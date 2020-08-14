@@ -1,9 +1,17 @@
 // System.Net.Dns.cs
 //
+// Authors:
+//	Mads Pultz (mpultz@diku.dk)
+//	Lawrence Pit (loz@cable.a2000.nl)
+
 // Author: Mads Pultz (mpultz@diku.dk)
-// Author: Lawrence Pit (loz@cable.a2000.nl)
+// 	   Lawrence Pit (loz@cable.a2000.nl)
+//	   Marek Safar (marek.safar@gmail.com)
+// 	   Gonzalo Paniagua Javier (gonzalo.mono@gmail.com)
 //
 // (C) Mads Pultz, 2001
+// Copyright (c) 2011 Novell, Inc.
+// Copyright (c) 2011 Xamarin, Inc.
 
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -33,60 +41,122 @@ using System.Collections;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Runtime.Remoting.Messaging;
+#if NET_4_5
+using System.Threading.Tasks;
+#endif
+
+#if !MOBILE
+using Mono.Net.Dns;
+#endif
 
 namespace System.Net {
-#if NET_2_0
 	public static class Dns {
-#else
-	public sealed class Dns {
-
-		private Dns () {}
+#if !MOBILE
+		static bool use_mono_dns;
+		static SimpleResolver resolver;
 #endif
 
 		static Dns ()
 		{
 			System.Net.Sockets.Socket.CheckProtocolSupport();
+#if !MOBILE
+			if (Environment.GetEnvironmentVariable ("MONO_DNS") != null) {
+				resolver = new SimpleResolver ();
+				use_mono_dns = true;
+			}
+#endif
 		}
 
-#if !MOONLIGHT // global remove of async methods
+#if !MOBILE
+		internal static bool UseMonoDns {
+			get { return use_mono_dns; }
+		}
+#endif
+
+#if !MOBILE // global remove of async methods
 
 		private delegate IPHostEntry GetHostByNameCallback (string hostName);
 		private delegate IPHostEntry ResolveCallback (string hostName);
-#if NET_2_0
 		private delegate IPHostEntry GetHostEntryNameCallback (string hostName);
 		private delegate IPHostEntry GetHostEntryIPCallback (IPAddress hostAddress);
 		private delegate IPAddress [] GetHostAddressesCallback (string hostName);
-#endif
 
-#if NET_2_0
+		static void OnCompleted (object sender, SimpleResolverEventArgs e)
+		{
+			DnsAsyncResult ares = (DnsAsyncResult) e.UserToken;
+			IPHostEntry entry = e.HostEntry;
+			if (entry == null || e.ResolverError != 0) {
+				ares.SetCompleted (false, new Exception ("Error: " + e.ResolverError));
+				return;
+			}
+			ares.SetCompleted (false, entry);
+		}
+
+		static IAsyncResult BeginAsyncCallAddresses (string host, AsyncCallback callback, object state)
+		{
+			SimpleResolverEventArgs e = new SimpleResolverEventArgs ();
+			e.Completed += OnCompleted;
+			e.HostName = host;
+			DnsAsyncResult ares = new DnsAsyncResult (callback, state);
+			e.UserToken = ares;
+			if (resolver.GetHostAddressesAsync (e) == false)
+				ares.SetCompleted (true, e.HostEntry); // Completed synchronously
+			return ares;
+		}
+
+		static IAsyncResult BeginAsyncCall (string host, AsyncCallback callback, object state)
+		{
+			SimpleResolverEventArgs e = new SimpleResolverEventArgs ();
+			e.Completed += OnCompleted;
+			e.HostName = host;
+			DnsAsyncResult ares = new DnsAsyncResult (callback, state);
+			e.UserToken = ares;
+			if (resolver.GetHostEntryAsync (e) == false)
+				ares.SetCompleted (true, e.HostEntry); // Completed synchronously
+			return ares;
+		}
+
+		static IPHostEntry EndAsyncCall (DnsAsyncResult ares)
+		{
+			if (ares == null)
+				throw new ArgumentException ("Invalid asyncResult");
+			if (!ares.IsCompleted)
+				ares.AsyncWaitHandle.WaitOne ();
+			if (ares.Exception != null)
+				throw ares.Exception;
+			IPHostEntry entry = ares.HostEntry;
+			if (entry == null || entry.AddressList == null || entry.AddressList.Length == 0)
+				throw new SocketException(11001);
+			return entry;
+		}
+
 		[Obsolete ("Use BeginGetHostEntry instead")]
-#endif
-		public static IAsyncResult BeginGetHostByName (string hostName,
-			AsyncCallback requestCallback, object stateObject)
+		public static IAsyncResult BeginGetHostByName (string hostName, AsyncCallback requestCallback, object stateObject)
 		{
 			if (hostName == null)
 				throw new ArgumentNullException ("hostName");
+
+			if (use_mono_dns)
+				return BeginAsyncCall (hostName, requestCallback, stateObject);
 
 			GetHostByNameCallback c = new GetHostByNameCallback (GetHostByName);
 			return c.BeginInvoke (hostName, requestCallback, stateObject);
 		}
 
-#if NET_2_0
 		[Obsolete ("Use BeginGetHostEntry instead")]
-#endif
-		public static IAsyncResult BeginResolve (string hostName,
-			AsyncCallback requestCallback, object stateObject)
+		public static IAsyncResult BeginResolve (string hostName, AsyncCallback requestCallback, object stateObject)
 		{
 			if (hostName == null)
 				throw new ArgumentNullException ("hostName");
+
+			if (use_mono_dns)
+				return BeginAsyncCall (hostName, requestCallback, stateObject);
 
 			ResolveCallback c = new ResolveCallback (Resolve);
 			return c.BeginInvoke (hostName, requestCallback, stateObject);
 		}
 
-#if NET_2_0
-		public static IAsyncResult BeginGetHostAddresses (string hostNameOrAddress,
-			AsyncCallback requestCallback, object stateObject)
+		public static IAsyncResult BeginGetHostAddresses (string hostNameOrAddress, AsyncCallback requestCallback, object stateObject)
 		{
 			if (hostNameOrAddress == null)
 				throw new ArgumentNullException ("hostName");
@@ -95,13 +165,15 @@ namespace System.Net {
 					"and ::0 (IPv6) are unspecified addresses. You " +
 					"cannot use them as target address.",
 					"hostNameOrAddress");
+
+			if (use_mono_dns)
+				return BeginAsyncCallAddresses (hostNameOrAddress, requestCallback, stateObject);
 
 			GetHostAddressesCallback c = new GetHostAddressesCallback (GetHostAddresses);
 			return c.BeginInvoke (hostNameOrAddress, requestCallback, stateObject);
 		}
 
-		public static IAsyncResult BeginGetHostEntry (string hostNameOrAddress,
-			AsyncCallback requestCallback, object stateObject)
+		public static IAsyncResult BeginGetHostEntry (string hostNameOrAddress, AsyncCallback requestCallback, object stateObject)
 		{
 			if (hostNameOrAddress == null)
 				throw new ArgumentNullException ("hostName");
@@ -111,52 +183,64 @@ namespace System.Net {
 					"cannot use them as target address.",
 					"hostNameOrAddress");
 
+			if (use_mono_dns)
+				return BeginAsyncCall (hostNameOrAddress, requestCallback, stateObject);
+
 			GetHostEntryNameCallback c = new GetHostEntryNameCallback (GetHostEntry);
 			return c.BeginInvoke (hostNameOrAddress, requestCallback, stateObject);
 		}
 
-		public static IAsyncResult BeginGetHostEntry (IPAddress address,
-			AsyncCallback requestCallback, object stateObject)
+		public static IAsyncResult BeginGetHostEntry (IPAddress address, AsyncCallback requestCallback, object stateObject)
 		{
 			if (address == null)
 				throw new ArgumentNullException ("address");
 
+			if (use_mono_dns)
+				return BeginAsyncCall (address.ToString (), requestCallback, stateObject);
+
 			GetHostEntryIPCallback c = new GetHostEntryIPCallback (GetHostEntry);
 			return c.BeginInvoke (address, requestCallback, stateObject);
 		}
-#endif
 
-#if NET_2_0
 		[Obsolete ("Use EndGetHostEntry instead")]
-#endif
 		public static IPHostEntry EndGetHostByName (IAsyncResult asyncResult) 
 		{
 			if (asyncResult == null)
 				throw new ArgumentNullException ("asyncResult");
+
+			if (use_mono_dns)
+				return EndAsyncCall (asyncResult as DnsAsyncResult);
 
 			AsyncResult async = (AsyncResult) asyncResult;
 			GetHostByNameCallback cb = (GetHostByNameCallback) async.AsyncDelegate;
 			return cb.EndInvoke(asyncResult);
 		}
 
-#if NET_2_0
 		[Obsolete ("Use EndGetHostEntry instead")]
-#endif
 		public static IPHostEntry EndResolve (IAsyncResult asyncResult) 
 		{
 			if (asyncResult == null)
 				throw new ArgumentNullException ("asyncResult");
+
+			if (use_mono_dns)
+				return EndAsyncCall (asyncResult as DnsAsyncResult);
+
 			AsyncResult async = (AsyncResult) asyncResult;
 			ResolveCallback cb = (ResolveCallback) async.AsyncDelegate;
 			return cb.EndInvoke(asyncResult);
 		}
 
-#if NET_2_0
-
 		public static IPAddress [] EndGetHostAddresses (IAsyncResult asyncResult) 
 		{
 			if (asyncResult == null)
 				throw new ArgumentNullException ("asyncResult");
+
+			if (use_mono_dns) {
+				IPHostEntry entry = EndAsyncCall (asyncResult as DnsAsyncResult);
+				if (entry == null)
+					return null;
+				return entry.AddressList;
+			}
 
 			AsyncResult async = (AsyncResult) asyncResult;
 			GetHostAddressesCallback cb = (GetHostAddressesCallback) async.AsyncDelegate;
@@ -167,15 +251,16 @@ namespace System.Net {
 		{
 			if (asyncResult == null)
 				throw new ArgumentNullException ("asyncResult");
+
+			if (use_mono_dns)
+				return EndAsyncCall (asyncResult as DnsAsyncResult);
+
 			AsyncResult async = (AsyncResult) asyncResult;
-#if NET_2_0
 			if (async.AsyncDelegate is GetHostEntryIPCallback)
 				return ((GetHostEntryIPCallback) async.AsyncDelegate).EndInvoke (asyncResult);
-#endif
 			GetHostEntryNameCallback cb = (GetHostEntryNameCallback) async.AsyncDelegate;
 			return cb.EndInvoke(asyncResult);
 		}
-#endif
 		
 #endif // !MOONLIGHT: global remove of async methods
 
@@ -220,9 +305,7 @@ namespace System.Net {
 			return he;
 		}
 
-#if NET_2_0
 		[Obsolete ("Use GetHostEntry instead")]
-#endif
 		public static IPHostEntry GetHostByAddress(IPAddress address)
 		{
 			if (address == null)
@@ -231,9 +314,7 @@ namespace System.Net {
 			return GetHostByAddressFromString (address.ToString (), false);
 		}
 
-#if NET_2_0
 		[Obsolete ("Use GetHostEntry instead")]
-#endif
 		public static IPHostEntry GetHostByAddress(string address)
 		{
 			if (address == null)
@@ -284,12 +365,7 @@ namespace System.Net {
 			
 		}
 
-#if NET_2_0
-		public
-#else
-		internal
-#endif
-		static IPHostEntry GetHostEntry (string hostNameOrAddress)
+		public static IPHostEntry GetHostEntry (string hostNameOrAddress)
 		{
 			if (hostNameOrAddress == null)
 				throw new ArgumentNullException ("hostNameOrAddress");
@@ -306,12 +382,7 @@ namespace System.Net {
 			return GetHostByName (hostNameOrAddress);
 		}
 
-#if NET_2_0
-		public
-#else
-		internal
-#endif
-		static IPHostEntry GetHostEntry (IPAddress address)
+		public static IPHostEntry GetHostEntry (IPAddress address)
 		{
 			if (address == null)
 				throw new ArgumentNullException ("address");
@@ -319,12 +390,7 @@ namespace System.Net {
 			return GetHostByAddressFromString (address.ToString (), false);
 		}
 
-#if NET_2_0
-		public
-#else
-		internal
-#endif
-		static IPAddress [] GetHostAddresses (string hostNameOrAddress)
+		public static IPAddress [] GetHostAddresses (string hostNameOrAddress)
 		{
 			if (hostNameOrAddress == null)
 				throw new ArgumentNullException ("hostNameOrAddress");
@@ -342,9 +408,7 @@ namespace System.Net {
 			return GetHostEntry (hostNameOrAddress).AddressList;
 		}
 
-#if NET_2_0
 		[Obsolete ("Use GetHostEntry instead")]
-#endif
 		public static IPHostEntry GetHostByName (string hostName)
 		{
 			if (hostName == null)
@@ -396,9 +460,7 @@ namespace System.Net {
 #endif
 		}
 
-#if NET_2_0
 		[Obsolete ("Use GetHostEntry instead")]
-#endif
 		public static IPHostEntry Resolve(string hostName) 
 		{
 			if (hostName == null)
@@ -416,6 +478,23 @@ namespace System.Net {
 
 			return ret;
 		}
+
+#if NET_4_5
+		public static Task<IPAddress[]> GetHostAddressesAsync (string hostNameOrAddress)
+		{
+			return Task<IPAddress[]>.Factory.FromAsync (BeginGetHostAddresses, EndGetHostAddresses, hostNameOrAddress, null);
+		}
+
+		public static Task<IPHostEntry> GetHostEntryAsync (IPAddress address)
+		{
+			return Task<IPHostEntry>.Factory.FromAsync (BeginGetHostEntry, EndGetHostEntry, address, null);
+		}
+
+		public static Task<IPHostEntry> GetHostEntryAsync (string hostNameOrAddress)
+		{
+			return Task<IPHostEntry>.Factory.FromAsync (BeginGetHostEntry, EndGetHostEntry, hostNameOrAddress, null);
+		}
+#endif
 	}
 }
 

@@ -72,6 +72,14 @@ namespace MonoTests.System.Net.Sockets {
 			Assert.IsTrue (client.MulticastLoopback, "#A:MulticastLoopback");
 			//Assert.AreEqual (32, client.Ttl, "#A:Ttl");
 #endif
+		}
+
+		[Test] // .ctor (AddressFamily)
+		[Category("IPv6")]
+		public void Constructor2_IPv6()
+		{
+			MyUdpClient client;
+			Socket s;
 
 			client = new MyUdpClient (AddressFamily.InterNetworkV6);
 			s = client.Client;
@@ -290,6 +298,15 @@ namespace MonoTests.System.Net.Sockets {
 			Assert.IsNotNull (localEP, "#A:Client:LocalEndpoint");
 			Assert.AreEqual (IPAddress.Any, localEP.Address, "#A:Client:LocalEndPoint/Address");
 			Assert.AreEqual (AddressFamily.InterNetwork, localEP.AddressFamily, "#A:Client:LocalEndPoint/AddressFamily");
+		}
+
+		[Test] // .ctor (Int32, AddressFamily)
+		[Category("IPv6")]
+		public void Constructor5_IPv6 ()
+		{
+			MyUdpClient client;
+			Socket s;
+			IPEndPoint localEP;
 
 			client = new MyUdpClient (IPEndPoint.MaxPort, AddressFamily.InterNetworkV6);
 			s = client.Client;
@@ -383,6 +400,9 @@ namespace MonoTests.System.Net.Sockets {
 		}
 
 		[Test] // .ctor (String, Int32)
+#if MOBILE
+		[Category("NotWorking")] // SocketException Bad address
+#endif
 		public void Constructor6 ()
 		{
 			MyUdpClient client;
@@ -477,6 +497,9 @@ namespace MonoTests.System.Net.Sockets {
 		}
 
 		[Test]
+#if MOBILE
+		[Category("NotWorking")] // SocketException Bad address
+#endif
 		public void UdpClientBroadcastTest () 
 		{
 			UdpClient client = new UdpClient (new IPEndPoint (IPAddress.Loopback, 1234));
@@ -642,6 +665,7 @@ namespace MonoTests.System.Net.Sockets {
 		}
 
 		[Test] // JoinMulticastGroup (Int32, IPAddress)
+		[Category("IPv6")]
 		public void JoinMulticastGroup2_Socket_Closed ()
 		{
 			IPAddress mcast_addr = null;
@@ -662,6 +686,7 @@ namespace MonoTests.System.Net.Sockets {
 
 		[Test] // JoinMulticastGroup (Int32, IPAddress)
 		[Category ("NotWorking")]
+		[Category ("IPv6")]
 		public void JoinMulticastGroup2_Socket_NotBound ()
 		{
 			IPAddress mcast_addr = IPAddress.Parse ("ff02::1");

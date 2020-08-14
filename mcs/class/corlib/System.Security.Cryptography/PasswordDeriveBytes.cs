@@ -125,10 +125,7 @@ public class PasswordDeriveBytes : DeriveBytes {
 			initial = null;
 		}
 		// zeroize temporary password storage
-		if (password != null) {
-			Array.Clear (password, 0, password.Length);
-			password = null;
-		}
+		Array.Clear (password, 0, password.Length);
 #if NET_4_0
 		base.Dispose (disposing);
 #endif

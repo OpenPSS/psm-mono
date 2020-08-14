@@ -73,6 +73,7 @@ namespace MonoTests.System
 
 		[Test]
 		[Category ("TargetJvmNotWorking")]
+		[Category("PssFileIO")]
 		public void ApplicationBase1 ()
 		{
 			string expected_path = tmpPath.Replace(@"\", @"/");
@@ -97,6 +98,7 @@ namespace MonoTests.System
 
 		[Test]
 		[Category ("TargetJvmNotWorking")]
+		[Category("PssFileIO")]
 		public void ApplicationBase2 ()
 		{
 			AppDomainSetup setup = new AppDomainSetup ();
@@ -106,6 +108,7 @@ namespace MonoTests.System
 
 		[Test]
 		[Category ("TargetJvmNotWorking")]
+		[Category("PssFileIO")]
 		public void ApplicationBase3 ()
 		{
 			AppDomainSetup setup = new AppDomainSetup ();
@@ -177,14 +180,17 @@ namespace MonoTests.System
 			}
 		}
 
-#if NET_2_0
+#if NET_2_0 && !NET_2_1
 		[Test]
 		public void AppDomainInitializer1 ()
 		{
 			AppDomainSetup s = new AppDomainSetup ();
 			s.AppDomainInitializer = AppDomainInitialized1;
 			s.AppDomainInitializerArguments = new string [] {"A", "B"};
+
+			Console.WriteLine ("creating domain");
 			AppDomain domain = AppDomain.CreateDomain ("MyDomain", null, s);
+			Console.WriteLine ("done creating domain");
 
 			object data = domain.GetData ("Initialized");
 			Assert.IsNotNull (data);
@@ -193,6 +199,7 @@ namespace MonoTests.System
 
 		static void AppDomainInitialized1 (string [] args)
 		{
+			Console.WriteLine ("made it to AppDomainInitialized1");
 			bool initialized = true;
 			initialized &= args [0] == "A";
 			initialized &= args [1] == "B";

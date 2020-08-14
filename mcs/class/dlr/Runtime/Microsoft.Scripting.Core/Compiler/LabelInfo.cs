@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Ast.Compiler {
 #else
 namespace System.Linq.Expressions.Compiler {
 #endif
-#if CLR2 || SILVERLIGHT
+#if CLR2 || SILVERLIGHT || MOBILE
     using ILGenerator = OffsetTrackingILGenerator;
 #endif
 

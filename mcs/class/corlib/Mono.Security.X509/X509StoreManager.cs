@@ -88,7 +88,7 @@ namespace Mono.Security.X509 {
 		static public X509Stores LocalMachine {
 			get {
 				if (_machineStore == null) 
-					_machineStore = new X509Stores (LocalMachinePath);
+					_machineStore = new SystemX509Stores ();
 
 				return _machineStore;
 			}

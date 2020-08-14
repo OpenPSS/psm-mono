@@ -27,6 +27,7 @@ namespace MonoTests.System.Text
 		// returned array from Encoding.GetEncodings() so that
 		// we can make sure to put additional encodings into
 		// Encoding.GetEncodings() code.
+		[Category("PssFileIO")]
 		public void EncodingGetEncodingsReturnsAll ()
 		{
 			// Make sure that those I18N assemblies are loaded.
@@ -58,6 +59,9 @@ namespace MonoTests.System.Text
 		}
 
 		[Test]
+#if MOBILE
+		[Category("NotWorking")] // System.NotSupportedException : CodePage 37 not supported
+#endif
 		public void GetEncodingForAllInfo ()
 		{
 			foreach (EncodingInfo i in Encoding.GetEncodings ())

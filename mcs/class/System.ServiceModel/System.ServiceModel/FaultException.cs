@@ -110,7 +110,7 @@ namespace System.ServiceModel
 		{
 			throw new NotImplementedException ();
 		}
-		
+
 		public virtual MessageFault CreateMessageFault ()
 		{
 			return fault;

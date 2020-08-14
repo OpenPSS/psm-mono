@@ -95,12 +95,12 @@ namespace System.Xml.Linq
 			get { return XmlNodeType.DocumentType; }
 		}
 
-		public override void WriteTo (XmlWriter writer)
+		public override void WriteTo (XmlWriter w)
 		{
 			XDocument doc = Document;
 			XElement root = doc.Root;
 			if (root != null)
-				writer.WriteDocType (root.Name.LocalName, pubid, sysid, intSubset);
+				w.WriteDocType (root.Name.LocalName, pubid, sysid, intSubset);
 		}
 	}
 }

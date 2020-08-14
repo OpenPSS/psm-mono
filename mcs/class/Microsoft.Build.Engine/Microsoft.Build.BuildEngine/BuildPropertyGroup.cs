@@ -70,7 +70,7 @@ namespace Microsoft.Build.BuildEngine {
 					AddProperty (bp);
 				} 
 			} else
-				this.propertiesByName = new Dictionary <string, BuildProperty> (StringComparer.OrdinalIgnoreCase);
+				this.propertiesByName = new Dictionary <string, BuildProperty> (StringComparer.InvariantCultureIgnoreCase);
 
 			DefinedInFileName = importedProject != null ? importedProject.FullFileName :
 						(project != null ? project.FullFileName : null);

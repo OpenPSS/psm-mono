@@ -27,7 +27,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents one case of a <see cref="SwitchExpression"/>.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.SwitchCaseProxy))]
 #endif
     public sealed class SwitchCase {

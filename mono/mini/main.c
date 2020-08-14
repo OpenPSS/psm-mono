@@ -1,8 +1,11 @@
 #include <config.h>
 #include "mini.h"
-#ifndef HOST_WIN32
+#if !defined(HOST_WIN32) && !defined(TARGET_VITA)
 #include "buildver.h"
 #endif
+
+
+unsigned int sceLibcHeapSize = 16*1024*1024;
 
 /*
  * If the MONO_ENV_OPTIONS environment variable is set, it uses this as a
@@ -18,19 +21,13 @@ mono_main_with_options (int argc, char *argv [])
 		GString *buffer = g_string_new ("");
 		const char *p;
 		int i;
-		gboolean in_quotes = FALSE;
-		char quote_char = '\0';
 
 		for (p = env_options; *p; p++){
 			switch (*p){
 			case ' ': case '\t':
-				if (!in_quotes) {
-					if (buffer->len != 0){
-						g_ptr_array_add (array, g_strdup (buffer->str));
-						g_string_truncate (buffer, 0);
-					}
-				} else {
-					g_string_append_c (buffer, *p);
+				if (buffer->len != 0){
+					g_ptr_array_add (array, g_strdup (buffer->str));
+					g_string_truncate (buffer, 0);
 				}
 				break;
 			case '\\':
@@ -39,28 +36,11 @@ mono_main_with_options (int argc, char *argv [])
 					p++;
 				}
 				break;
-			case '\'':
-			case '"':
-				if (in_quotes) {
-					if (quote_char == *p)
-						in_quotes = FALSE;
-					else
-						g_string_append_c (buffer, *p);
-				} else {
-					in_quotes = TRUE;
-					quote_char = *p;
-				}
-				break;
 			default:
 				g_string_append_c (buffer, *p);
 				break;
 			}
 		}
-		if (in_quotes) {
-			fprintf (stderr, "Unmatched quotes in value of MONO_ENV_OPTIONS: [%s]\n", env_options);
-			exit (1);
-		}
-			
 		if (buffer->len != 0)
 			g_ptr_array_add (array, g_strdup (buffer->str));
 		g_string_free (buffer, TRUE);
@@ -115,9 +95,10 @@ main ()
 int
 main (int argc, char* argv[])
 {
-	mono_build_date = build_date;
-	
-	return mono_main_with_options (argc, argv);
+	mono_build_date = "00/00/00";
+
+	int ret = mono_main_with_options (argc, argv);
+	return ret;
 }
 
 #endif

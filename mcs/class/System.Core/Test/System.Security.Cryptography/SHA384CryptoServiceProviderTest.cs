@@ -26,7 +26,7 @@ namespace MonoTests.System.Security.Cryptography {
 	public class SHA384CryptoServiceProviderTest : SHA384Test {
 
 		[SetUp]
-		public override void SetUp ()
+		protected override void SetUp ()
 		{
 			hash = new SHA384CryptoServiceProvider ();
 		}

@@ -66,6 +66,7 @@ namespace System.Threading.Tasks
 			if (method == null)
 				return;
 			field = Delegate.CreateDelegate (typeof(TDelegate), scheduler, method) as TDelegate;
+			Console.WriteLine ("Created delegate for " + name);
 		}
 
 		public void ParticipateUntil (Task task)

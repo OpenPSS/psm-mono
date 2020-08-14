@@ -52,9 +52,11 @@ namespace MonoTests.System.Security.Permissions {
 			Assert.IsFalse (hpa.Synchronization, "Synchronization");
 			Assert.IsFalse (hpa.UI, "UI");
 			Assert.IsFalse (hpa.Unrestricted, "Unrestricted");
+#if !NET_2_1
 			IPermission p = hpa.CreatePermission ();
 			Assert.AreEqual ("System.Security.Permissions.HostProtectionPermission", p.GetType ().ToString (), "CreatePermission");
 			Assert.IsTrue ((p is IUnrestrictedPermission), "IUnrestrictedPermission");
+#endif
 		}
 
 		[Test]

@@ -16,7 +16,7 @@ using System; using Microsoft;
 
 
 
-#if !SILVERLIGHT // ComObject
+#if !SILVERLIGHT && !MOBILE // ComObject
 
 using System.Diagnostics;
 #if CODEPLEX_40

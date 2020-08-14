@@ -47,10 +47,14 @@ namespace System.ServiceModel
 			: base (type)
 		{
 			this.channel = channel;
-			this.isDuplex = isDuplex;
+#if NET_2_1
+			context_channel_type = typeof (IClientChannel);
+#else
+			context_channel_type = isDuplex ? typeof (IDuplexContextChannel) : typeof (IClientChannel);
+#endif
 		}
-
-		bool isDuplex;
+		
+		Type context_channel_type;
 		IInternalContextChannel channel;
 		Dictionary<object,object[]> saved_params = new Dictionary<object,object[]> ();
 
@@ -62,19 +66,10 @@ namespace System.ServiceModel
 
 		public virtual string TypeName { get; set; }
 
-		static bool CanCastTo<T> (Type type)
-		{
-			return typeof (T) == type || typeof (T).GetInterfaces ().Contains (type);
-		}
-
 		public virtual bool CanCastTo (Type t, object o)
 		{
-			if (CanCastTo<IClientChannel> (t))
+			if (t == context_channel_type || context_channel_type.GetInterfaces ().Contains (t))
 				return true;
-#if !NET_2_1
-			if (isDuplex && CanCastTo<IDuplexContextChannel> (t))
-				return true;
-#endif
 			return false;
 		}
 		
@@ -108,7 +103,6 @@ namespace System.ServiceModel
 					// sync invocation
 					pl = new object [inmsg.MethodBase.GetParameters ().Length];
 					Array.Copy (inmsg.Args, pl, inmsg.ArgCount);
-					channel.Context = OperationContext.Current;
 					ret = channel.Process (inmsg.MethodBase, od.Name, pl);
 					method = od.SyncMethod;
 				} else if (inmsg.MethodBase.Equals (od.BeginMethod)) {

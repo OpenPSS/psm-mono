@@ -36,7 +36,8 @@ monodis_LDADD = 			\
 	libmonodis.a			\
 	$(runtime_lib)			\
 	$(LLVM_LIBS)			\
-	$(GLIB_LIBS) 
+	$(GLIB_LIBS)			\
+	$(LIBICONV)
 
 if PLATFORM_DARWIN
 monodis_LDFLAGS=-framework CoreFoundation

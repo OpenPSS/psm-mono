@@ -59,6 +59,8 @@ Mono.Security.Cryptography/MACAlgorithm.cs
 Mono.Security.Cryptography/SymmetricTransform.cs
 Mono.Security.Cryptography/RSAManaged.cs
 Mono.Security.X509/PKCS12.cs
+Mono.Security.X509/SystemX509Store.cs
+Mono.Security.X509/SystemX509Stores.cs
 Mono.Security.X509/X501Name.cs
 Mono.Security.X509/X509Certificate.cs
 Mono.Security.X509/X509CertificateCollection.cs
@@ -79,7 +81,6 @@ Mono.Xml/SecurityParser.cs
 System/AccessViolationException.cs
 System/ActivationContext.cs
 System/Activator.cs
-System/AndroidPlatform.cs
 System/AppDomain.cs
 System/AppDomainInitializer.cs
 System/AppDomainManager.cs
@@ -183,6 +184,7 @@ System/InvalidCastException.cs
 System/InvalidOperationException.cs
 System/InvalidProgramException.cs
 System/InvalidTimeZoneException.cs
+System/IProgress.cs
 System/IServiceProvider.cs
 System/KnownTerminals.cs
 System/Lazy.cs
@@ -254,7 +256,6 @@ System/TimeZone.cs
 ../System.Core/System/TimeZoneInfo.cs
 ../System.Core/System/TimeZoneInfo.AdjustmentRule.cs
 ../System.Core/System/TimeZoneInfo.Android.cs
-../System.Core/System/TimeZoneInfo.MonoTouch.cs
 ../System.Core/System/TimeZoneInfo.TransitionTime.cs
 System/TimeZoneNotFoundException.cs
 System/TimeoutException.cs
@@ -392,7 +393,6 @@ System.Globalization/NumberFormatInfo.cs
 System.Globalization/NumberStyles.cs
 System.Globalization/PersianCalendar.cs
 System.Globalization/RegionInfo.cs
-System.Globalization/RegionInfo.MonoTouch.cs
 System.Globalization/StringInfo.cs
 System.Globalization/TaiwanCalendar.cs
 System.Globalization/TaiwanLunisolarCalendar.cs
@@ -425,7 +425,6 @@ System.IO/FileStream.cs
 System.IO/FileStreamAsyncResult.cs
 System.IO/FileSystemInfo.cs
 System.IO/IOException.cs
-System.IO/LogcatTextWriter.cs
 System.IO/MemoryStream.cs
 System.IO/MonoIO.cs
 System.IO/MonoIOError.cs
@@ -437,7 +436,6 @@ System.IO/SearchOption.cs
 System.IO/SearchPattern.cs
 System.IO/SeekOrigin.cs
 System.IO/Stream.cs
-System.IO/StreamAsyncResult.cs
 System.IO/StreamReader.cs
 System.IO/StreamWriter.cs
 System.IO/StringReader.cs
@@ -609,6 +607,9 @@ System.Runtime/GCSettings.cs
 System.Runtime/MemoryFailPoint.cs
 System.Runtime/TargetedPatchingOptOutAttribute.cs
 System.Runtime.CompilerServices/AccessedThroughPropertyAttribute.cs
+System.Runtime.CompilerServices/AsyncVoidMethodBuilder.cs
+System.Runtime.CompilerServices/AsyncTaskMethodBuilder.cs
+System.Runtime.CompilerServices/AsyncTaskMethodBuilder_T.cs
 System.Runtime.CompilerServices/ReferenceAssemblyAttribute.cs
 System.Runtime.CompilerServices/CallConvCdecl.cs
 System.Runtime.CompilerServices/CallConvFastcall.cs
@@ -620,6 +621,9 @@ System.Runtime.CompilerServices/CompilerGeneratedAttribute.cs
 System.Runtime.CompilerServices/CompilerGlobalScopeAttribute.cs
 System.Runtime.CompilerServices/CompilerMarshalOverride.cs
 System.Runtime.CompilerServices/ConditionalWeakTable.cs
+System.Runtime.CompilerServices/ConfiguredTaskAwaitable.cs
+System.Runtime.CompilerServices/ConfiguredTaskAwaitable_T.cs
+System.Runtime.CompilerServices/ContractHelper.cs
 System.Runtime.CompilerServices/CustomConstantAttribute.cs
 System.Runtime.CompilerServices/DateTimeConstantAttribute.cs
 System.Runtime.CompilerServices/DecimalConstantAttribute.cs
@@ -659,8 +663,11 @@ System.Runtime.CompilerServices/ScopelessEnumAttribute.cs
 System.Runtime.CompilerServices/SuppressIldasmAttribute.cs
 System.Runtime.CompilerServices/StringFreezingAttribute.cs 
 System.Runtime.CompilerServices/UnsafeValueTypeAttribute.cs
+System.Runtime.CompilerServices/TaskAwaiter.cs
+System.Runtime.CompilerServices/TaskAwaiter_T.cs
 System.Runtime.CompilerServices/TypeForwardedFromAttribute.cs
 System.Runtime.CompilerServices/TypeForwardedToAttribute.cs
+System.Runtime.CompilerServices/YieldAwaitable.cs
 System.Runtime.ConstrainedExecution/CriticialFinalizerObject.cs
 System.Runtime.ConstrainedExecution/CER.cs
 System.Runtime.ConstrainedExecution/Consistency.cs
@@ -1151,6 +1158,7 @@ System.Security/SecurityFrame.cs
 System.Security/SecurityException.cs
 System.Security/SecurityManager.cs
 System.Security/SecurityManager_2_1.cs
+System.Security/SecurityManager_mobile.cs
 System.Security/SecurityRuleSet.cs
 System.Security/SecurityRulesAttribute.cs
 System.Security/SecuritySafeCriticalAttribute.cs
@@ -1520,6 +1528,8 @@ System.Collections.Generic/IList.cs
 System.Collections.Generic/IComparer.cs
 System.Collections.Generic/IEqualityComparer.cs
 System.Collections.Generic/IDictionary.cs
+System.Collections.Generic/IReadOnlyList.cs
+System.Collections.Generic/IReadOnlyDictionary.cs
 System.Collections.Generic/KeyValuePair.cs
 System.Collections.Generic/EqualityComparer.cs
 System.Collections.Generic/KeyNotFoundException.cs
@@ -1538,19 +1548,19 @@ System.Threading.Tasks/TaskFactory.cs
 System.Threading.Tasks/TaskFactory_T.cs
 System.Threading.Tasks/TaskStatus.cs
 System.Threading.Tasks/TaskCreationOptions.cs
+System.Threading.Tasks/SchedulerProxy.cs
 System.Threading.Tasks/CyclicDeque.cs
+System.Threading.Tasks/IConcurrentDeque.cs
+System.Threading.Tasks/PopResult.cs
 System.Threading.Tasks/TaskScheduler.cs
 System.Threading.Tasks/TaskContinuationOptions.cs
 System.Threading.Tasks/TaskCanceledException.cs
 System.Threading.Tasks/Task_T.cs
 System.Threading.Tasks/Task.cs
-System.Threading.Tasks/TaskCompletionQueue.cs
-System.Threading.Tasks/EventSlots.cs
-System.Threading.Tasks/TaskExceptionSlot.cs
-System.Threading.Tasks/TaskActionInvoker.cs
+System.Threading.Tasks/CompletionContainer.cs
+System.Threading.Tasks/CompletionSlot.cs
 System.Threading.Tasks/TaskDebuggerView.cs
 System.Threading.Tasks/TaskCompletionSource.cs
-System.Threading.Tasks/TaskContinuation.cs
 System.Threading.Tasks/TaskSchedulerException.cs
 System.Threading.Tasks/TaskConstants.cs
 System.Threading.Tasks/TaskConstants_T.cs
@@ -1585,4 +1595,5 @@ System/AggregateException.cs
 System.Threading.Tasks/SimpleConcurrentBag.cs
 System.Threading.Tasks/SynchronizationContextScheduler.cs
 System.Threading.Tasks/UnobservedTaskExceptionEventArgs.cs
+System.Collections.Concurrent/ObjectPool.cs
 System.Threading.Tasks/TpScheduler.cs

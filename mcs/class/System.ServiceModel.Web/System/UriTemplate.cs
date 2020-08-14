@@ -5,6 +5,7 @@
 //	Atsushi Enomoto  <atsushi@ximian.com>
 //
 // Copyright (C) 2008 Novell, Inc (http://www.novell.com)
+// Copyright 2011 Xamarin Inc (http://www.xamarin.com).
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -302,7 +303,7 @@ namespace System
 			if (tEnd < 0)
 				tEnd = template.Length;
 			if (wild)
-				tEnd = Math.Max (wildIdx - 1, 0);
+				tEnd = wildIdx - 1;
 			if (!wild && (cp.Length - c) != (tEnd - i) ||
 			    String.CompareOrdinal (cp, c, template, i, tEnd - i) != 0)
 				return null; // suffix doesn't match

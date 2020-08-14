@@ -156,6 +156,7 @@ namespace MonoTests.System.IO
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void Combine ()
 		{
 			string [] files = new string [3];
@@ -280,8 +281,6 @@ namespace MonoTests.System.IO
 				Assert.AreEqual (@"C:\dir", Path.GetDirectoryName (@"C:\dir\"), "#B5");
 				Assert.AreEqual (@"C:\dir", Path.GetDirectoryName (@"C:\dir\dir"), "#B6");
 				Assert.AreEqual (@"C:\dir\dir", Path.GetDirectoryName (@"C:\dir\dir\"), "#B7");
-				Assert.AreEqual (@"C:", Path.GetDirectoryName (@"C:foo.txt"), "#B8");
-				Assert.AreEqual (@"C:dir", Path.GetDirectoryName (@"C:dir\"), "#B9"); 
 
 				Assert.AreEqual ("\\foo\\bar", Path.GetDirectoryName ("/foo//bar/dingus"), "#C1");
 				Assert.AreEqual ("foo\\bar", Path.GetDirectoryName ("foo/bar/"), "#C2");
@@ -490,6 +489,7 @@ namespace MonoTests.System.IO
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void GetFullPath_Unix ()
 		{
 			if (Windows)
@@ -752,6 +752,7 @@ namespace MonoTests.System.IO
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void GetFullPath2 ()
 		{
 			if (Windows) {
@@ -781,6 +782,7 @@ namespace MonoTests.System.IO
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void GetPathRoot ()
 		{
 			string current;
@@ -886,6 +888,7 @@ namespace MonoTests.System.IO
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void GetTempPath ()
 		{
 			string getTempPath = Path.GetTempPath ();
@@ -895,6 +898,7 @@ namespace MonoTests.System.IO
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void GetTempFileName ()
 		{
 			string getTempFileName = null;
@@ -943,6 +947,7 @@ namespace MonoTests.System.IO
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void IsPathRooted ()
 		{
 			Assert.IsTrue (Path.IsPathRooted (path2), "IsPathRooted #01");
@@ -1025,6 +1030,8 @@ namespace MonoTests.System.IO
 			try {
 #if TARGET_JVM
 				string system = "C:\\WINDOWS\\system32\\";
+#elif MOBILE
+				string system = "something-goes-here";
 #else
 				string system = Environment.SystemDirectory;
 #endif
@@ -1050,6 +1057,8 @@ namespace MonoTests.System.IO
 			try {
 #if TARGET_JVM
 				string system = "C:\\WINDOWS\\system32\\";
+#elif MOBILE
+				string system = "something-goes-here";
 #else
 				string system = Environment.SystemDirectory;
 #endif

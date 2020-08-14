@@ -33,7 +33,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents creating a new array and possibly initializing the elements of the new array.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.NewArrayExpressionProxy))]
 #endif
     public class NewArrayExpression : Expression {

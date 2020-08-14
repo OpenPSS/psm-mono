@@ -30,7 +30,7 @@ namespace System.Linq.Expressions {
     /// Needed to implement "eval" in some dynamic languages.
     /// Evaluates to an instance of <see cref="IList{IStrongBox}" /> when executed.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.RuntimeVariablesExpressionProxy))]
 #endif
     public sealed class RuntimeVariablesExpression : Expression {

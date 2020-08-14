@@ -1189,24 +1189,36 @@ namespace MonoTests.System.Security {
 		}
 
 		[Test]
+#if NET_2_1
+		[Category ("NotWorking")] // PermissionSetAttribute.CreatePermissionSet returns null on 2.1
+#endif
 		public void Unification_FromFx10 ()
 		{
 			Unification (String.Format (PermissionPattern, fx10version));
 		}
 
 		[Test]
+#if NET_2_1
+		[Category ("NotWorking")] // PermissionSetAttribute.CreatePermissionSet returns null on 2.1
+#endif
 		public void Unification_FromFx11 ()
 		{
 			Unification (String.Format (PermissionPattern, fx11version));
 		}
 
 		[Test]
+#if NET_2_1
+		[Category ("NotWorking")] // PermissionSetAttribute.CreatePermissionSet returns null on 2.1
+#endif
 		public void Unification_FromFx20 ()
 		{
 			Unification (String.Format (PermissionPattern, fx20version));
 		}
 
 		[Test]
+#if NET_2_1
+		[Category ("NotWorking")] // PermissionSetAttribute.CreatePermissionSet returns null on 2.1
+#endif
 		public void Unification_FromFx99 ()
 		{
 			Unification (String.Format (PermissionPattern, "9.99.999.9999"));

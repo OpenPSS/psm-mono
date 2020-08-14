@@ -49,10 +49,6 @@ namespace System.IO.Packaging {
 		private const string ContentNamespace = "http://schemas.openxmlformats.org/package/2006/content-types";
 		private const string ContentUri = "[Content_Types].xml";
 		
-		bool OwnsStream {
-			get; set;
-		}
-		
 		Dictionary<Uri, ZipPackagePart> parts;
 		internal Dictionary<Uri, MemoryStream> PartStreams = new Dictionary<Uri, MemoryStream> (new  UriComparer());
 
@@ -66,17 +62,15 @@ namespace System.IO.Packaging {
 			}
 		}
 		
-		internal ZipPackage (FileAccess access, bool ownsStream, Stream stream)
+		internal ZipPackage (FileAccess access, Stream stream)
 			: base (access)
 		{
-			OwnsStream = ownsStream;
 			PackageStream = stream;
 		}
 
-		internal ZipPackage (FileAccess access, bool ownsStream, Stream stream, bool streaming)
+		internal ZipPackage (FileAccess access, Stream stream, bool streaming)
 			: base (access, streaming)
 		{
-			OwnsStream = ownsStream;
 			PackageStream = stream;
 		}
 		
@@ -85,10 +79,7 @@ namespace System.IO.Packaging {
 			foreach (Stream s in PartStreams.Values)
 				s.Close ();
 			
-			base.Dispose (disposing);
-			
-			if (OwnsStream)
-				PackageStream.Close ();
+			PackageStream.Close ();
 		}
 
 		protected override void FlushCore ()
@@ -205,8 +196,6 @@ namespace System.IO.Packaging {
 		{
 			XmlDocument doc = new XmlDocument ();
 			XmlNamespaceManager manager = new XmlNamespaceManager (doc.NameTable);
-			Dictionary<string, string> mimes = new Dictionary<string, string> ();
-			
 			manager.AddNamespace ("content", ContentNamespace);
 
 			doc.AppendChild(doc.CreateNode (XmlNodeType.XmlDeclaration, "", ""));
@@ -215,35 +204,19 @@ namespace System.IO.Packaging {
 			doc.AppendChild (root);
 			foreach (ZipPackagePart part in Parts.Values)
 			{
-				XmlNode node = null;
-				string existingMimeType;
-									
-				var extension = Path.GetExtension (part.Uri.OriginalString);
-				if (extension.Length > 0)
-					extension = extension.Substring (1);
+				XmlNode node = doc.CreateNode (XmlNodeType.Element, "Override", ContentNamespace);
 				
-				if (!mimes.TryGetValue (extension, out existingMimeType)) {
-					node = doc.CreateNode (XmlNodeType.Element, "Default", ContentNamespace);
-					
-					XmlAttribute ext = doc.CreateAttribute ("Extension");
-					ext.Value = extension;
-					node.Attributes.Append (ext);
-					mimes [extension] = part.ContentType;
-				} else if (part.ContentType != existingMimeType) {
-					node = doc.CreateNode (XmlNodeType.Element, "Override", ContentNamespace);
-					
-					XmlAttribute name = doc.CreateAttribute ("PartName");
-					name.Value = part.Uri.ToString ();
-					node.Attributes.Append (name);
-				}
+				XmlAttribute contentType = doc.CreateAttribute ("ContentType");
+				contentType.Value = part.ContentType;
 				
-				if (node != null) {
-					XmlAttribute contentType = doc.CreateAttribute ("ContentType");
-					contentType.Value = part.ContentType;
-					node.Attributes.Prepend (contentType);
-	
-					root.AppendChild (node);
-				}
+				XmlAttribute name = doc.CreateAttribute ("PartName");
+				name.Value = part.Uri.ToString ();
+				
+
+				node.Attributes.Append (contentType);
+				node.Attributes.Append (name);
+
+				root.AppendChild (node);				
 			}
 
 			using (XmlTextWriter writer = new XmlTextWriter (s, System.Text.Encoding.UTF8))

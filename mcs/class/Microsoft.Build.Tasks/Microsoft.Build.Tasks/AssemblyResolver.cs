@@ -43,8 +43,8 @@ namespace Microsoft.Build.Tasks {
 	internal class AssemblyResolver {
 
 		// name -> (version -> assemblypath)
-		static Dictionary<string, TargetFrameworkAssemblies> target_framework_cache;
-		static Dictionary<string, Dictionary<Version, string>> gac;
+		Dictionary<string, TargetFrameworkAssemblies> target_framework_cache;
+		Dictionary<string, Dictionary<Version, string>> gac;
 		TaskLoggingHelper log;
 		List<string> search_log;
 
@@ -52,12 +52,10 @@ namespace Microsoft.Build.Tasks {
 
 		public AssemblyResolver ()
 		{
-			if (gac == null) {
-				gac = new Dictionary<string, Dictionary<Version, string>> ();
-				target_framework_cache = new Dictionary <string, TargetFrameworkAssemblies> ();
+			gac = new Dictionary<string, Dictionary<Version, string>> ();
+			target_framework_cache = new Dictionary <string, TargetFrameworkAssemblies> ();
 
-				GatherGacAssemblies ();
-			}
+			GatherGacAssemblies ();
 		}
 
 		public void ResetSearchLogger ()
@@ -313,14 +311,10 @@ namespace Microsoft.Build.Tasks {
 						SearchPath.HintPath, specific_version);
 		}
 
-		static Dictionary<string, AssemblyName> assemblyNameCache = new Dictionary<string, AssemblyName> ();
 		public bool TryGetAssemblyNameFromFile (string filename, out AssemblyName aname)
 		{
-			filename = Path.GetFullPath (filename);
-			if (assemblyNameCache.TryGetValue (filename, out aname))
-			    return aname != null;
-
 			aname = null;
+			filename = Path.GetFullPath (filename);
 			try {
 				aname = AssemblyName.GetAssemblyName (filename);
 			} catch (FileNotFoundException) {
@@ -331,7 +325,6 @@ namespace Microsoft.Build.Tasks {
 						filename);
 			}
 
-			assemblyNameCache [filename] = aname;
 			return aname != null;
 		}
 
@@ -452,7 +445,7 @@ namespace Microsoft.Build.Tasks {
 		{
 			this.Path = path;
 			NameToAssemblyNameCache = new Dictionary<string, KeyValuePair<AssemblyName, string>> (
-					StringComparer.OrdinalIgnoreCase);
+					StringComparer.InvariantCultureIgnoreCase);
 		}
 	}
 

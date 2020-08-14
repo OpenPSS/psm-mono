@@ -2112,6 +2112,20 @@ namespace MonoTests.System.Net
 			Assert.AreEqual(data64KB, received);
 		}
 
+		/*
+		Invalid test: it does not work on linux.
+		[pid 30973] send(9, "POST / HTTP/1.1\r\nContent-Length:"..., 89, 0) = 89
+		Abort set
+		[pid 30970] send(16, "HTTP/1.1 200 OK\r\nServer: Mono-HT"..., 133, 0) = 133
+		Calling abort
+		[pid 30970] close(16)                   = 0
+		Closing!!!
+		[pid 30980] send(9, "\213t\326\350\312u\36n\234\351\225L\r\243a\200\226\371\350F\271~oZ\32\270\24\226z4\211\345"..., 65536, 0) = 65536
+		Writing...
+		[pid 30966] close(4)                    = 0
+		OK
+		 *
+		 The server sideis closed (FD 16) and the send on the client side (FD 9) succeeds.
 		[Test]
 		[Category("NotWorking")]
 		public void WriteServerAborts ()
@@ -2139,6 +2153,7 @@ namespace MonoTests.System.Net
 				c.Response.Abort();
 			});
 		}
+		**/
 
 		[Test]
 		public void Read ()
@@ -3129,21 +3144,6 @@ namespace MonoTests.System.Net
 					req.Abort ();
 				}
 			}
-		}
-#endif
-
-#if NET_4_0
-		[Test]
-		// Bug6737
-		// This test is supposed to fail prior to .NET 4.0
-		public void Post_EmptyRequestStream ()
-		{
-			var wr = HttpWebRequest.Create ("http://google.com");
-			wr.Method = "POST";
-			wr.GetRequestStream ();
-			
-			var gr = wr.BeginGetResponse (delegate { }, null);
-			Assert.AreEqual (true, gr.AsyncWaitHandle.WaitOne (5000), "#1");
 		}
 #endif
 	}

@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Ast.Compiler {
 #else
 namespace System.Linq.Expressions.Compiler {
 #endif
-#if CLR2 || SILVERLIGHT
+#if CLR2 || SILVERLIGHT || MOBILE
     using ILGenerator = OffsetTrackingILGenerator;
 #endif
 
@@ -97,7 +97,7 @@ namespace System.Linq.Expressions.Compiler {
             _lambda = lambda;
             _method = method;
 
-#if CLR2 || SILVERLIGHT
+#if CLR2 || SILVERLIGHT || MOBILE
             _ilg = new OffsetTrackingILGenerator(method.GetILGenerator());
 #else
             _ilg = method.GetILGenerator();
@@ -136,7 +136,7 @@ namespace System.Linq.Expressions.Compiler {
             _typeBuilder = (TypeBuilder)method.DeclaringType;
             _method = method;
 
-#if CLR2 || SILVERLIGHT
+#if CLR2 || SILVERLIGHT || MOBILE
             _ilg = new OffsetTrackingILGenerator(method.GetILGenerator());
 #else
             _ilg = method.GetILGenerator();

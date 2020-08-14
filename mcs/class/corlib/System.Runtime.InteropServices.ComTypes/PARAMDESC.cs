@@ -28,6 +28,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[StructLayout (LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -37,3 +38,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		public PARAMFLAG wParamFlags;
 	}
 }
+#endif

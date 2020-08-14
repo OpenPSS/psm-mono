@@ -31,7 +31,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents accessing a field or property.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.MemberExpressionProxy))]
 #endif
     public class MemberExpression : Expression {

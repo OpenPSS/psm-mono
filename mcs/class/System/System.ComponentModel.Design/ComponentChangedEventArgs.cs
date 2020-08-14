@@ -61,11 +61,11 @@ namespace System.ComponentModel.Design
 		}
 
 		public object NewValue {
-			get { return newValue; }
+			get { return oldValue; }
 		}
 
 		public object OldValue {
-			get { return oldValue; }
+			get { return newValue; }
 		}
 	}
 }

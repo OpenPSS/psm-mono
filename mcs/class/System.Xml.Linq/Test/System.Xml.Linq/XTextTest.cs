@@ -61,12 +61,5 @@ namespace MonoTests.System.Xml.Linq
 			Assert.IsNotNull (newDocument);
 			Assert.IsNotNull (newDocument.Elements ().First ());
 		}
-		
-		[Test]
-		public void WriteWhitespaceToXml ()
-		{
-			var doc = new XDocument (new XText ("\n"), new XElement ("root"));
-			doc.Save (TextWriter.Null);
-		}
 	}
 }

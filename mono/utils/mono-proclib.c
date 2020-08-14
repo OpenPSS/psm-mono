@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <fcntl.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -13,7 +12,6 @@
 #include <windows.h>
 #endif
 
-/* FIXME: bsds untested */
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 #include <sys/param.h>
 #include <sys/types.h>
@@ -26,13 +24,11 @@
 #include <sys/user.h>
 #endif
 #ifdef HAVE_STRUCT_KINFO_PROC_KP_PROC
-#  ifdef KERN_PROC2
-#    define kinfo_pid_member p_pid
-#    define kinfo_name_member p_comm
-#  else
 #    define kinfo_pid_member kp_proc.p_pid
 #    define kinfo_name_member kp_proc.p_comm
-#  endif
+#elif defined(__OpenBSD__)
+#    define kinfo_pid_member p_pid
+#    define kinfo_name_member p_comm
 #else
 #define kinfo_pid_member ki_pid
 #define kinfo_name_member ki_comm
@@ -231,7 +227,7 @@ mono_process_get_name (gpointer pid, char *buf, int len)
 	FILE *file;
 	char *p;
 	int r;
-	sprintf (fname, "/proc/%d/cmdline", GPOINTER_TO_INT (pid));
+	g_snprintf (fname, sizeof(fname), "/proc/%d/cmdline", GPOINTER_TO_INT (pid));
 	buf [0] = 0;
 	file = fopen (fname, "r");
 	if (!file)
@@ -508,26 +504,7 @@ mono_process_get_data (gpointer pid, MonoProcessData data)
 int
 mono_cpu_count (void)
 {
-	int count = 0;
-#ifdef PLATFORM_ANDROID
-	/* Android tries really hard to save power by powering off CPUs on SMP phones which
-	 * means the normal way to query cpu count returns a wrong value with userspace API.
-	 * Instead we use /sys entries to query the actual hardware CPU count.
-	 */
-	char buffer[8] = {'\0'};
-	int present = open ("/sys/devices/system/cpu/present", O_RDONLY);
-	/* Format of the /sys entry is a cpulist of indexes which in the case
-	 * of present is always of the form "0-(n-1)" when there is more than
-	 * 1 core, n being the number of CPU cores in the system. Otherwise
-	 * the value is simply 0
-	 */
-	if (present != -1 && read (present, (char*)buffer, sizeof (buffer)) > 3)
-		count = strtol (((char*)buffer) + 2, NULL, 10);
-	if (present != -1)
-		close (present);
-	if (count > 0)
-		return count + 1;
-#endif
+	int count;
 #ifdef _SC_NPROCESSORS_ONLN
 	count = sysconf (_SC_NPROCESSORS_ONLN);
 	if (count > 0)
@@ -548,6 +525,16 @@ mono_cpu_count (void)
 		SYSTEM_INFO info;
 		GetSystemInfo (&info);
 		return info.dwNumberOfProcessors;
+	}
+#endif
+#if defined(TARGET_VITA)
+	{
+		return 4;
+	}
+#endif
+#if defined(TARGET_PS3)
+	{
+		return 3;
 	}
 #endif
 	/* FIXME: warn */
@@ -578,6 +565,7 @@ get_cpu_times (int cpu_id, gint64 *user, gint64 *systemt, gint64 *irq, gint64 *s
 			continue;
 		}
 		sscanf (data, "%Lu %Lu %Lu %Lu %Lu %Lu %Lu", &user_ticks, &nice_ticks, &system_ticks, &idle_ticks, &iowait_ticks, &irq_ticks, &sirq_ticks);
+		break;
 	}
 	fclose (f);
 

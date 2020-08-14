@@ -40,6 +40,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Reflection.Emit
 {
 	[TestFixture]
+	[Category("NotMobile")] // mobile profile doesn't support S.R.E
 	public class MethodOnTypeBuilderInstTest
 	{
 		private static string ASSEMBLY_NAME = "MonoTests.System.Reflection.Emit.MethodOnTypeBuilderInstTest";

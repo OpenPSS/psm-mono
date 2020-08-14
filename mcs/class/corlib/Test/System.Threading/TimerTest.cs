@@ -37,6 +37,14 @@ namespace MonoTests.System.Threading {
 		}
 
 		[Test]
+#if MOBILE
+		// is this really a valid test?  what's the guarantee about
+		// due times in .net?  I would think it's only a guarantee
+		// that the timer won't fire *before* that long, but is there
+		// an upper limit too?  very target performance specific,
+		// this test.
+		[Category("NotWorking")]
+#endif
 		public void TestDueTime ()
 		{
 			Bucket bucket = new Bucket();
@@ -82,6 +90,14 @@ namespace MonoTests.System.Threading {
 		}
 
 		[Test]
+#if MOBILE
+		// is this really a valid test?  what's the guarantee about
+		// due times in .net?  I would think it's only a guarantee
+		// that the timer won't fire *before* that long, but is there
+		// an upper limit too?  very target performance specific,
+		// this test.
+		[Category("NotWorking")]
+#endif
 		public void TestDispose ()
 		{	
 			Bucket bucket = new Bucket();

@@ -21,6 +21,9 @@ namespace MonoTests.System.Net.Sockets
 	public class TcpListenerTest
 	{
 		[Test]
+#if MOBILE
+		[Category("NotWorking")] // inListener.Pending() is False.
+#endif
 		public void TcpListener ()
 		{
 			// listen with a new listener (IPv4 is the default)

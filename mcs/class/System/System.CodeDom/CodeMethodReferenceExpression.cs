@@ -29,6 +29,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Runtime.InteropServices;
 
 namespace System.CodeDom 
@@ -41,9 +42,7 @@ namespace System.CodeDom
 	{
 		private string methodName;
 		private CodeExpression targetObject;
-#if NET_2_0
 		CodeTypeReferenceCollection typeArguments;
-#endif
 		
 		//
 		// Constructors
@@ -59,7 +58,6 @@ namespace System.CodeDom
 			this.methodName = methodName;
 		}
 
-#if NET_2_0
 		public CodeMethodReferenceExpression (CodeExpression targetObject, 
 			string methodName, params CodeTypeReference[] typeParameters) :
 			this (targetObject, methodName)
@@ -67,7 +65,6 @@ namespace System.CodeDom
 			if (typeParameters != null && typeParameters.Length > 0)
 				TypeArguments.AddRange (typeParameters);
 		}
-#endif
 
 		//
 		// Properties
@@ -93,7 +90,6 @@ namespace System.CodeDom
 			}
 		}
 
-#if NET_2_0
 		[ComVisible (false)]
 		public CodeTypeReferenceCollection TypeArguments {
 			get {
@@ -102,7 +98,6 @@ namespace System.CodeDom
 				return typeArguments;
 			}
 		}
-#endif
 
 		//
 		// ICodeDomVisitor method
@@ -113,3 +108,4 @@ namespace System.CodeDom
 		}
 	}
 }
+#endif

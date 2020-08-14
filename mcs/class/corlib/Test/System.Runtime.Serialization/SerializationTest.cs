@@ -28,6 +28,7 @@ namespace MonoTests.System.Runtime.Serialization
 		string uri;
 
 		[Test]
+		[Category("NotMobile")] // in the mobile profile System.Reflection.Assembly isn't marked as ISerializable
 		public void TestSerialization ()
 		{
 			MethodTester mt = new MethodTester();

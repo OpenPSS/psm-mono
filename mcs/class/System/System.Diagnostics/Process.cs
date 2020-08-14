@@ -32,6 +32,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.IO;
 using System.Text;
 using System.ComponentModel;
@@ -1126,7 +1127,8 @@ namespace System.Diagnostics {
 				throw new Win32Exception (-proc_info.pid,
 					"ApplicationName='" + startInfo.FileName +
 					"', CommandLine='" + startInfo.Arguments +
-					"', CurrentDirectory='" + startInfo.WorkingDirectory + "'");
+					"', CurrentDirectory='" + startInfo.WorkingDirectory +
+					"', Native error= " + Win32Exception.W32ErrorMessage (-proc_info.pid));
 			}
 
 			process.process_handle = proc_info.process_handle;
@@ -1697,4 +1699,4 @@ namespace System.Diagnostics {
 		}
 	}
 }
-
+#endif

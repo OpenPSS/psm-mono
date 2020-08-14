@@ -395,7 +395,6 @@ namespace System.Net
 			}
 		}
 
-		static char [] colon = { ':' };
 		static bool CheckValidHost (string scheme, string val)
 		{
 			if (val == null)
@@ -558,18 +557,7 @@ namespace System.Net
 		public ServicePoint ServicePoint {
 			get { return GetServicePoint (); }
 		}
-
-		internal ServicePoint ServicePointNoLock {
-			get { return servicePoint; }
-		}
-#if NET_4_5 || MOBILE
-		[MonoTODO ("for portable library support")]
-		public bool SupportsCookieContainer { 
-			get {
-				throw new NotImplementedException ();
-			}
-		}
-#endif
+		
 		public override int Timeout { 
 			get { return timeout; }
 			set {
@@ -654,43 +642,99 @@ namespace System.Net
 		
 		public void AddRange (int range)
 		{
-			AddRange ("bytes", range);
+			AddRange ("bytes", (long) range);
 		}
 		
 		public void AddRange (int from, int to)
 		{
-			AddRange ("bytes", from, to);
+			AddRange ("bytes", (long) from, (long) to);
 		}
 		
 		public void AddRange (string rangeSpecifier, int range)
 		{
-			if (rangeSpecifier == null)
-				throw new ArgumentNullException ("rangeSpecifier");
-			string value = webHeaders ["Range"];
-			if (value == null || value.Length == 0) 
-				value = rangeSpecifier + "=";
-			else if (value.ToLower ().StartsWith (rangeSpecifier.ToLower () + "="))
-				value += ",";
-			else
-				throw new InvalidOperationException ("rangeSpecifier");
-			webHeaders.RemoveAndAdd ("Range", value + range + "-");	
+			AddRange (rangeSpecifier, (long) range);
 		}
 		
 		public void AddRange (string rangeSpecifier, int from, int to)
 		{
+			AddRange (rangeSpecifier, (long) from, (long) to);
+		}
+#if NET_4_0
+		public
+#else
+		internal
+#endif
+		void AddRange (long range)
+		{
+			AddRange ("bytes", (long) range);
+		}
+
+#if NET_4_0
+		public
+#else
+		internal
+#endif
+		void AddRange (long from, long to)
+		{
+			AddRange ("bytes", from, to);
+		}
+
+#if NET_4_0
+		public
+#else
+		internal
+#endif
+		void AddRange (string rangeSpecifier, long range)
+		{
 			if (rangeSpecifier == null)
 				throw new ArgumentNullException ("rangeSpecifier");
-			if (from < 0 || to < 0 || from > to)
-				throw new ArgumentOutOfRangeException ();			
-			string value = webHeaders ["Range"];
-			if (value == null || value.Length == 0) 
-				value = rangeSpecifier + "=";
-			else if (value.ToLower ().StartsWith (rangeSpecifier.ToLower () + "="))
-				value += ",";
+			if (!WebHeaderCollection.IsHeaderValue (rangeSpecifier))
+				throw new ArgumentException ("Invalid range specifier", "rangeSpecifier");
+
+			string r = webHeaders ["Range"];
+			if (r == null)
+				r = rangeSpecifier + "=";
+			else {
+				string old_specifier = r.Substring (0, r.IndexOf ('='));
+				if (String.Compare (old_specifier, rangeSpecifier, StringComparison.OrdinalIgnoreCase) != 0)
+					throw new InvalidOperationException ("A different range specifier is already in use");
+				r += ",";
+			}
+
+			string n = range.ToString (CultureInfo.InvariantCulture);
+			if (range < 0)
+				r = r + "0" + n;
 			else
-				throw new InvalidOperationException ("rangeSpecifier");
-			webHeaders.RemoveAndAdd ("Range", value + from + "-" + to);	
+				r = r + n + "-";
+			webHeaders.RemoveAndAdd ("Range", r);
 		}
+
+#if NET_4_0
+		public
+#else
+		internal
+#endif
+		void AddRange (string rangeSpecifier, long from, long to)
+		{
+			if (rangeSpecifier == null)
+				throw new ArgumentNullException ("rangeSpecifier");
+			if (!WebHeaderCollection.IsHeaderValue (rangeSpecifier))
+				throw new ArgumentException ("Invalid range specifier", "rangeSpecifier");
+			if (from > to || from < 0)
+				throw new ArgumentOutOfRangeException ("from");
+			if (to < 0)
+				throw new ArgumentOutOfRangeException ("to");
+
+			string r = webHeaders ["Range"];
+			if (r == null)
+				r = rangeSpecifier + "=";
+			else
+				r += ",";
+
+			r = String.Format ("{0}{1}-{2}", r, from, to);
+			webHeaders.RemoveAndAdd ("Range", r);
+		}
+
 		
 		public override IAsyncResult BeginGetRequestStream (AsyncCallback callback, object state) 
 		{
@@ -775,24 +819,12 @@ namespace System.Net
 
 		void CheckIfForceWrite ()
 		{
-			if (writeStream == null || writeStream.RequestWritten || !InternalAllowBuffering)
+			if (writeStream == null || writeStream.RequestWritten|| contentLength < 0 || !InternalAllowBuffering)
 				return;
-#if NET_4_0
-			if (contentLength < 0 && writeStream.CanWrite == true && writeStream.WriteBufferLength < 0)
-				return;
-
-			if (contentLength < 0 && writeStream.WriteBufferLength >= 0)
-				InternalContentLength = writeStream.WriteBufferLength;
-#else
-			if (contentLength < 0 && writeStream.CanWrite == true)
-				return;
-#endif
 
 			// This will write the POST/PUT if the write stream already has the expected
-			// amount of bytes in it (ContentLength) (bug #77753) or if the write stream
-			// contains data and it has been closed already (xamarin bug #1512).
-
-			if (writeStream.WriteBufferLength == contentLength || (contentLength == -1 && writeStream.CanWrite == false))
+			// amount of bytes in it (ContentLength) (bug #77753).
+			if (writeStream.WriteBufferLength == contentLength)
 				writeStream.WriteRequest ();
 		}
 
@@ -1497,8 +1529,6 @@ namespace System.Net
 						bodyBufferLength = writeStream.WriteBufferLength;
 					}
 					b = Redirect (result, code);
-					if (b && ntlm_auth_state != 0)
-						ntlm_auth_state = 0;
 				}
 
 				if (resp != null && c >= 300 && c != 304)

@@ -301,14 +301,12 @@ namespace System.Xml.Linq
 
 		public string Value {
 			get { return XUtil.ToString (value); }
-			set { SetValue (value); }
+			set { this.value = value; }
 		}
 
 		public void Remove ()
 		{
 			if (Parent != null) {
-				var owner = Owner;
-				owner.OnRemovingObject (this);
 				if (next != null)
 					next.previous = previous;
 				if (previous != null)
@@ -318,7 +316,6 @@ namespace System.Xml.Linq
 				if (Parent.LastAttribute == this)
 					Parent.LastAttribute = previous;
 				SetOwner (null);
-				owner.OnRemovedObject (this);
 			}
 			next = null;
 			previous = null;
@@ -328,10 +325,7 @@ namespace System.Xml.Linq
 		{
 			if (value == null)
 				throw new ArgumentNullException ("value");
-
-			OnValueChanging (this);
 			this.value = XUtil.ToString (value);
-			OnValueChanged (this);
 		}
 
 		static readonly char [] escapeChars = new char [] {'<', '>', '&', '"', '\r', '\n', '\t'};

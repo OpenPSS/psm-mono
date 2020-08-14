@@ -85,16 +85,13 @@ namespace System
 		public virtual bool IsAlive {
 			get {
 				//Target property takes care of the exception
-				return (Target != null);
+				return (Target != null);		
 			}
 		}
 
 		public virtual object Target {
 			get {
-				// This shouldn't throw an exception after finalization
-				// http://blogs.msdn.com/b/yunjin/archive/2005/08/31/458231.aspx
-				if (!gcHandle.IsAllocated)
-					return null;
+				//Exception is thrown by gcHandle's Target
 				return gcHandle.Target;
 			}
 			set

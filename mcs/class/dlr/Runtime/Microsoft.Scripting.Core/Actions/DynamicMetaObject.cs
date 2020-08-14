@@ -311,7 +311,7 @@ namespace System.Dynamic {
             ContractUtils.RequiresNotNull(expression, "expression");
 
             IDynamicMetaObjectProvider ido = value as IDynamicMetaObjectProvider;
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
             if (ido != null && !RemotingServices.IsObjectOutOfAppDomain(value)) {
 #else
             if (ido != null) {

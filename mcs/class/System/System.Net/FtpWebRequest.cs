@@ -996,7 +996,7 @@ namespace System.Net
 				}
 
 				s.Close ();
-				origDataStream = new NetworkStream (incoming, true);
+				origDataStream = new NetworkStream (s, true);
 				dataStream = origDataStream;
 				if (EnableSsl)
 					ChangeToSSLSocket (ref dataStream);

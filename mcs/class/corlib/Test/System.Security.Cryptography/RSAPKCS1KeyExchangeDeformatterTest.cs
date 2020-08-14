@@ -196,6 +196,7 @@ public class RSAPKCS1KeyExchangeDeformatterTest : Assertion {
 		AsymmetricKeyExchangeDeformatter keyex = new RSAPKCS1KeyExchangeDeformatter (dsa);
 	}
 
+#if !MOBILE
 	[Test]
 	[ExpectedException (typeof (CryptographicException))]
 	public void Bug79320 ()
@@ -207,6 +208,7 @@ public class RSAPKCS1KeyExchangeDeformatterTest : Assertion {
 		RSAPKCS1KeyExchangeDeformatter def = new RSAPKCS1KeyExchangeDeformatter (r);
 		AssertNotNull (def.DecryptKeyExchange (bytes));
 	}
+#endif
 }
 
 }

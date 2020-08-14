@@ -1,5 +1,8 @@
 #include "mono-poll.h"
 #include <errno.h>
+#if defined(TARGET_VITA)
+#include "bridge.h"
+#endif
 
 #if defined(HAVE_POLL) && !defined(__APPLE__)
 int
@@ -8,13 +11,16 @@ mono_poll (mono_pollfd *ufds, unsigned int nfds, int timeout)
 	return poll (ufds, nfds, timeout);
 }
 #else
-
 int
 mono_poll (mono_pollfd *ufds, unsigned int nfds, int timeout)
 {
 	struct timeval tv, *tvptr;
 	int i, fd, events, affected, count;
+#if defined(TARGET_VITA)
+	PssNetFdSet rfds, wfds, efds;
+#else
 	fd_set rfds, wfds, efds;
+#endif
 	int nexc = 0;
 	int maxfd = 0;
 
@@ -62,7 +68,11 @@ mono_poll (mono_pollfd *ufds, unsigned int nfds, int timeout)
 			
 	}
 
+#if defined(TARGET_VITA)
+	affected = pss_net_select (maxfd + 1, &rfds, &wfds, &efds, timeout);
+#else
 	affected = select (maxfd + 1, &rfds, &wfds, &efds, tvptr);
+#endif
 	if (affected == -1) {
 #ifdef HOST_WIN32
 		int error = WSAGetLastError ();

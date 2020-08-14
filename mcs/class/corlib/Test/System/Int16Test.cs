@@ -169,14 +169,6 @@ public class Int16Test
 		Assert.AreEqual (7345, Int64.Parse ("7345\0\0\0"), "#4");
 	}
 
-	[Test]
-	public void Parse_MinMax ()
-	{
-		Assert.AreEqual (Int16.MinValue, Int16.Parse ("-32768"), "MinValue");
-		Assert.AreEqual (Int16.MaxValue, Int16.Parse ("32767"), "MaxValue");
-		Assert.AreEqual (-1, Int16.Parse ("FFFF", NumberStyles.HexNumber), "MaxHex");
-	}
-
 	[Test]	
 	public void TestToString()
 	{
@@ -221,12 +213,6 @@ public class Int16Test
 		Assert.AreEqual (def, i.ToString (String.Empty, null), "ToString(empty,null)");
 
 		Assert.AreEqual ("254", def, "ToString(G)");
-	}
-
-	[Test]
-	public void Bug3677 ()
-	{
-		Assert.AreEqual (-7197, short.Parse("E3E3", NumberStyles.HexNumber), "HexNumber");
 	}
 }
 

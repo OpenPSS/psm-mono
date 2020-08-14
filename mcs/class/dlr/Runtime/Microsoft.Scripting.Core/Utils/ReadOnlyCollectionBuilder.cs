@@ -31,7 +31,7 @@ namespace System.Runtime.CompilerServices {
     /// The builder for read only collection.
     /// </summary>
     /// <typeparam name="T">The type of the collection element.</typeparam>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [Serializable]
 #endif
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
@@ -42,7 +42,7 @@ namespace System.Runtime.CompilerServices {
         private int _size;
         private int _version;
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
         [NonSerialized]
 #endif
         private Object _syncRoot;
@@ -452,7 +452,7 @@ namespace System.Runtime.CompilerServices {
             throw new ArgumentException(Strings.InvalidObjectType(value != null ? value.GetType() : (object)"null", typeof(T)), argument);
         }
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
         [Serializable]
 #endif
         private class Enumerator : IEnumerator<T>, System.Collections.IEnumerator {

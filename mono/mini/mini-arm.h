@@ -2,6 +2,7 @@
 #define __MONO_MINI_ARM_H__
 
 #include <mono/arch/arm/arm-codegen.h>
+#include <mono/utils/mono-context.h>
 #include <glib.h>
 
 #if defined(ARM_FPU_NONE) || (defined(__ARM_EABI__) && !defined(ARM_FPU_VFP))
@@ -87,11 +88,18 @@
 #define MONO_ARCH_CODE_ALIGNMENT 32
 
 void arm_patch (guchar *code, const guchar *target);
+void arm_patch_general (MonoDomain *domain, guchar *code, const guchar *target, MonoCodeManager *dyn_code_mp, gboolean lock_code);
 guint8* mono_arm_emit_load_imm (guint8 *code, int dreg, guint32 val);
 int mono_arm_is_rotated_imm8 (guint32 val, gint *rot_amount);
 
 void
 mono_arm_throw_exception_by_token (guint32 type_token, unsigned long eip, unsigned long esp, gulong *int_regs, gdouble *fp_regs);
+
+typedef enum {
+	MONO_ARM_FPU_NONE = 0,
+	MONO_ARM_FPU_FPA = 1,
+	MONO_ARM_FPU_VFP = 2
+} MonoArmFPU;
 
 /* keep the size of the structure a multiple of 8 */
 struct MonoLMF {
@@ -103,8 +111,12 @@ struct MonoLMF {
 	gpointer    lmf_addr;
 	/* This is only set in trampoline LMF frames */
 	MonoMethod *method;
-	gulong     esp;
-	gulong     eip;
+	gulong     sp;
+	gulong     ip;
+	gulong     fp;
+#if defined(TARGET_VITA)
+	gdouble    fregs [MONO_SAVED_FREGS]; /* 8..15 */
+#endif
 	/* all but sp and pc: matches the PUSH instruction layout in the trampolines
 	 * 0-4 should be considered undefined (execpt in the magic tramp)
 	 * sp is saved at IP.
@@ -112,25 +124,13 @@ struct MonoLMF {
 	gulong     iregs [14];
 };
 
-/* we define our own structure and we'll copy the data
- * from sigcontext/ucontext/mach when we need it.
- * This also makes us save stack space and time when copying
- * We might also want to add an additional field to propagate
- * the original context from the signal handler.
- */
-typedef struct {
-	gulong eip;          // pc 
-	gulong esp;          // sp
-	gulong regs [16];
-	double fregs [MONO_SAVED_FREGS];
-} MonoContext;
-
 typedef struct MonoCompileArch {
 	gpointer seq_point_info_var, ss_trigger_page_var;
 	gpointer seq_point_read_var, seq_point_ss_method_var;
 	gpointer seq_point_bp_method_var;
 	gboolean omit_fp, omit_fp_computed;
 	gpointer cinfo;
+	gpointer vret_addr_loc;
 } MonoCompileArch;
 
 #define MONO_ARCH_EMULATE_FCONV_TO_I8 1
@@ -146,7 +146,10 @@ typedef struct MonoCompileArch {
 #define ARM_FIRST_ARG_REG 0
 #define ARM_LAST_ARG_REG 3
 
+#if !defined(TARGET_VITA)
 #define MONO_ARCH_USE_SIGACTION 1
+#endif
+
 #define MONO_ARCH_NEED_DIV_CHECK 1
 
 #define MONO_ARCH_HAVE_CREATE_DELEGATE_TRAMPOLINE
@@ -170,28 +173,27 @@ typedef struct MonoCompileArch {
 #define MONO_ARCH_DYN_CALL_PARAM_AREA 24
 
 #define MONO_ARCH_SOFT_DEBUG_SUPPORTED 1
+
 #define MONO_ARCH_HAVE_EXCEPTIONS_INIT 1
 #define MONO_ARCH_HAVE_GET_TRAMPOLINES 1
+#define MONO_ARCH_HAVE_CONTEXT_SET_INT_REG 1
 #define MONO_ARCH_HAVE_SIGCTX_TO_MONOCTX 1
+#define MONO_ARCH_GC_MAPS_SUPPORTED 1
+#define MONO_ARCH_HAVE_SETUP_ASYNC_CALLBACK 1
+#define MONO_ARCH_HAVE_CONTEXT_SET_INT_REG 1
 
 /* Matches the HAVE_AEABI_READ_TP define in mini-arm.c */
 #if defined(__ARM_EABI__) && defined(__linux__) && !defined(TARGET_ANDROID)
 #define MONO_ARCH_HAVE_TLS_GET 1
+#elif defined(TARGET_VITA)
+#define MONO_ARCH_USES_EXCEPTION_THREAD 1
+#define MONO_ARCH_HAVE_TLS_GET (mono_arm_have_tls_get ())
 #endif
 
 /* ARM doesn't have too many registers, so we have to use a callee saved one */
 #define MONO_ARCH_RGCTX_REG ARMREG_V5
 /* First argument reg */
 #define MONO_ARCH_VTABLE_REG ARMREG_R0
-
-/* we have the stack pointer, not the base pointer in sigcontext */
-#define MONO_CONTEXT_SET_IP(ctx,ip) do { (ctx)->eip = (int)ip; } while (0); 
-#define MONO_CONTEXT_SET_BP(ctx,bp) do { (ctx)->regs [ARMREG_FP] = (int)bp; } while (0); 
-#define MONO_CONTEXT_SET_SP(ctx,bp) do { (ctx)->esp = (int)bp; } while (0); 
-
-#define MONO_CONTEXT_GET_IP(ctx) ((gpointer)((ctx)->eip))
-#define MONO_CONTEXT_GET_BP(ctx) ((gpointer)((ctx)->regs [ARMREG_FP]))
-#define MONO_CONTEXT_GET_SP(ctx) ((gpointer)((ctx)->esp))
 
 #define MONO_CONTEXT_SET_LLVM_EXC_REG(ctx, exc) do { (ctx)->regs [0] = (gsize)exc; } while (0)
 
@@ -215,11 +217,23 @@ mono_arm_resume_unwind (guint32 dummy1, unsigned long eip, unsigned long esp, gu
 gboolean
 mono_arm_thumb_supported (void);
 
+gboolean
+mono_arm_hardfp_abi_supported (void);
+
 GSList*
 mono_arm_get_exception_trampolines (gboolean aot) MONO_INTERNAL;
 
 guint8*
 mono_arm_get_thumb_plt_entry (guint8 *code) MONO_INTERNAL;
+
+gboolean
+mono_arm_have_tls_get (void) MONO_INTERNAL;
+
+void
+mono_arm_lock_code (gpointer code) MONO_INTERNAL;
+
+void
+mono_arm_unlock_code (gpointer code) MONO_INTERNAL;
 
 #endif /* __MONO_MINI_ARM_H__ */
 

@@ -27,7 +27,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-#if !MOONLIGHT
+#if !MOONLIGHT && SCE_DISABLED
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
@@ -58,8 +58,12 @@ namespace System.IO.IsolatedStorage {
 
 				StackFrame sf = new StackFrame (3); // skip self and constructor
 				isf = IsolatedStorageFile.GetStore (IsolatedStorageScope.User | IsolatedStorageScope.Domain | IsolatedStorageScope.Assembly,
+#if MOBILE
+					null, null);
+#else
 					IsolatedStorageFile.GetDomainIdentityFromEvidence (AppDomain.CurrentDomain.Evidence), 
 					IsolatedStorageFile.GetAssemblyIdentityFromEvidence (sf.GetMethod ().ReflectedType.Assembly.UnprotectedGetEvidence ()));
+#endif
 			}
 
 #if NET_4_0 || MOBILE

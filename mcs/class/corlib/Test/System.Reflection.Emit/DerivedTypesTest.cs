@@ -26,6 +26,7 @@ namespace MonoTests.System.Reflection.Emit
 {
 #if NET_2_0
 	[TestFixture]
+	[Category("NotMobile")] // mobile profile doesn't support S.R.E
 	public class PointerTypeTest
 	{
 		AssemblyBuilder assembly;

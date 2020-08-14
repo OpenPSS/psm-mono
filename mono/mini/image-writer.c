@@ -17,7 +17,9 @@
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
+#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
 #include <ctype.h>
 #include <string.h>
 #ifndef HOST_WIN32
@@ -28,7 +30,9 @@
 #endif
 
 #include <errno.h>
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
 #include <limits.h>    /* for PAGESIZE */
 #ifndef PAGESIZE
 #define PAGESIZE 4096
@@ -1714,7 +1718,7 @@ asm_writer_emit_bytes (MonoImageWriter *acfg, const guint8* buf, int size)
 	if (byte_to_str == NULL) {
 		byte_to_str = g_new0 (char, 256 * 8);
 		for (i = 0; i < 256; ++i) {
-			sprintf (byte_to_str + (i * 8), ",%d", i);
+			g_snprintf (byte_to_str + (i * 8), 8, ",%d", i);
 		}
 	}
 
@@ -1789,7 +1793,7 @@ asm_writer_emit_symbol_diff (MonoImageWriter *acfg, const char *end, const char*
 
 	if (offset == 0 && strcmp (start, ".") != 0) {
 		char symbol [128];
-		sprintf (symbol, ".LDIFF_SYM%d", acfg->label_gen);
+		g_snprintf (symbol, sizeof(symbol), ".LDIFF_SYM%d", acfg->label_gen);
 		acfg->label_gen ++;
 		fprintf (acfg->fp, "\n%s=%s - %s", symbol, end, start);
 		fprintf (acfg->fp, "\n\t%s ", AS_INT32_DIRECTIVE);

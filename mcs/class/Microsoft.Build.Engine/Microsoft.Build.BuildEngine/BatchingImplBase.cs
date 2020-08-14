@@ -62,7 +62,7 @@ namespace Microsoft.Build.BuildEngine {
 		protected void Init ()
 		{
 			// all referenced item lists
-			consumedItemsByName = new Dictionary<string, BuildItemGroup> (StringComparer.OrdinalIgnoreCase);
+			consumedItemsByName = new Dictionary<string, BuildItemGroup> (StringComparer.InvariantCultureIgnoreCase);
 
 			// all referenced metadata
 			consumedMetadataReferences = new List<MetadataReference> ();
@@ -72,10 +72,10 @@ namespace Microsoft.Build.BuildEngine {
 
 		protected void BatchAndPrepareBuckets ()
 		{
-			batchedItemsByName = new Dictionary<string, BuildItemGroup> (StringComparer.OrdinalIgnoreCase);
+			batchedItemsByName = new Dictionary<string, BuildItemGroup> (StringComparer.InvariantCultureIgnoreCase);
 
 			// These will passed as is for every batch
-			commonItemsByName = new Dictionary<string, BuildItemGroup> (StringComparer.OrdinalIgnoreCase);
+			commonItemsByName = new Dictionary<string, BuildItemGroup> (StringComparer.InvariantCultureIgnoreCase);
 
 			ValidateUnqualifiedMetadataReferences ();
 
@@ -159,7 +159,7 @@ namespace Microsoft.Build.BuildEngine {
 		ICollection<Dictionary<string, BuildItemGroup>> Bucketize ()
 		{
 			var buckets = new Dictionary<string, Dictionary<string, BuildItemGroup>> (
-					StringComparer.OrdinalIgnoreCase);
+					StringComparer.InvariantCultureIgnoreCase);
 
 			// For each item list represented in "BatchedItemNames", and then for each item
 			// within that list, get the values for that item for each of the metadata in
@@ -199,7 +199,7 @@ namespace Microsoft.Build.BuildEngine {
 					if (!buckets.TryGetValue (bucket_key, out bucket))
 						// new bucket
 						buckets [bucket_key] = bucket = new Dictionary<string, BuildItemGroup> (
-								StringComparer.OrdinalIgnoreCase);
+								StringComparer.InvariantCultureIgnoreCase);
 
 					string itemGroup_key = item.Name;
 					BuildItemGroup itemGroup;

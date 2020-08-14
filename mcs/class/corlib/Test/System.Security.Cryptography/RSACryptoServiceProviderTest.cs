@@ -1,3 +1,4 @@
+#if !MOBILE
 //
 // RSACryptoServiceProviderTest.cs, NUnit Test Cases for RSACryptoServiceProvider
 //
@@ -45,7 +46,8 @@ public class RSACryptoServiceProviderTest : Assertion {
 
 	private bool machineKeyStore;
 
-	public RSACryptoServiceProviderTest () 
+	[TestFixtureSetUp]
+	public void FixtureSetUp () 
 	{
 		sha1OID = CryptoConfig.MapNameToOID ("SHA1");
 		disposed = new RSACryptoServiceProvider (minKeySize);
@@ -414,7 +416,7 @@ public class RSACryptoServiceProviderTest : Assertion {
 		rsa.VerifyHash (hash, "1.3.14.3.2.26", null);
 	}
 
-#if NET_2_0 && !NET_2_1
+#if NET_2_0
 	[Test]
 	[Category ("NotWorking")]
 	public void ImportDisposed ()
@@ -1150,7 +1152,6 @@ public class RSACryptoServiceProviderTest : Assertion {
 	}
 
 #if NET_2_0
-#if !NET_2_1
 	[Test]
 	[Category ("NotWorking")]
 	public void CspKeyContainerInfo_NewKeypair ()
@@ -1212,7 +1213,7 @@ public class RSACryptoServiceProviderTest : Assertion {
 		Assert ("Removable", !info.Removable);
 		// info.UniqueKeyContainerName throws a CryptographicException at this stage
 	}
-#endif
+
 	[Test]
 	public void ExportCspBlob_Full () 
 	{
@@ -1328,3 +1329,4 @@ public class RSACryptoServiceProviderTest : Assertion {
 }
 
 }
+#endif

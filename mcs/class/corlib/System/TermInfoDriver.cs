@@ -548,7 +548,6 @@ namespace System {
 					Init ();
 				}
 
-				CheckWindowDimensions ();
 				return bufferHeight;
 			}
 			set {
@@ -566,7 +565,6 @@ namespace System {
 					Init ();
 				}
 
-				CheckWindowDimensions ();
 				return bufferWidth;
 			}
 			set {

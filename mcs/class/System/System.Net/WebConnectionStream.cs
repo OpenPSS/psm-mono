@@ -44,7 +44,6 @@ namespace System.Net
 		byte [] readBuffer;
 		int readBufferOffset;
 		int readBufferSize;
-		int stream_length; // -1 when CL not present
 		int contentLength;
 		int totalRead;
 		internal long totalWritten;
@@ -92,10 +91,6 @@ namespace System.Net
 			} else {
 				contentLength = Int32.MaxValue;
 			}
-
-			// Negative numbers?
-			if (!Int32.TryParse (clength, out stream_length))
-				stream_length = -1;
 		}
 
 		public WebConnectionStream (WebConnection cnc, HttpWebRequest request)
@@ -643,11 +638,8 @@ namespace System.Net
 			long cl = request.ContentLength;
 			string method = request.Method;
 			bool no_writestream = (method == "GET" || method == "CONNECT" || method == "HEAD" ||
-						method == "TRACE");
-			bool webdav = (method == "PROPFIND" || method == "PROPPATCH" || method == "MKCOL" ||
-			               method == "COPY" || method == "MOVE" || method == "LOCK" ||
-			               method == "UNLOCK");
-			if (sendChunked || cl > -1 || no_writestream || webdav) {
+						method == "TRACE" || method == "DELETE");
+			if (sendChunked || cl > -1 || no_writestream) {
 				WriteHeaders ();
 				if (!initRead) {
 					initRead = true;
@@ -706,7 +698,7 @@ namespace System.Net
 			if (!headersSent) {
 				string method = request.Method;
 				bool no_writestream = (method == "GET" || method == "CONNECT" || method == "HEAD" ||
-							method == "TRACE");
+							method == "TRACE" || method == "DELETE");
 				if (!no_writestream)
 					request.InternalContentLength = length;
 				request.SendRequestHeaders (true);
@@ -779,8 +771,7 @@ namespace System.Net
 				throw new WebException ("Request was cancelled.", io, WebExceptionStatus.RequestCanceled);
 			}
 
-			// Commented out the next line to fix xamarin bug #1512
-			//WriteRequest ();
+			WriteRequest ();
 			disposed = true;
 		}
 
@@ -812,11 +803,7 @@ namespace System.Net
 		}
 
 		public override long Length {
-			get {
-				if (!isRead)
-					throw new NotSupportedException ();
-				return stream_length;
-			}
+			get { throw new NotSupportedException (); }
 		}
 
 		public override long Position {

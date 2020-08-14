@@ -41,7 +41,7 @@ namespace System.Linq.Expressions {
     /// <remarks>
     /// Lambda expressions take input through parameters and are expected to be fully bound. 
     /// </remarks>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.LambdaExpressionProxy))]
 #endif
     public abstract class LambdaExpression : Expression {

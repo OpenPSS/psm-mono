@@ -219,7 +219,7 @@ throw_exception (MonoObject *exc, unsigned long eip, unsigned long esp, gboolean
 		if (!rethrow)
 			mono_ex->stack_trace = NULL;
 	}
-	mono_handle_exception (&ctx, exc, (void *)eip, FALSE);
+	mono_handle_exception (&ctx, exc);
 #ifdef DEBUG_EXCEPTIONS
 	g_print ("throw_exception: restore to pc=%p sp=%p fp=%p ctx=%p\n",
 		 (void *) ctx.sc_pc, (void *) ctx.sc_regs[mips_sp],
@@ -396,25 +396,6 @@ mono_arch_get_throw_corlib_exception (MonoTrampInfo **info, gboolean aot)
 	mono_arch_get_throw_exception_generic (start, sizeof (start), TRUE, FALSE);
 	inited = 1;
 	return start;
-}	
-
-static MonoArray *
-glist_to_array (GList *list, MonoClass *eclass) 
-{
-	MonoDomain *domain = mono_domain_get ();
-	MonoArray *res;
-	int len, i;
-
-	if (!list)
-		return NULL;
-
-	len = g_list_length (list);
-	res = mono_array_new (domain, eclass, len);
-
-	for (i = 0; list; list = list->next, i++)
-		mono_array_set (res, gpointer, i, list->data);
-
-	return res;
 }
 
 /*
@@ -432,37 +413,28 @@ mono_arch_find_jit_info (MonoDomain *domain, MonoJitTlsData *jit_tls,
 							 mgreg_t **save_locations,
 							 StackFrameInfo *frame)
 {
-	gpointer ip = MONO_CONTEXT_GET_IP (ctx);
-	gpointer fp = MONO_CONTEXT_GET_BP (ctx);
-	guint32 sp;
-
 	memset (frame, 0, sizeof (StackFrameInfo));
 	frame->ji = ji;
-	frame->managed = FALSE;
 
 	*new_ctx = *ctx;
 
 	if (ji != NULL) {
-		int i;
 		gint32 address;
-		int offset = 0;
+		gpointer ip = MONO_CONTEXT_GET_IP (ctx);
+		gpointer fp = MONO_CONTEXT_GET_BP (ctx);
+		guint32 sp;
 
 		frame->type = FRAME_TYPE_MANAGED;
 
-		if (!ji->method->wrapper_type || ji->method->wrapper_type == MONO_WRAPPER_DYNAMIC_METHOD)
-			frame->managed = TRUE;
-
-		if (*lmf && (MONO_CONTEXT_GET_BP (ctx) >= (gpointer)(*lmf)->ebp)) {
+		if (*lmf && (fp >= (gpointer)(*lmf)->ebp)) {
 			/* remove any unused lmf */
 			*lmf = (*lmf)->previous_lmf;
 		}
 
 		address = (char *)ip - (char *)ji->code_start;
 
-		/* My stack frame */
-		fp = MONO_CONTEXT_GET_BP (ctx);
-
-		/* Compute the previous stack frame */
+		/* Compute the previous stack frame, assuming method
+		 * starts with addiu sp, sp, <offset>. */
 		sp = (guint32)(fp) - (short)(*(guint32 *)(ji->code_start));
 
 		/* Sanity check the frame */
@@ -512,7 +484,7 @@ mono_arch_find_jit_info (MonoDomain *domain, MonoJitTlsData *jit_tls,
 		MONO_CONTEXT_SET_IP (new_ctx, new_ctx->sc_regs[mips_ra] - 8);
 
 		/* Sanity check -- we should have made progress here */
-		g_assert (new_ctx->sc_pc != ctx->sc_pc);
+		g_assert (MONO_CONTEXT_GET_BP (new_ctx) != MONO_CONTEXT_GET_BP (ctx));
 		return TRUE;
 	} else if (*lmf) {
 		if (!(*lmf)->method) {
@@ -582,7 +554,7 @@ mono_arch_ip_from_context (void *sigctx)
  * This is the function called from the signal handler
  */
 gboolean
-mono_arch_handle_exception (void *ctx, gpointer obj, gboolean test_only)
+mono_arch_handle_exception (void *ctx, gpointer obj)
 {
 	MonoContext mctx;
 	gboolean result;
@@ -591,7 +563,7 @@ mono_arch_handle_exception (void *ctx, gpointer obj, gboolean test_only)
 #ifdef DEBUG_EXCEPTIONS
 	g_print ("mono_arch_handle_exception: pc=%p\n", (void *) mctx.sc_pc);
 #endif
-	mono_handle_exception (&mctx, obj, (gpointer)mctx.sc_pc, test_only);
+	mono_handle_exception (&mctx, obj);
 	result = TRUE;
 
 #ifdef DEBUG_EXCEPTIONS
@@ -604,11 +576,3 @@ mono_arch_handle_exception (void *ctx, gpointer obj, gboolean test_only)
 
 	return result;
 }
-
-
-gboolean
-mono_arch_has_unwind_info (gconstpointer addr)
-{
-	return FALSE;
-}
-

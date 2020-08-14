@@ -31,9 +31,6 @@ using System.Collections.ObjectModel;
 
 namespace System.Linq.Expressions {
 
-#if MONOTOUCH
-	public
-#endif
 	abstract class ExpressionVisitor {
 
 		protected virtual void Visit (Expression expression)

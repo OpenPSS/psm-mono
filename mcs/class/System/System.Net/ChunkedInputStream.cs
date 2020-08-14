@@ -159,7 +159,7 @@ namespace System.Net {
 				ares.AsyncWaitHandle.WaitOne ();
 
 			if (my_ares.Error != null)
-				throw new HttpListenerException (400, "I/O operation aborted: " + my_ares.Error.Message);
+				throw new HttpListenerException (400, "I/O operation aborted.");
 
 			return my_ares.Count;
 		}

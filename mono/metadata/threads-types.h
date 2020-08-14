@@ -58,11 +58,11 @@ gpointer mono_create_thread (WapiSecurityAttributes *security,
 							 guint32 stacksize, WapiThreadStart start,
 							 gpointer param, guint32 create, gsize *tid) MONO_INTERNAL;
 
-MonoInternalThread* mono_thread_create_internal (MonoDomain *domain, gpointer func, gpointer arg, gboolean threadpool_thread, gboolean no_detach, guint32 stack_size) MONO_INTERNAL;
+MonoInternalThread* mono_thread_create_internal (MonoDomain *domain, gpointer func, gpointer arg, gboolean threadpool_thread, guint32 stack_size) MONO_INTERNAL;
 
 void mono_threads_install_cleanup (MonoThreadCleanupFunc func) MONO_INTERNAL;
 
-void ves_icall_System_Threading_Thread_ConstructInternalThread (MonoThread *this) MONO_INTERNAL;
+void ves_icall_System_Threading_Thread_ConstructInternalThread (MonoThread *thiz) MONO_INTERNAL;
 HANDLE ves_icall_System_Threading_Thread_Thread_internal(MonoThread *this_obj, MonoObject *start) MONO_INTERNAL;
 void ves_icall_System_Threading_InternalThread_Thread_free_internal(MonoInternalThread *this_obj, HANDLE thread) MONO_INTERNAL;
 void ves_icall_System_Threading_Thread_Sleep_internal(gint32 ms) MONO_INTERNAL;
@@ -161,6 +161,10 @@ gboolean mono_thread_internal_has_appdomain_ref (MonoInternalThread *thread, Mon
 void mono_thread_internal_reset_abort (MonoInternalThread *thread) MONO_INTERNAL;
 
 void mono_alloc_special_static_data_free (GHashTable *special_static_fields) MONO_INTERNAL;
+void mono_special_static_data_free_slot (guint32 offset, guint32 size) MONO_INTERNAL;
+uint32_t mono_thread_alloc_tls   (MonoReflectionType *type) MONO_INTERNAL;
+void     mono_thread_destroy_tls (uint32_t tls_offset) MONO_INTERNAL;
+void     mono_thread_destroy_domain_tls (MonoDomain *domain) MONO_INTERNAL;
 void mono_thread_free_local_slot_values (int slot, MonoBoolean thread_local) MONO_INTERNAL;
 void mono_thread_current_check_pending_interrupt (void) MONO_INTERNAL;
 void mono_thread_get_stack_bounds (guint8 **staddr, size_t *stsize) MONO_INTERNAL;
@@ -181,30 +185,7 @@ MonoException* mono_thread_get_undeniable_exception (void);
 
 MonoException* mono_thread_get_and_clear_pending_exception (void) MONO_INTERNAL;
 
-typedef struct {
-	gpointer hazard_pointers [2];
-} MonoThreadHazardPointers;
-
-typedef void (*MonoHazardousFreeFunc) (gpointer p);
-
-void mono_thread_hazardous_free_or_queue (gpointer p, MonoHazardousFreeFunc free_func);
-void mono_thread_hazardous_try_free_all (void);
-
-MonoThreadHazardPointers* mono_hazard_pointer_get (void);
-
-void mono_thread_set_name_internal (MonoInternalThread *this_obj, MonoString *name, gboolean managed) MONO_INTERNAL;
-
 void mono_threads_install_notify_pending_exc (MonoThreadNotifyPendingExcFunc func) MONO_INTERNAL;
-
-#define mono_hazard_pointer_set(hp,i,v)	\
-	do { g_assert ((i) == 0 || (i) == 1); \
-		(hp)->hazard_pointers [(i)] = (v); \
-		mono_memory_write_barrier (); \
-	} while (0)
-#define mono_hazard_pointer_clear(hp,i)	\
-	do { g_assert ((i) == 0 || (i) == 1); \
-		(hp)->hazard_pointers [(i)] = NULL; \
-	} while (0)
 
 MonoObject* mono_thread_get_execution_context (void) MONO_INTERNAL;
 void mono_thread_set_execution_context (MonoObject *ec) MONO_INTERNAL;
@@ -230,10 +211,11 @@ void mono_thread_interruption_checkpoint (void) MONO_INTERNAL;
 void mono_thread_force_interruption_checkpoint (void) MONO_INTERNAL;
 gint32* mono_thread_interruption_request_flag (void) MONO_INTERNAL;
 
-uint32_t mono_alloc_special_static_data (uint32_t static_type, uint32_t size, uint32_t align, uintptr_t *bitmap, int numbits) MONO_INTERNAL;
+uint32_t mono_alloc_special_static_data (uint32_t static_type, uint32_t size, uint32_t align, uintptr_t *bitmap, int max_set) MONO_INTERNAL;
 void*    mono_get_special_static_data   (uint32_t offset) MONO_INTERNAL;
 gpointer mono_get_special_static_data_for_thread (MonoInternalThread *thread, guint32 offset) MONO_INTERNAL;
 
 MonoException* mono_thread_resume_interruption (void) MONO_INTERNAL;
+void mono_threads_perform_thread_dump (void) MONO_INTERNAL;
 
 #endif /* _MONO_METADATA_THREADS_TYPES_H_ */

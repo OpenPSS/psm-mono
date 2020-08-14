@@ -219,12 +219,11 @@ namespace System.Web.Routing
 
 			for (int tokenIndex = tokensCount - 1; tokenIndex > -1; tokenIndex--) {
 				token = tokens [tokenIndex];
-				tokenType = token.Type;
-				tokenName = token.Name;
-
-				if (startIndex < 0 && tokenType != PatternTokenType.CatchAll)
+				if (startIndex < 0)
 					return false;
 
+				tokenType = token.Type;
+				tokenName = token.Name;
 
 				if (segIndex > segmentCount - 1 || tokenType == PatternTokenType.CatchAll) {
 					var sb = new StringBuilder ();
@@ -304,8 +303,8 @@ namespace System.Web.Routing
 				argSegs = path.Split ('/');
 				argsCount = argSegs.Length;
 
-				if (String.IsNullOrEmpty (argSegs [argsCount - 1]) && !haveSegmentWithCatchAll)
-					argsCount--; // path ends with a trailing '/'
+				if (String.IsNullOrEmpty (argSegs [argsCount - 1]))
+					argsCount--; // path ends with a trailinig '/'
 			}
 			bool haveDefaults = defaults != null && defaults.Count > 0;
 

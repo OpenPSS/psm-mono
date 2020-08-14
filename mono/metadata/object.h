@@ -254,6 +254,9 @@ mono_store_remote_field_new (MonoObject *this_obj, MonoClass *klass, MonoClassFi
 void
 mono_unhandled_exception    (MonoObject *exc);
 
+char*
+mono_unhandled_exception_message (MonoObject *exc);
+
 void
 mono_print_unhandled_exception (MonoObject *exc);
 

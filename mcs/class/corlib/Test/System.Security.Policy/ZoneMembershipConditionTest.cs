@@ -305,6 +305,7 @@ namespace MonoTests.System.Security.Policy {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void FromXml_PolicyLevel ()
 		{
 			ZoneMembershipCondition zmc = new ZoneMembershipCondition (SecurityZone.MyComputer);
@@ -330,6 +331,7 @@ namespace MonoTests.System.Security.Policy {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ToXml_PolicyLevel ()
 		{
 			ZoneMembershipCondition zmc = new ZoneMembershipCondition (SecurityZone.MyComputer);

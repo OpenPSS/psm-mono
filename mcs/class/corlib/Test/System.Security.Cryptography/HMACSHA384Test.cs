@@ -48,7 +48,7 @@ namespace MonoTests.System.Security.Cryptography {
 		private bool legacy;
 
 		[SetUp]
-		public override void SetUp () 
+		protected override void SetUp () 
 		{
 			algo = new HMACSHA384 ();
 			algo.Key = new byte [8];

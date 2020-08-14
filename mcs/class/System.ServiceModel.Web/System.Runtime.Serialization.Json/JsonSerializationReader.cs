@@ -72,12 +72,6 @@ namespace System.Runtime.Serialization.Json
 			if (serialized_object_count ++ == serializer.MaxItemsInObjectGraph)
 				throw SerializationError (String.Format ("The object graph exceeded the maximum object count '{0}' specified in the serializer", serializer.MaxItemsInObjectGraph));
 
-			bool nullable = false;
-			if (type.IsGenericType && type.GetGenericTypeDefinition () == typeof (Nullable<>)) {
-				nullable = true;
-				type = Nullable.GetUnderlyingType (type);
-			}
-
 			bool isNull = reader.GetAttribute ("type") == "null";
 
 			switch (Type.GetTypeCode (type)) {
@@ -125,34 +119,9 @@ namespace System.Runtime.Serialization.Json
 			case TypeCode.DateTime:
 				// it does not use ReadElementContentAsDateTime(). Different string format.
 				var s = reader.ReadElementContentAsString ();
-				if (s.Length < 2 || !s.StartsWith ("/Date(", StringComparison.Ordinal) || !s.EndsWith (")/", StringComparison.Ordinal)) {
-					if (nullable)
-						return null;
+				if (s.Length < 2 || !s.StartsWith ("/Date(", StringComparison.Ordinal) || !s.EndsWith (")/", StringComparison.Ordinal))
 					throw new XmlException ("Invalid JSON DateTime format. The value format should be '/Date(UnixTime)/'");
-				}
-
-				// The date can contain [SIGN]LONG, [SIGN]LONG+HOURSMINUTES or [SIGN]LONG-HOURSMINUTES
-				// the format for HOURSMINUTES is DDDD
-				int tidx = s.IndexOf ('-', 8);
-				if (tidx == -1)
-					tidx = s.IndexOf ('+', 8);
-				int minutes = 0;
-				if (tidx == -1){
-					s = s.Substring (6, s.Length - 8);
-				} else {
-					int offset;
-					int.TryParse (s.Substring (tidx+1, s.Length-3-tidx), out offset);
-
-					minutes = (offset % 100) + (offset / 100) * 60;
-					if (s [tidx] == '-')
-						minutes = -minutes;
-
-					s = s.Substring (6, tidx-6);
-				}
-				var date = new DateTime (1970, 1, 1).AddMilliseconds (long.Parse (s));
-				if (minutes != 0)
-					date = date.AddMinutes (minutes);
-				return date;
+				return new DateTime (1970, 1, 1).AddMilliseconds (long.Parse (s.Substring (6, s.Length - 8)));
 			default:
 				if (type == typeof (Guid)) {
 					return new Guid (reader.ReadElementContentAsString ());
@@ -198,7 +167,7 @@ namespace System.Runtime.Serialization.Json
 			var ret = root_type.Assembly.GetType (name, false) ?? Type.GetType (name, false);
 			if (ret != null)
 				return ret;
-#if !MOONLIGHT // how to do that in ML?
+
 			// We probably have to iterate all the existing
 			// assemblies that are loaded in current domain.
 			foreach (var ass in AppDomain.CurrentDomain.GetAssemblies ()) {
@@ -206,7 +175,7 @@ namespace System.Runtime.Serialization.Json
 				if (ret != null)
 					return ret;
 			}
-#endif
+
 			return null;
 		}
 
@@ -304,7 +273,6 @@ namespace System.Runtime.Serialization.Json
 			object ret;
 			if (collectionType.IsInterface)
 				collectionType = typeof (List<>).MakeGenericType (elementType);
-
 			if (TypeMap.IsDictionary (collectionType)) {
 				object dic = Activator.CreateInstance (collectionType);
 				var itemSetter = dic.GetType ().GetProperty ("Item");
@@ -325,28 +293,24 @@ namespace System.Runtime.Serialization.Json
 					itemSetter.SetValue (dic, val, keyarr);
 				}
 				ret = dic;
-			} else if (typeof (IEnumerable).IsAssignableFrom (collectionType)) {
+			} else if (typeof (IList).IsAssignableFrom (collectionType)) {
 #if NET_2_1
 				Type listType = collectionType.IsArray ? typeof (List<>).MakeGenericType (elementType) : null;
 #else
 				Type listType = collectionType.IsArray ? typeof (ArrayList) : null;
 #endif
-				var c = (IEnumerable) TypeMap.CreateInstance (listType ?? collectionType);
-				var addMethod = c.GetType ().GetMethods ().First (m => m.Name == "Add" && m.GetParameters ().Length == 1);
-				var argarr = new object [1];
+				IList c = (IList) Activator.CreateInstance (listType ?? collectionType);
 				for (reader.MoveToContent (); reader.NodeType != XmlNodeType.EndElement; reader.MoveToContent ()) {
 					if (!reader.IsStartElement ("item"))
 						throw SerializationError (String.Format ("Expected element 'item', but found '{0}' in namespace '{1}'", reader.LocalName, reader.NamespaceURI));
 					Type et = elementType == typeof (object) || elementType.IsAbstract ? null : elementType;
 					object elem = ReadObject (et ?? typeof (object));
-					argarr [0] = elem;
-					addMethod.Invoke (c, argarr);
+					c.Add (elem);
 				}
 #if NET_2_1
-				if (collectionType.IsArray && c is ICollection) {
-					ICollection collection = (ICollection) c;
-					Array array = Array.CreateInstance (elementType, collection.Count);
-					collection.CopyTo (array, 0);
+				if (collectionType.IsArray) {
+					Array array = Array.CreateInstance (elementType, c.Count);
+					c.CopyTo (array, 0);
 					ret = array;
 				}
 				else

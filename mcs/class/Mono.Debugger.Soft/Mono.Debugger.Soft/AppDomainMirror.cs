@@ -12,8 +12,7 @@ namespace Mono.Debugger.Soft
 
 		public string FriendlyName {
 			get {
-				/* The name can't be empty during domain creation */
-				if (friendly_name == null || friendly_name == String.Empty)
+				if (friendly_name == null)
 					friendly_name = vm.conn.Domain_GetName (id);
 				return friendly_name;
 			}

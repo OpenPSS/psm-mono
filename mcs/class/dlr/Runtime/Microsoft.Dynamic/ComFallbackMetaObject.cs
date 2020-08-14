@@ -15,7 +15,7 @@
 using System; using Microsoft;
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
 
 #if CODEPLEX_40
 using System.Linq.Expressions;

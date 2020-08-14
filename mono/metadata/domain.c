@@ -13,7 +13,9 @@
 #include <config.h>
 #include <glib.h>
 #include <string.h>
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
 
 #include <mono/metadata/gc-internal.h>
 
@@ -21,6 +23,7 @@
 #include <mono/utils/mono-logger-internal.h>
 #include <mono/utils/mono-membar.h>
 #include <mono/utils/mono-counters.h>
+#include <mono/utils/hazard-pointer.h>
 #include <mono/utils/mono-tls.h>
 #include <mono/metadata/object.h>
 #include <mono/metadata/object-internals.h>
@@ -38,6 +41,18 @@
 #include <metadata/profiler-private.h>
 #include <mono/metadata/coree.h>
 
+//--- debug -------------------------------------------------------------------
+#if 0
+#define PRINTF(...)			printf( "[domain] " __VA_ARGS__ )
+#define ERR_PRINTF(...)		printf( "[domain:ERROR] " __VA_ARGS__ )
+#define TRACE				printf( "[domain:TRACE] %s %d %s\n", __FILE__, __LINE__, __FUNCTION__ )
+#else
+#define PRINTF(...)
+#define ERR_PRINTF(...)
+#define TRACE
+#endif
+//-----------------------------------------------------------------------------
+
 /* #define DEBUG_DOMAIN_UNLOAD */
 
 /* we need to use both the Tls* functions and __thread because
@@ -47,35 +62,25 @@
  */
 static MonoNativeTlsKey appdomain_thread_id;
 
-/* 
- * Avoid calling TlsSetValue () if possible, since in the io-layer, it acquires
- * a global lock (!) so it is a contention point.
- */
-#if (defined(__i386__) || defined(__x86_64__)) && !defined(HOST_WIN32)
-#define NO_TLS_SET_VALUE
-#endif
- 
-#ifdef HAVE_KW_THREAD
+#ifdef MONO_HAVE_FAST_TLS
 
-static __thread MonoDomain * tls_appdomain MONO_TLS_FAST;
+MONO_FAST_TLS_DECLARE(tls_appdomain);
 
-#define GET_APPDOMAIN() tls_appdomain
+#define GET_APPDOMAIN() ((MonoDomain*)MONO_FAST_TLS_GET(tls_appdomain))
 
-#ifdef NO_TLS_SET_VALUE
 #define SET_APPDOMAIN(x) do { \
-	tls_appdomain = x; \
-} while (FALSE)
-#else
-#define SET_APPDOMAIN(x) do { \
-	tls_appdomain = x; \
+	MONO_FAST_TLS_SET (tls_appdomain,x); \
 	mono_native_tls_set_value (appdomain_thread_id, x); \
+	mono_gc_set_current_thread_appdomain (x); \
 } while (FALSE)
-#endif
 
-#else /* !HAVE_KW_THREAD */
+#else /* !MONO_HAVE_FAST_TLS */
 
 #define GET_APPDOMAIN() ((MonoDomain *)mono_native_tls_get_value (appdomain_thread_id))
-#define SET_APPDOMAIN(x) mono_native_tls_set_value (appdomain_thread_id, x);
+#define SET_APPDOMAIN(x) do {						\
+		mono_native_tls_set_value (appdomain_thread_id, x);	\
+		mono_gc_set_current_thread_appdomain (x);		\
+	} while (FALSE)
 
 #endif
 
@@ -134,8 +139,9 @@ static const MonoRuntimeInfo supported_runtimes[] = {
 	{"v2.0.50727","2.0", { {2,0,0,0},    {8,0,0,0}, { 3, 5, 0, 0 } }	},
 	{"v4.0.20506","4.0", { {4,0,0,0},    {10,0,0,0}, { 4, 0, 0, 0 } }   },
 	{"v4.0.30128","4.0", { {4,0,0,0},    {10,0,0,0}, { 4, 0, 0, 0 } }   },
-	{"v4.0.30319","4.0", { {4,0,0,0},    {10,0,0,0}, { 4, 0, 0, 0 } }   },
+	{"v4.0.30319","4.5", { {4,0,0,0},    {10,0,0,0}, { 4, 0, 0, 0 } }   },
 	{"moonlight", "2.1", { {2,0,5,0},    {9,0,0,0}, { 3, 5, 0, 0 } }    },
+	{"mobile", "2.1", { {2,0,5,0},    {9,0,0,0}, { 3, 5, 0, 0 } }    },
 };
 
 
@@ -159,7 +165,7 @@ static MonoImage*
 mono_jit_info_find_aot_module (guint8* addr);
 
 MonoNativeTlsKey
-mono_domain_get_native_tls_key (void)
+mono_domain_get_tls_key (void)
 {
 	return appdomain_thread_id;
 }
@@ -274,36 +280,6 @@ jit_info_table_free (MonoJitInfoTable *table)
 	mono_domain_unlock (domain);
 
 	g_free (table);
-}
-
-/* Can be called with hp==NULL, in which case it acts as an ordinary
-   pointer fetch.  It's used that way indirectly from
-   mono_jit_info_table_add(), which doesn't have to care about hazards
-   because it holds the respective domain lock. */
-static gpointer
-get_hazardous_pointer (gpointer volatile *pp, MonoThreadHazardPointers *hp, int hazard_index)
-{
-	gpointer p;
-
-	for (;;) {
-		/* Get the pointer */
-		p = *pp;
-		/* If we don't have hazard pointers just return the
-		   pointer. */
-		if (!hp)
-			return p;
-		/* Make it hazardous */
-		mono_hazard_pointer_set (hp, hazard_index, p);
-		/* Check that it's still the same.  If not, try
-		   again. */
-		if (*pp != p) {
-			mono_hazard_pointer_clear (hp, hazard_index);
-			continue;
-		}
-		break;
-	}
-
-	return p;
 }
 
 /* The jit_info_table is sorted in ascending order by the end
@@ -502,11 +478,6 @@ jit_info_table_realloc (MonoJitInfoTable *old)
 	/* number of needed places for elements needed */
 	required_size = (int)((long)num_elements * JIT_INFO_TABLE_FILL_RATIO_DENOM / JIT_INFO_TABLE_FILL_RATIO_NOM);
 	num_chunks = (required_size + MONO_JIT_INFO_TABLE_CHUNK_SIZE - 1) / MONO_JIT_INFO_TABLE_CHUNK_SIZE;
-	if (num_chunks == 0) {
-		g_assert (num_elements == 0);
-		return jit_info_table_new (old->domain);
-	}
-	g_assert (num_chunks > 0);
 
 	new = g_malloc (MONO_SIZEOF_JIT_INFO_TABLE + sizeof (MonoJitInfoTableChunk*) * num_chunks);
 	new->domain = old->domain;
@@ -1039,22 +1010,6 @@ mono_jit_info_get_try_block_hole_table_info (MonoJitInfo *ji)
 		return NULL;
 	}
 }
-
-MonoArchEHJitInfo*
-mono_jit_info_get_arch_eh_info (MonoJitInfo *ji)
-{
-	if (ji->has_arch_eh_info) {
-		char *ptr = (char*)&ji->clauses [ji->num_clauses];
-		if (ji->has_generic_jit_info)
-			ptr += sizeof (MonoGenericJitInfo);
-		if (ji->has_try_block_holes)
-			ptr += sizeof (MonoTryBlockHoleTableJitInfo);
-		return (MonoArchEHJitInfo*)ptr;
-	} else {
-		return NULL;
-	}
-}
-
 void
 mono_install_create_domain_hook (MonoCreateDomainFunc func)
 {
@@ -1240,6 +1195,8 @@ mono_domain_create (void)
 	domain->jit_info_table = jit_info_table_new (domain);
 	domain->jit_info_free_queue = NULL;
 	domain->finalizable_objects_hash = g_hash_table_new (mono_aligned_addr_hash, NULL);
+	domain->track_resurrection_handles_hash = g_hash_table_new (mono_aligned_addr_hash, NULL);
+	domain->ftnptrs_hash = g_hash_table_new (mono_aligned_addr_hash, NULL);
 
 	InitializeCriticalSection (&domain->lock);
 	InitializeCriticalSection (&domain->assemblies_lock);
@@ -1293,9 +1250,6 @@ mono_init_internal (const char *filename, const char *exe_filename, const char *
 #ifdef HOST_WIN32
 	/* Avoid system error message boxes. */
 	SetErrorMode (SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
-#ifdef ENABLE_COREE
-	mono_load_coree (exe_filename);
-#endif
 #endif
 
 	mono_perfcounters_init ();
@@ -1306,6 +1260,7 @@ mono_init_internal (const char *filename, const char *exe_filename, const char *
 
 	mono_gc_base_init ();
 
+	MONO_FAST_TLS_INIT (tls_appdomain);
 	mono_native_tls_alloc (&appdomain_thread_id, NULL);
 
 	InitializeCriticalSection (&appdomains_mutex);
@@ -1333,7 +1288,7 @@ mono_init_internal (const char *filename, const char *exe_filename, const char *
 		 * exe_image, and close it during shutdown.
 		 */
 		get_runtimes_from_exe (exe_filename, &exe_image, runtimes);
-#ifdef ENABLE_COREE
+#ifdef HOST_WIN32
 		if (!exe_image) {
 			exe_image = mono_assembly_open_from_bundle (exe_filename, NULL, FALSE);
 			if (!exe_image)
@@ -1385,7 +1340,7 @@ mono_init_internal (const char *filename, const char *exe_filename, const char *
 			break;
 		}
 		
-		exit (1);
+		mono_exit (1);
 	}
 	mono_defaults.corlib = mono_assembly_get_image (ass);
 
@@ -1521,7 +1476,7 @@ mono_init_internal (const char *filename, const char *exe_filename, const char *
 		fprintf (stderr, "Corlib too old for this runtime.\n");
 		fprintf (stderr, "Loaded from: %s\n",
 				 mono_defaults.corlib? mono_image_get_filename (mono_defaults.corlib): "unknown");
-		exit (1);
+		mono_exit (1);
 	}
 
 	mono_defaults.appdomain_class = mono_class_from_name (
@@ -1774,10 +1729,6 @@ mono_cleanup (void)
 	mono_native_tls_free (appdomain_thread_id);
 	DeleteCriticalSection (&appdomains_mutex);
 
-	/*
-	 * This should be called last as TlsGetValue ()/TlsSetValue () can be called during
-	 * shutdown.
-	 */
 #ifndef HOST_WIN32
 	_wapi_cleanup ();
 #endif
@@ -1976,6 +1927,11 @@ mono_domain_free (MonoDomain *domain, gboolean force)
 	mono_g_hash_table_destroy (domain->env);
 	domain->env = NULL;
 
+	if (domain->tlsrec_list) {
+		mono_thread_destroy_domain_tls (domain);
+		domain->tlsrec_list = NULL;
+	}
+
 	mono_reflection_cleanup_domain (domain);
 
 	if (domain->type_hash) {
@@ -2076,6 +2032,12 @@ mono_domain_free (MonoDomain *domain, gboolean force)
 
 	g_hash_table_destroy (domain->finalizable_objects_hash);
 	domain->finalizable_objects_hash = NULL;
+	if (domain->track_resurrection_objects_hash) {
+		g_hash_table_foreach (domain->track_resurrection_objects_hash, free_slist, NULL);
+		g_hash_table_destroy (domain->track_resurrection_objects_hash);
+	}
+	if (domain->track_resurrection_handles_hash)
+		g_hash_table_destroy (domain->track_resurrection_handles_hash);
 	if (domain->method_rgctx_hash) {
 		g_hash_table_destroy (domain->method_rgctx_hash);
 		domain->method_rgctx_hash = NULL;
@@ -2087,6 +2049,10 @@ mono_domain_free (MonoDomain *domain, gboolean force)
 	if (domain->generic_virtual_thunks) {
 		g_hash_table_destroy (domain->generic_virtual_thunks);
 		domain->generic_virtual_thunks = NULL;
+	}
+	if (domain->ftnptrs_hash) {
+		g_hash_table_destroy (domain->ftnptrs_hash);
+		domain->ftnptrs_hash = NULL;
 	}
 
 	DeleteCriticalSection (&domain->finalizable_objects_hash_lock);
@@ -2585,24 +2551,24 @@ get_runtime_by_version (const char *version)
 {
 	int n;
 	int max = G_N_ELEMENTS (supported_runtimes);
-	gboolean do_partial_match;
 	int vlen;
 
 	if (!version)
 		return NULL;
 
-	vlen = strlen (version);
-	if (vlen >= 4 && version [1] - '0' >= 4)
-		do_partial_match = TRUE;
-	else
-		do_partial_match = FALSE;
-
 	for (n=0; n<max; n++) {
-		if (do_partial_match && strncmp (version, supported_runtimes[n].runtime_version, vlen) == 0)
-			return &supported_runtimes[n];
 		if (strcmp (version, supported_runtimes[n].runtime_version) == 0)
 			return &supported_runtimes[n];
 	}
+	
+	vlen = strlen (version);
+	if (vlen >= 4 && version [1] - '0' >= 4) {
+		for (n=0; n<max; n++) {
+			if (strncmp (version, supported_runtimes[n].runtime_version, 4) == 0)
+				return &supported_runtimes[n];
+		}
+	}
+	
 	return NULL;
 }
 

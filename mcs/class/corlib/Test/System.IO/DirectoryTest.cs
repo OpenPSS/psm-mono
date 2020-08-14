@@ -22,6 +22,7 @@ namespace MonoTests.System.IO
 {
 
 [TestFixture]
+[Category("PssFileIO")]
 public class DirectoryTest
 {
 	static readonly string TempSubFolder = "MonoTests.System.IO.Tests";
@@ -314,7 +315,7 @@ public class DirectoryTest
 		Assert.IsFalse (Directory.Exists (null as string));
 	}
 
-#if !TARGET_JVM // We don't support yet the Process class.
+#if !TARGET_JVM && !MOBILE// We don't support yet the Process class.
 	[Test] // bug #78239
 	public void ExistsAccessDenied ()
 	{

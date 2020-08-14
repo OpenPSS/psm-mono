@@ -52,9 +52,9 @@ namespace System.Xml.Linq
 			set { this.value = value; }
 		}
 
-		public override void WriteTo (XmlWriter writer)
+		public override void WriteTo (XmlWriter w)
 		{
-			writer.WriteComment (value);
+			w.WriteComment (value);
 		}
 	}
 }

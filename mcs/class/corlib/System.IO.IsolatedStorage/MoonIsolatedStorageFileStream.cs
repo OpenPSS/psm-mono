@@ -28,7 +28,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-#if MOONLIGHT
+#if MOONLIGHT && SCE_DISABLED
 using System;
 using System.IO;
 
@@ -84,6 +84,12 @@ namespace System.IO.IsolatedStorage {
 		{
 			container.PreCheck ();
 			base.Flush ();
+		}
+
+		public override void Flush (bool flushToDisk)
+		{
+			container.PreCheck ();
+			base.Flush (flushToDisk);
 		}
 
 		public override int Read (byte [] buffer, int offset, int count)

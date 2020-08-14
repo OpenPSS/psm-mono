@@ -1,15 +1,19 @@
-AC_INIT(README)
-AC_CANONICAL_SYSTEM
+AC_INIT(eglib, [0.3],
+        [http://bugzilla.xamarin.com/enter_bug.cgi?classification=Mono])
 
-AC_CONFIG_HEADERS(config.h)
-AM_INIT_AUTOMAKE(eglib,0.3)
+AC_CONFIG_SRCDIR([README])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CANONICAL_SYSTEM
+AC_CANONICAL_HOST
+
+AM_INIT_AUTOMAKE([1.9 dist-bzip2 tar-ustar no-dist-gzip foreign])
+AM_CONFIG_HEADER([config.h])
 AM_MAINTAINER_MODE
 
 AC_PROG_CC
 AM_PROG_LIBTOOL
 # Use dolt (http://dolt.freedesktop.org/) instead of libtool for building.
 DOLT
-CFLAGS="$CFLAGS -O0"
 GNUC_PRETTY=
 GNUC_UNUSED=
 BREAKPOINT="G_STMT_START { raise (SIGTRAP); } G_STMT_END"
@@ -106,14 +110,15 @@ AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
-AC_CHECK_FUNCS(strndup strlcpy getpwuid_r strtok_r rewinddir vasprintf)
+AC_CHECK_FUNCS(strndup strlcpy stpcpy getpwuid_r strtok_r rewinddir vasprintf)
 AM_CONDITIONAL(NEED_VASPRINTF, test x$have_vasprintf = x )
-AC_CHECK_LIB(iconv, iconv_open, LIBS="$LIBS -liconv")
-AC_CHECK_LIB(iconv, libiconv_open, LIBS="$LIBS -liconv")
-AC_CHECK_LIB(iconv, iconv_open, ICONV_LIBS="-liconv")
-AC_CHECK_LIB(iconv, libiconv_open, ICONV_LIBS="-liconv")
-AC_SUBST(ICONV_LIBS)
-LIBS="$LIBS $ICONV_LIBS"
+
+AC_ARG_ENABLE(libiconv, [  --enable-libiconv  Enable libiconv (on by default)], enable_libiconv=$enableval, enable_libiconv=yes)
+if test x$enable_libiconv = xyes; then
+  AM_ICONV()
+  AC_CHECK_HEADERS(iconv.h localcharset.h)
+fi
+
 AC_SEARCH_LIBS(sqrtf, m)
 
 # nanosleep may not be part of libc, also search it in other libraries
@@ -142,7 +147,7 @@ if test "x$have_iso_varargs" = "xyes"; then
 fi
 AC_SUBST(G_HAVE_ISO_VARARGS)
 
-AC_CHECK_HEADERS(getopt.h sys/time.h sys/wait.h pwd.h langinfo.h iconv.h localcharset.h sys/types.h)
+AC_CHECK_HEADERS(getopt.h sys/time.h sys/wait.h pwd.h langinfo.h sys/types.h)
 AC_CHECK_HEADER(alloca.h, [HAVE_ALLOCA_H=1], [HAVE_ALLOCA_H=0])
 AC_SUBST(HAVE_ALLOCA_H)
 
@@ -155,6 +160,8 @@ if test $ac_cv_sizeof_void_p = $ac_cv_sizeof_int; then
    GSIZE_FORMAT='"u"'
    G_GUINT64_FORMAT='"llu"'
    G_GINT64_FORMAT='"lld"'
+   G_GUINT32_FORMAT='"lu"'
+   G_GINT32_FORMAT='"ld"'
 elif test $ac_cv_sizeof_void_p = $ac_cv_sizeof_long; then
    GPOINTER_TO_INT="((gint)(long) (ptr))"
    GPOINTER_TO_UINT="((guint)(long) (ptr))"
@@ -164,6 +171,8 @@ elif test $ac_cv_sizeof_void_p = $ac_cv_sizeof_long; then
    GSIZE_FORMAT='"lu"'
    G_GUINT64_FORMAT='"lu"'
    G_GINT64_FORMAT='"ld"'
+   G_GUINT32_FORMAT='"u"'
+   G_GINT32_FORMAT='"d"'
 elif test $ac_cv_sizeof_void_p = $ac_cv_sizeof_long_long; then
    GPOINTER_TO_INT="((gint)(long long) (ptr))"
    GPOINTER_TO_UINT="((guint)(unsigned long long) (ptr))"
@@ -173,6 +182,8 @@ elif test $ac_cv_sizeof_void_p = $ac_cv_sizeof_long_long; then
    GSIZE_FORMAT='"I64u"'
    G_GUINT64_FORMAT='"I64u"'
    G_GINT64_FORMAT='"I64i"'
+   G_GUINT32_FORMAT='"I32u"'
+   G_GINT32_FORMAT='"I32i"'
 else
    AC_MSG_ERROR([unsupported pointer size])
 fi
@@ -214,6 +225,8 @@ AC_SUBST(GSIZE)
 AC_SUBST(GSIZE_FORMAT)
 AC_SUBST(G_GUINT64_FORMAT)
 AC_SUBST(G_GINT64_FORMAT)
+AC_SUBST(G_GUINT32_FORMAT)
+AC_SUBST(G_GINT32_FORMAT)
 
 if test x$enable_quiet_build = xyes; then
    AC_CONFIG_COMMANDS([quiet], [for i in `find src test -name Makefile.in | sed -e 's/Makefile.in/Makefile/g'`; do if test -f $i; then $srcdir/../scripts/patch-quiet.sh $i; fi; done], [shell=$SHELL])
@@ -222,6 +235,7 @@ fi
 
 AC_OUTPUT([
 Makefile
+m4/Makefile
 src/Makefile
 src/eglib-config.h
 test/Makefile

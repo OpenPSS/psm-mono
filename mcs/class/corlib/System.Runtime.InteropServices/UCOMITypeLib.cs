@@ -28,6 +28,7 @@
 //
 // (C) 2002 Ximian, Inc.
 
+#if !MOBILE
 namespace System.Runtime.InteropServices
 {
 	[Obsolete]
@@ -50,4 +51,4 @@ namespace System.Runtime.InteropServices
 		void ReleaseTLibAttr (IntPtr pTLibAttr);
 	}
 }
-
+#endif

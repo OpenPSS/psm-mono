@@ -12,12 +12,13 @@
 
 #include <config.h>
 #include <glib.h>
-#ifdef HAVE_SEMAPHORE_H
+#include <time.h>
+#if defined(HAVE_SEMAPHORE_H) && !defined(HOST_WIN32)
 #include <semaphore.h>
 #endif
 #include <mono/io-layer/io-layer.h>
 
-#if defined (HAVE_SEMAPHORE_H) || defined (USE_MACH_SEMA)
+#if (defined (HAVE_SEMAPHORE_H) || defined (USE_MACH_SEMA)) && !defined(HOST_WIN32)
 #  define MONO_HAS_SEMAPHORES
 
 #  if defined (USE_MACH_SEMA)
@@ -32,6 +33,12 @@ typedef sem_t MonoSemType;
 #    define MONO_SEM_INIT(addr,value) sem_init ((addr), 0, (value))
 #    define MONO_SEM_DESTROY(sem) sem_destroy ((sem))
 #  endif
+#elif defined(TARGET_VITA)
+#  define MONO_HAS_SEMAPHORES
+#  include "bridge.h"
+typedef int MonoSemType;
+#  define MONO_SEM_INIT(addr,initial) do {*(addr) = pss_create_semaphore (initial);} while (0)
+#  define MONO_SEM_DESTROY(addr) pss_delete_semaphore(*(addr))
 #else
 #  define MONO_HAS_SEMAPHORES
 typedef HANDLE MonoSemType;

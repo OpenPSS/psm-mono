@@ -16,6 +16,7 @@ using System.Reflection;
 namespace MonoTests.System.Reflection {
 
 [TestFixture]
+[Category("PssFileIO")]
 public class StrongNameKeyPairTest {
 
 	// created with "sn -o test.snk test.txt"

@@ -27,7 +27,6 @@
 #if !MOONLIGHT
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Xml;
 using System.Xml.Linq;
@@ -51,43 +50,32 @@ namespace System.Xml.XPath
 			return XPathEvaluate (node, expression, null);
 		}
 
-		public static object XPathEvaluate (this XNode node, string expression, IXmlNamespaceResolver resolver)
+		public static object XPathEvaluate (this XNode node, string expression, IXmlNamespaceResolver nsResolver)
 		{
-			object navigationResult = CreateNavigator (node).Evaluate (expression, resolver);
-			if (!(navigationResult is XPathNodeIterator))
-				return navigationResult;
-			return GetUnderlyingXObjects((XPathNodeIterator) navigationResult);
+			return CreateNavigator (node).Evaluate (expression, nsResolver);
 		}
 
-		private static IEnumerable<object> GetUnderlyingXObjects(XPathNodeIterator nodeIterator)
+		public static XElement XPathSelectElement (this XNode node, string xpath)
 		{
-			foreach (XPathNavigator nav in nodeIterator)
-			{
-				yield return nav.UnderlyingObject;
-			}
+			return XPathSelectElement (node, xpath, null);
 		}
 
-		public static XElement XPathSelectElement (this XNode node, string expression)
+		public static XElement XPathSelectElement (this XNode node, string xpath, IXmlNamespaceResolver nsResolver)
 		{
-			return XPathSelectElement (node, expression, null);
-		}
-
-		public static XElement XPathSelectElement (this XNode node, string expression, IXmlNamespaceResolver resolver)
-		{
-			XPathNavigator nav = CreateNavigator (node).SelectSingleNode (expression, resolver);
+			XPathNavigator nav = CreateNavigator (node).SelectSingleNode (xpath, nsResolver);
 			if (nav == null)
 				return null;
 			return nav.UnderlyingObject as XElement;
 		}
 
-		public static IEnumerable<XElement> XPathSelectElements (this XNode node, string expression)
+		public static IEnumerable<XElement> XPathSelectElements (this XNode node, string xpath)
 		{
-			return XPathSelectElements (node, expression, null);
+			return XPathSelectElements (node, xpath, null);
 		}
 
-		public static IEnumerable<XElement> XPathSelectElements (this XNode node, string expression, IXmlNamespaceResolver resolver)
+		public static IEnumerable<XElement> XPathSelectElements (this XNode node, string xpath, IXmlNamespaceResolver nsResolver)
 		{
-			XPathNodeIterator iter = CreateNavigator (node).Select (expression, resolver);
+			XPathNodeIterator iter = CreateNavigator (node).Select (xpath, nsResolver);
 			foreach (XPathNavigator nav in iter){
 				if (nav.UnderlyingObject is XElement)
 					yield return (XElement) nav.UnderlyingObject;

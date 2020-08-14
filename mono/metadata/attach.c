@@ -433,7 +433,7 @@ ipc_connect (void)
 	res = listen (sock, 16);
 	if (res != 0) {
 		fprintf (stderr, "attach: listen () failed: %s\n", strerror (errno));
-		exit (1);
+		mono_exit (1);
 	}
 
 	listen_fd = sock;

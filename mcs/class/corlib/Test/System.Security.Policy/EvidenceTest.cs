@@ -368,6 +368,7 @@ namespace MonoTests.System.Security.Policy {
 		}
 
 		[Test]
+		[Category("NotMobile")] // Assembly.Evidence returns null in mobile profile
 		public void Assembly_NoPermissionRequestEvidence ()
 		{
 			// PermissionRequestEvidence is only used druing policy resolution

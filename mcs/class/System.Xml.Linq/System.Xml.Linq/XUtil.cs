@@ -65,12 +65,10 @@ namespace System.Xml.Linq
 				return (string) o;
 			case TypeCode.DateTime:
 				return XmlConvert.ToString ((DateTime) o, XmlDateTimeSerializationMode.RoundtripKind);
-			case TypeCode.Decimal:
-				return ((decimal) o).ToString (CultureInfo.InvariantCulture);
 			case TypeCode.Double:
-				return ((double) o).ToString ("r", CultureInfo.InvariantCulture);
+				return ((double) o).ToString ("r");
 			case TypeCode.Single:
-				return ((float) o).ToString ("r", CultureInfo.InvariantCulture);
+				return ((float) o).ToString ("r");
 			case TypeCode.Boolean:
 				// Valid XML values are `true' and `false', not `True' and `False' that boolean returns
 				return o.ToString().ToLower();

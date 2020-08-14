@@ -13,8 +13,12 @@
 #include <config.h>
 #include <glib.h>
 #include <sys/types.h>
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
+#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -26,18 +30,7 @@
 #include <mono/metadata/rand.h>
 #include <mono/metadata/exception.h>
 
-#if defined(__native_client__)
-#include <errno.h>
-
-static void
-get_entropy_from_server (const char *path, guchar *buf, int len)
-{
-    return;
-}
-
-#else /* defined(__native_client__) */
-
-#if !defined(HOST_WIN32)
+#if !defined(__native_client__) && !defined(HOST_WIN32) && !defined(TARGET_VITA)
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <errno.h>
@@ -107,7 +100,6 @@ get_entropy_from_server (const char *path, guchar *buf, int len)
     close (file);
 }
 #endif
-#endif /* __native_client__ */
 
 #if defined (HOST_WIN32)
 
@@ -190,6 +182,90 @@ void
 ves_icall_System_Security_Cryptography_RNGCryptoServiceProvider_RngClose (gpointer handle) 
 {
 	CryptReleaseContext ((HCRYPTPROV) handle, 0);
+}
+
+#elif defined (__native_client__)
+
+MonoBoolean
+ves_icall_System_Security_Cryptography_RNGCryptoServiceProvider_RngOpen (void)
+{
+	srand (time (NULL));
+	return TRUE;
+}
+
+gpointer
+ves_icall_System_Security_Cryptography_RNGCryptoServiceProvider_RngInitialize (MonoArray *seed)
+{
+	return -1;
+}
+
+gpointer 
+ves_icall_System_Security_Cryptography_RNGCryptoServiceProvider_RngGetBytes (gpointer handle, MonoArray *arry)
+{	
+	guint32 len = mono_array_length (arry);
+	guchar *buf = mono_array_addr (arry, guchar, 0);
+
+	/* Read until the buffer is filled. This may block if using NAME_DEV_RANDOM. */
+	gint count = 0;
+	gint err;
+
+	do {
+		if (len - count >= sizeof (long))
+		{
+			*(long*)buf = rand();
+			count += sizeof (long);
+		}
+		else if (len - count >= sizeof (short))
+		{
+			*(short*)buf = rand();
+			count += sizeof (short);
+		}
+		else if (len - count >= sizeof (char))
+		{
+			*buf = rand();
+			count += sizeof (char);
+		}
+	} while (count < len);
+
+	return (gpointer)-1L;
+}
+
+void
+ves_icall_System_Security_Cryptography_RNGCryptoServiceProvider_RngClose (gpointer handle) 
+{
+}
+
+#elif defined(TARGET_VITA)
+
+#include "bridge.h"
+
+MonoBoolean
+ves_icall_System_Security_Cryptography_RNGCryptoServiceProvider_RngOpen (void)
+{
+	return TRUE;
+}
+
+gpointer
+ves_icall_System_Security_Cryptography_RNGCryptoServiceProvider_RngInitialize (MonoArray *seed)
+{
+	return pss_get_prng_provider ();
+}
+
+gpointer
+ves_icall_System_Security_Cryptography_RNGCryptoServiceProvider_RngGetBytes (gpointer handle, MonoArray *arry)
+{
+	guint32 len = mono_array_length (arry);
+	guchar *buf = mono_array_addr (arry, guchar, 0);
+
+	pss_prng_fill (handle, buf, len);
+
+	return handle;
+}
+
+void
+ves_icall_System_Security_Cryptography_RNGCryptoServiceProvider_RngClose (gpointer handle) 
+{
+	pss_free_prng_provider (handle);
 }
 
 #else

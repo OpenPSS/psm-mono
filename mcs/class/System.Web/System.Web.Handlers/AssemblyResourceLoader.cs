@@ -324,7 +324,7 @@ namespace System.Web.Handlers
 					atime = QueryParamSeparator + "t=" + DateTime.UtcNow.Ticks;
 			}
 #endif
-			string d = HttpUtility.UrlEncode (assemblyNameHash + "_" + resourceNameHash +  (debug ? "_t" : "_f"));
+			string d = assemblyNameHash + "_" + resourceNameHash +  (debug ? "_t" : "_f");
 			string href = HandlerFileName + "?d=" + d + atime + extra;
 			HttpContext ctx = HttpContext.Current;
 			HttpRequest req = ctx != null ? ctx.Request : null;
@@ -334,6 +334,19 @@ namespace System.Web.Handlers
 			}
 			
 			return href;
+		}
+
+		bool HasCacheControl (HttpRequest request, NameValueCollection queryString, out long atime)
+		{
+			if (String.Compare (request.Headers ["Cache-Control"], "max-age=0", StringComparison.Ordinal) != 0) {
+				atime = 0;
+				return false;
+			}
+			
+			if (Int64.TryParse (request.QueryString ["t"], out atime))
+				return true;
+
+			return false;
 		}
 
 		bool HasIfModifiedSince (HttpRequest request, out DateTime modified)
@@ -348,6 +361,7 @@ namespace System.Web.Handlers
 				if (DateTime.TryParseExact (modif_since, "r", null, 0, out modified))
 					return true;
 			} catch {
+				modified = DateTime.MinValue;
 			}
 
 			return false;
@@ -359,6 +373,7 @@ namespace System.Web.Handlers
 			response.Clear ();
 			response.StatusCode = 304;
 			response.ContentType = null;
+			response.CacheControl = "public"; // easier to set it to public as MS than remove it
 			context.ApplicationInstance.CompleteRequest ();
 		}
 		
@@ -385,6 +400,13 @@ namespace System.Web.Handlers
 				assembly = Assembly.Load (entry.AssemblyName);
 			
 			long atime;
+			if (HasCacheControl (request, queryString, out atime)) {
+				if (atime == File.GetLastWriteTimeUtc (assembly.Location).Ticks) {
+					RespondWithNotModified (context);
+					return;
+				}
+			}
+
 			DateTime modified;
 			if (HasIfModifiedSince (request, out modified)) {
 				if (File.GetLastWriteTimeUtc (assembly.Location) <= modified) {

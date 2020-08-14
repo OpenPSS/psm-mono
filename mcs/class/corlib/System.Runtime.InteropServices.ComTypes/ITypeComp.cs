@@ -30,6 +30,7 @@
 // (C) 2002 Ximian, Inc.
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[ComImport]
@@ -40,3 +41,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		void BindType([MarshalAs(UnmanagedType.LPWStr)] string szName, int lHashVal, out ITypeInfo ppTInfo, out ITypeComp ppTComp);
 	}
 }
+#endif

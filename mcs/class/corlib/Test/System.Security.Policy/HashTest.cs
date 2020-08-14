@@ -37,6 +37,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Security.Policy {
 
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class HashTest {
 
 		// mcs compiled

@@ -35,7 +35,7 @@ using System.Configuration.Assemblies;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-#if !TARGET_JVM
+#if !TARGET_JVM && !MOBILE
 using System.Reflection.Emit;
 #endif
 using System.Threading;
@@ -45,6 +45,7 @@ using System.Security;
 namespace MonoTests.System.Reflection
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class AssemblyTest
 	{
 		static string TempFolder = Path.Combine (Path.GetTempPath (),
@@ -151,7 +152,7 @@ namespace MonoTests.System.Reflection
 			}
 		}
 
-#if !TARGET_JVM // Reflection.Emit is not supported.
+#if !TARGET_JVM && !MOBILE // Reflection.Emit is not supported.
 		[Test]
 		public void GetModules_MissingFile ()
 		{
@@ -212,8 +213,12 @@ namespace MonoTests.System.Reflection
 		{
 			Assembly corlib_test = Assembly.GetExecutingAssembly ();
 			Assert.IsNull (corlib_test.EntryPoint, "EntryPoint");
+#if MOBILE
+			Assert.IsNull (corlib_test.Evidence, "Evidence");
+#else
 			Assert.IsNotNull (corlib_test.Evidence, "Evidence");
 			Assert.IsFalse (corlib_test.GlobalAssemblyCache, "GlobalAssemblyCache");
+#endif
 
 			Assert.IsTrue (corlib_test.GetReferencedAssemblies ().Length > 0, "GetReferencedAssemblies");
 			Assert.AreEqual (0, corlib_test.HostContext, "HostContext");
@@ -369,6 +374,7 @@ namespace MonoTests.System.Reflection
 #if ONLY_1_1
 		[Category ("NotDotNet")] // MS.NET 1.x throws FileLoadException
 #endif
+		[Category("PssFileIO")]
 		public void LoadFrom_Empty_Assembly ()
 		{
 			string tempFile = Path.GetTempFileName ();
@@ -384,6 +390,7 @@ namespace MonoTests.System.Reflection
 		}
 
 		[Test] // bug #78517
+		[Category("PssFileIO")]
 		public void LoadFrom_Invalid_Assembly ()
 		{
 			string tempFile = Path.GetTempFileName ();
@@ -403,6 +410,7 @@ namespace MonoTests.System.Reflection
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void LoadFrom_NonExisting_Assembly ()
 		{
 			string tempFile = Path.GetTempFileName ();
@@ -421,7 +429,7 @@ namespace MonoTests.System.Reflection
 		[Test]
 		public void LoadWithPartialName ()
 		{
-			string [] names = { "corlib_test_net_1_1", "corlib_test_net_2_0", "corlib_test_net_4_0", "corlib_plattest" };
+			string [] names = { "corlib_test_net_1_1", "corlib_test_net_2_0", "corlib_test_net_4_0", "corlib_test_net_4_5", "corlib_plattest", "corlib_test_mobile" };
 
 			foreach (string s in names)
 				if (Assembly.LoadWithPartialName (s) != null)
@@ -468,7 +476,7 @@ namespace MonoTests.System.Reflection
 			}
 		}
 
-#if !TARGET_JVM // Reflection.Emit is not supported.
+#if !TARGET_JVM && !MOBILE // Reflection.Emit is not supported.
 		[Test]
 		public void Location_Empty() {
 			string assemblyFileName = Path.Combine (
@@ -1096,7 +1104,7 @@ namespace MonoTests.System.Reflection
 			Module module = assembly.ManifestModule;
 			Assert.IsNotNull (module, "#1");
 
-#if NET_4_0
+#if NET_4_0 || MOBILE
 			Assert.AreEqual ("MonoModule", module.GetType ().Name, "#2");
 #else
 			Assert.AreEqual (typeof (Module), module.GetType (), "#2");

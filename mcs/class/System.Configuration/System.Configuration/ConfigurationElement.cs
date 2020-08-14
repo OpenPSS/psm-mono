@@ -93,12 +93,12 @@ namespace System.Configuration
 			}
 		}
 
+		[MonoTODO]
 		protected ContextInformation EvaluationContext {
 			get {
 				if (Configuration != null)
 					return Configuration.EvaluationContext;
-				throw new ConfigurationErrorsException (
-					"This element is not currently associated with any context.");
+				throw new NotImplementedException ();
 			}
 		}
 

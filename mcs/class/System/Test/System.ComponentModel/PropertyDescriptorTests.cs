@@ -13,7 +13,6 @@ using System.Collections;
 using System.ComponentModel;
 using DescriptionAttribute = System.ComponentModel.DescriptionAttribute;
 using System.ComponentModel.Design;
-using System.Drawing.Design;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -790,6 +789,7 @@ namespace MonoTests.System.ComponentModel
 			Assert.AreEqual ("Implicit", p2.DisplayName, "#2");
 		}
 
+#if !MOBILE
 		[Test]
 		public void GetEditorTest ()
 		{
@@ -804,6 +804,7 @@ namespace MonoTests.System.ComponentModel
 			Assert.IsNotNull (ed, "#01");
 			Assert.AreEqual (ed.GetType ().Name, "UIEditor", "#02");
 		}
+#endif
 
 		[Test]
 		public void AddValueChanged ()
@@ -1076,6 +1077,7 @@ namespace MonoTests.System.ComponentModel
 			return null;
 		}
 
+#if !MOBILE
 		class GetEditor_test 
 		{
 			[Editor (typeof (UIEditor), typeof (UITypeEditor))]
@@ -1089,6 +1091,7 @@ namespace MonoTests.System.ComponentModel
 		{
 			
 		}
+#endif
 
 		class MockPropertyDescriptor : PropertyDescriptor
 		{

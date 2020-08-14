@@ -270,7 +270,7 @@ namespace System.IO {
 
 		public override string ToString ()
 		{
-#if NET_2_1
+#if MOONLIGHT
 			// for Moonlight we *never* return paths, since ToString is not [SecurityCritical] we simply return the Name
 			return Name;
 #else

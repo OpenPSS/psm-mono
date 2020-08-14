@@ -17,6 +17,7 @@ namespace MonoTests.System.Reflection.Emit
 {
 
 [TestFixture]
+[Category("NotMobile")] // mobile profile doesn't support S.R.E
 public class PropertyBuilderTest
 {	
     private TypeBuilder tb;

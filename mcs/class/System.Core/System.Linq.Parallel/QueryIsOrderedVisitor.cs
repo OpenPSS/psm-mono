@@ -39,43 +39,43 @@ namespace System.Linq.Parallel
 		}
 
 		#region INodeVisitor implementation
-		public void Visit (QueryBaseNode node)
+		public void Visit<T> (QueryBaseNode<T> node)
 		{
 
 		}
 
-		public void Visit (QueryChildNode node)
+		public void Visit<U, V> (QueryChildNode<U, V> node)
 		{
 			node.Parent.Visit (this);
 		}
 
-		public void Visit (QueryOptionNode node)
+		public void Visit<T> (QueryOptionNode<T> node)
 		{
-			Visit ((QueryChildNode)node);
+			Visit<T, T> ((QueryChildNode<T, T>)node);
 		}
 
-		public void Visit (QueryStartNode node)
+		public void Visit<T> (QueryStartNode<T> node)
 		{
 		}
 
-		public void Visit (QueryStreamNode node)
+		public void Visit<T, TParent> (QueryStreamNode<T, TParent> node)
 		{
-			Visit ((QueryChildNode)node);
+			Visit<T, TParent> ((QueryChildNode<T, TParent>)node);
 		}
 
-		public void Visit (QueryOrderGuardNode node)
+		public void Visit<T> (QueryOrderGuardNode<T> node)
 		{
 			BehindOrderGuard = node.EnsureOrder;
 		}
 
-		public void Visit (QueryMuxNode node)
+		public void Visit<TFirst, TSecond, TResult> (QueryMuxNode<TFirst, TSecond, TResult> node)
 		{
-			Visit ((QueryChildNode)node);
+			Visit<TResult, TFirst> ((QueryChildNode<TResult, TFirst>)node);
 		}
 
-		public void Visit (QueryHeadWorkerNode node)
+		public void Visit<T> (QueryHeadWorkerNode<T> node)
 		{
-			Visit ((QueryStreamNode)node);
+			Visit<T, T> ((QueryStreamNode<T, T>)node);
 		}
 		#endregion
 	}

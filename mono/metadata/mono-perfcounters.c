@@ -1006,25 +1006,6 @@ predef_writable_counter (ImplVtable *vtable, MonoBoolean only_value, MonoCounter
 			return TRUE;
 		}
 		break;
-	case CATEGORY_JIT:
-		switch (id) {
-		case COUNTER_JIT_BYTES:
-			sample->rawValue = mono_perfcounters->jit_bytes;
-			return TRUE;
-		case COUNTER_JIT_METHODS:
-			sample->rawValue = mono_perfcounters->jit_methods;
-			return TRUE;
-		case COUNTER_JIT_TIME:
-			sample->rawValue = mono_perfcounters->jit_time;
-			return TRUE;
-		case COUNTER_JIT_BYTES_PSEC:
-			sample->rawValue = mono_perfcounters->jit_bytes;
-			return TRUE;
-		case COUNTER_JIT_FAILURES:
-			sample->rawValue = mono_perfcounters->jit_failures;
-			return TRUE;
-		}
-		break;
 	}
 	return FALSE;
 }
@@ -1144,11 +1125,13 @@ custom_get_instance (SharedCategory *cat, SharedCounter *scounter, MonoString* i
 	char *p;
 	int size, data_offset;
 	char *name;
+	int name_len;
 	inst = find_custom_instance (cat, instance);
 	if (inst)
 		return inst;
 	name = mono_string_to_utf8 (instance);
-	size = sizeof (SharedInstance) + strlen (name);
+	name_len = strlen (name);
+	size = sizeof (SharedInstance) + name_len;
 	size += 7;
 	size &= ~7;
 	data_offset = size;
@@ -1167,8 +1150,8 @@ custom_get_instance (SharedCategory *cat, SharedCounter *scounter, MonoString* i
 	cat->num_instances++;
 	/* now copy the variable data */
 	p = inst->instance_name;
-	strcpy (p, name);
-	p += strlen (name) + 1;
+	strncpy (p, name, name_len + 1);
+	p += name_len + 1;
 	inst->header.ftype = FTYPE_INSTANCE;
 	perfctr_unlock ();
 	g_free (name);
@@ -1428,19 +1411,22 @@ mono_perfcounter_create (MonoString *category, MonoString *help, int type, MonoA
 	cat->counters_data_size = counters_data_size;
 	/* now copy the vaiable data */
 	p = cat->name;
-	strcpy (p, name);
+	strncpy (p, name, strlen(name) + 1);
 	p += strlen (name) + 1;
-	strcpy (p, chelp);
+	strncpy (p, chelp, strlen(chelp) + 1);
 	p += strlen (chelp) + 1;
 	for (i = 0; i < num_counters; ++i) {
+		int name_len, help_len;
 		CounterCreationData *data = mono_array_get (items, CounterCreationData*, i);
 		/* emit the SharedCounter structures */
 		*p++ = perfctr_type_compress (data->type);
 		*p++ = i;
-		strcpy (p, counter_info [i * 2]);
-		p += strlen (counter_info [i * 2]) + 1;
-		strcpy (p, counter_info [i * 2 + 1]);
-		p += strlen (counter_info [i * 2 + 1]) + 1;
+		name_len = strlen (counter_info[ i * 2 ]);
+		help_len = strlen (counter_info[ i * 2 + 1]);
+		strncpy (p, counter_info [i * 2], name_len+1);
+		p += name_len+1;
+		strncpy (p, counter_info [i * 2 + 1], help_len+1);
+		p += help_len+1;
 	}
 	cat->header.ftype = FTYPE_CATEGORY;
 
@@ -1559,7 +1545,7 @@ get_string_array (void **array, int count, gboolean is_process)
 			char *pname = mono_process_get_name (array [i], buf, sizeof (buf));
 			p = g_strdup_printf ("%d/%s", GPOINTER_TO_INT (array [i]), pname);
 		} else {
-			sprintf (buf, "%d", GPOINTER_TO_INT (array [i]));
+			g_snprintf (buf, sizeof(buf), "%d", GPOINTER_TO_INT (array [i]));
 			p = buf;
 		}
 		mono_array_setref (res, i, mono_string_new (domain, p));

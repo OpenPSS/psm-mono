@@ -20,6 +20,7 @@ using NUnit.Framework;
 namespace MonoTests.System.IO
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class FileTest
 	{
 		CultureInfo old_culture;
@@ -497,6 +498,9 @@ namespace MonoTests.System.IO
 		[ExpectedException (typeof(UnauthorizedAccessException))]
 		public void Delete_File_ReadOnly ()
 		{
+			if (RunningOnUnix)
+				Assert.Ignore ("ReadOnly files can be deleted on unix since fdef50957f508627928c7876a905d5584da45748.");
+
 			string path = TempFolder + Path.DirectorySeparatorChar + "DeleteReadOnly";
 			DeleteFile (path);
 			try {
@@ -900,6 +904,7 @@ namespace MonoTests.System.IO
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void Move_FileLock ()
 		{
 			string sourceFile = Path.GetTempFileName ();
@@ -1103,6 +1108,7 @@ namespace MonoTests.System.IO
 
 		[Test]
 		[Category("TargetJvmNotSupported")] // GetCreationTime not supported for TARGET_JVM
+		[Category("PssFileIO")]
 		public void CreationTime ()
 		{
 			if (RunningOnUnix)
@@ -2575,6 +2581,7 @@ namespace MonoTests.System.IO
 		}
 		
 		[Test]
+		[Category("PssFileIO")]
 		public void OpenAppend ()
 		{
 			string fn = Path.GetTempFileName ();

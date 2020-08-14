@@ -30,6 +30,7 @@
 //
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[ComImport]
@@ -63,3 +64,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		int IsSystemMoniker (out int pdwMksys);
 	}
 }
+#endif

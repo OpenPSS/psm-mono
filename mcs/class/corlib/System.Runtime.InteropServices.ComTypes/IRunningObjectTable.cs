@@ -30,6 +30,7 @@
 //
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[ComImport]
@@ -49,3 +50,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		void EnumRunning (out IEnumMoniker ppenumMoniker);
 	}
 }
+#endif

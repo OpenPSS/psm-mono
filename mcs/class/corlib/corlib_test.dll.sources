@@ -103,6 +103,7 @@ System.IO/FileSystemInfoTest.cs
 System.IO/FileTest.cs
 System.IO/MemoryStreamTest.cs
 System.IO/PathTest.cs
+System.IO/StreamTest.cs
 System.IO/StreamHelperTest.cs
 System.IO/StreamReaderTest.cs
 System.IO/StreamWriterTest.cs
@@ -111,9 +112,6 @@ System.IO/StringWriterTest.cs
 System.IO/TextReaderTest.cs
 System.IO/TextWriterTest.cs
 System.IO/UnmanagedMemoryStreamTest.cs
-System.IO.IsolatedStorage/IsolatedStorageTest.cs
-System.IO.IsolatedStorage/IsolatedStorageFileTest.cs
-System.IO.IsolatedStorage/IsolatedStorageFileStreamTest.cs
 System/MathTest.cs
 System/MulticastDelegate.cs
 System/NumberFormatterTest.cs
@@ -148,6 +146,7 @@ System.Reflection.Emit/ConstructorOnTypeBuilderInstTest.cs
 System.Reflection.Emit/CustomAttributeBuilderTest.cs
 System.Reflection.Emit/DerivedTypesTest.cs
 System.Reflection.Emit/DynamicMethodTest.cs
+System.Reflection.Emit/DynamicILInfoTest.cs
 System.Reflection.Emit/EnumBuilderTest.cs
 System.Reflection.Emit/EventBuilderTest.cs
 System.Reflection.Emit/FieldBuilderTest.cs
@@ -171,6 +170,10 @@ System.Runtime.CompilerServices/ConditionalWeakTableTest.cs
 System.Runtime.CompilerServices/InternalsVisibleToAttributeTest.cs
 System.Runtime.CompilerServices/RuntimeHelpersTest.cs
 System.Runtime.CompilerServices/RuntimeWrappedExceptionTest.cs
+System.Runtime.CompilerServices/AsyncVoidMethodBuilderTest.cs
+System.Runtime.CompilerServices/TaskAwaiterTest.cs
+System.Runtime.CompilerServices/TaskAwaiterTest_T.cs
+System.Runtime.CompilerServices/YieldAwaitableTest.cs
 System.Runtime.InteropServices/ExternalExceptionTest.cs
 System.Runtime.InteropServices/GCHandleTest.cs
 System.Runtime.InteropServices/MarshalTest.cs
@@ -277,9 +280,6 @@ System.Security.Permissions/GacIdentityPermissionAttributeTest.cs
 System.Security.Permissions/GacIdentityPermissionTest.cs
 System.Security.Permissions/HostProtectionAttributeTest.cs
 System.Security.Permissions/IBuiltInPermissionTest.cs
-System.Security.Permissions/IsolatedStorageFilePermissionAttributeTest.cs
-System.Security.Permissions/IsolatedStorageFilePermissionTest.cs
-System.Security.Permissions/IsolatedStoragePermissionAttributeTest.cs
 System.Security.Permissions/KeyContainerPermissionAttributeTest.cs
 System.Security.Permissions/PermissionSetAttributeTest.cs
 System.Security.Permissions/PrincipalPermissionAttributeTest.cs
@@ -406,8 +406,6 @@ System.IO/FileNotFoundExceptionCas.cs
 System.IO/FileStreamCas.cs
 System.IO/PathCas.cs
 System.IO/StreamCas.cs
-System.IO.IsolatedStorage/IsolatedStorageFileCas.cs
-System.IO.IsolatedStorage/IsolatedStorageFileStreamCas.cs
 System.Reflection/AssemblyCas.cs
 System.Reflection/AssemblyNameCas.cs
 System.Reflection/ModuleCas.cs
@@ -438,10 +436,9 @@ System.Threading/ThreadCas.cs
 System.Threading/WaitHandleCas.cs
 System.Threading.Tasks/TaskTest.cs
 System.Threading.Tasks/Task_T_Test.cs
+System.Threading.Tasks/TaskSchedulerTest.cs
 System.Threading.Tasks/TaskFactoryTest.cs
 System.Threading.Tasks/TaskFactoryTest_T.cs
-System.Threading.Tasks/TaskSchedulerTest.cs
-System.Threading.Tasks/FutureTests.cs
 System.Threading.Tasks/TaskCompletionSourceTests.cs
 System.Threading.Tasks/ParallelTestHelper.cs
 System.Threading.Tasks/ParallelTests.cs
@@ -454,7 +451,6 @@ System.Collections.Concurrent/ConcurrentDictionaryTests.cs
 System.Collections.Concurrent/CollectionStressTestHelper.cs
 System.Collections.Concurrent/ParallelConcurrentQueueTests.cs
 System.Threading/CancellationTokenTests.cs
-System.Threading/CancellationTokenSourceTest.cs
 System.Threading/ManualResetEventSlimTests.cs
 System.Threading/SemaphoreSlimTests.cs
 System.Threading/CountdownEventTests.cs

@@ -15,44 +15,49 @@ libs=	\
 	$(monodir)/mono/metadata/libmonoruntime.la	\
 	$(monodir)/mono/io-layer/libwapi.la	\
 	$(monodir)/mono/utils/libmonoutils.la \
-	$(GLIB_LIBS)	\
+	$(GLIB_LIBS) $(LIBICONV) \
 	$(libgc_libs)
 
 sgen_libs = \
 	$(monodir)/mono/metadata/libmonoruntimesgen.la	\
 	$(monodir)/mono/io-layer/libwapi.la	\
 	$(monodir)/mono/utils/libmonoutils.la \
-	$(GLIB_LIBS)
+	$(GLIB_LIBS) $(LIBICONV)
+
+if PLATFORM_ANDROID
+libs +=-lstdc++ -landroid-bridge -L$(top_srcdir)/android
+sgen_libs +=-lstdc++ -landroid-bridge -L$(top_srcdir)/android
+endif
 
 if MOONLIGHT
 moon_libs = \
 	$(monodir)/mono/metadata/libmonoruntimemoon.la	\
 	$(monodir)/mono/io-layer/libwapi.la	\
 	$(monodir)/mono/utils/libmonoutils.la \
-	$(GLIB_LIBS)
+	$(GLIB_LIBS) $(LIBICONV)
 endif
 
 static_libs=	\
 	$(monodir)/mono/metadata/libmonoruntime-static.la	\
 	$(monodir)/mono/io-layer/libwapi.la	\
 	$(monodir)/mono/utils/libmonoutils.la \
-	$(GLIB_LIBS)	\
+	$(GLIB_LIBS) $(LIBICONV) \
 	$(libgc_static_libs)
 
 sgenstatic_libs = \
 	$(monodir)/mono/metadata/libmonoruntimesgen-static.la	\
 	$(monodir)/mono/io-layer/libwapi.la	\
 	$(monodir)/mono/utils/libmonoutils.la \
-	$(GLIB_LIBS)
+	$(GLIB_LIBS) $(LIBICONV)
 
-CLASS=$(mcs_topdir)/class/lib/net_2_0
+CLASS=$(mcs_topdir)/class/lib/net_4_5
 
 RUNTIME_EXECUTABLE = $(if $(SGEN),$(top_builddir)/mono/mini/mono-sgen,$(top_builddir)/runtime/mono-wrapper)
 
 RUNTIME = MONO_PATH=$(CLASS) $(RUNTIME_EXECUTABLE)
 RUNTIME_AOTCHECK = MONO_PATH=$(CLASS):. $(RUNTIME_EXECUTABLE)
 
-MCS = $(RUNTIME) $(CLASS)/gmcs.exe -unsafe -nowarn:0162
+MCS = $(RUNTIME) $(mcs_topdir)/class/lib/build/mcs.exe -unsafe -nowarn:0162
 ILASM = $(RUNTIME) $(CLASS)/ilasm.exe
 
 AM_CFLAGS = \
@@ -101,7 +106,7 @@ boehm_binaries  = mono
 endif
 
 if HOST_WIN32
-bin_PROGRAMS = mono monow
+bin_PROGRAMS = $(boehm_binaries) $(sgen_binaries) monow
 else
 bin_PROGRAMS = $(boehm_binaries) $(sgen_binaries)
 endif
@@ -184,6 +189,7 @@ mono_LDADD = \
 	$(MONO_LIB)		\
 	$(GLIB_LIBS)		\
 	$(LLVMMONOF)		\
+	$(LIBICONV)		\
 	-lm			\
 	$(MONO_DTRACE_OBJECT)
 
@@ -194,6 +200,7 @@ mono_sgen_LDADD = \
 	$(MONO_SGEN_LIB)	\
 	$(GLIB_LIBS)		\
 	$(LLVMMONOF)		\
+	$(LIBICONV)		\
 	-lm			\
 	$(MONO_DTRACE_OBJECT)
 
@@ -227,7 +234,8 @@ genmdesc_SOURCES = \
 # Don't link this against libmonoruntime to speed up rebuilds
 genmdesc_LDADD = \
 	$(monodir)/mono/utils/libmonoutils.la -lm	\
-	$(GLIB_LIBS)
+	$(GLIB_LIBS)					\
+	$(LIBICONV)
 
 x86_sources = \
 	mini-x86.c		\
@@ -513,10 +521,6 @@ libmono_2_0_la_LIBADD = $(libs) $(LIBMONO_DTRACE_OBJECT)
 libmonosgen_2_0_la_SOURCES = $(libmono_2_0_la_SOURCES)
 libmonosgen_2_0_la_CFLAGS = $(mono_sgen_CFLAGS)
 libmonosgen_2_0_la_LIBADD = $(sgen_libs) $(LIBMONO_DTRACE_OBJECT)
-
-if PLATFORM_ANDROID
-libmonosgen_2_0_la_LDFLAGS = -avoid-version
-endif
 
 if MOONLIGHT
 libmono_moon_la_SOURCES = $(libmono_2_0_la_SOURCES)

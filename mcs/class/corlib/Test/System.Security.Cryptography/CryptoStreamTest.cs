@@ -200,6 +200,7 @@ namespace MonoTests.System.Security.Cryptography {
 		
 		[Test]
 		[ExpectedException (typeof (ArgumentException))]
+		[Category("PssFileIO")]
 		public void StreamWriteModeRead () 
 		{
 			// This needs a stream which can't be read from; memory stream won't do that.
@@ -331,8 +332,7 @@ namespace MonoTests.System.Security.Cryptography {
 				Assert.AreEqual (0, cs.Read (buffer, 0, 8), "Read from disposed");
 			}
 		}
-		
-#if !NET_2_1
+
 		[Test]
 		// MS BUG [ExpectedException (typeof (ObjectDisposedException))]
 #if NET_2_0
@@ -354,7 +354,6 @@ namespace MonoTests.System.Security.Cryptography {
 				len = cs.Read (buffer, 3, 4);
 			}
 		}
-#endif
 
 		[Test]
 		[ExpectedException (typeof (NotSupportedException))]
@@ -435,8 +434,7 @@ namespace MonoTests.System.Security.Cryptography {
 			cs = new CryptoStream (readStream, encryptor, CryptoStreamMode.Read);
 			cs.Read (buffer, Int32.MaxValue, 4);
 		}
-		
-#if !NET_2_1
+
 		[Test]
 		// MS BUG [ExpectedException (typeof (ObjectDisposedException))]
 #if NET_2_0
@@ -456,8 +454,7 @@ namespace MonoTests.System.Security.Cryptography {
 				cs.Write (buffer, 0, 8);
 			}
 		}
-#endif
-		
+
 		[Test]
 		[ExpectedException (typeof (NotSupportedException))]
 		public void Write_ReadStream () 

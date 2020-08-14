@@ -15,7 +15,7 @@
 using System; using Microsoft;
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
 
 using System.Globalization;
 #if CODEPLEX_40

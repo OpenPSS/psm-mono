@@ -30,6 +30,7 @@
 //
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[ComImport]
@@ -50,3 +51,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		int RevokeObjectParam ([MarshalAs(UnmanagedType.LPWStr)] string pszKey);
 	}
 }
+#endif

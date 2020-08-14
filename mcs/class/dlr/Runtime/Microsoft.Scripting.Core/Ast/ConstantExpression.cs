@@ -30,7 +30,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents an expression that has a constant value.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.ConstantExpressionProxy))]
 #endif
     public class ConstantExpression : Expression {

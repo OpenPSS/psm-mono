@@ -399,7 +399,8 @@ namespace MonoTests.System.Reflection
 
 #if !TARGET_JVM // ReflectionOnly is not supported yet on TARGET_JVM
 		[Test]
-			public void InvokeOnRefOnlyAssembly ()
+		[Category ("NotWorking")]
+		public void InvokeOnRefOnlyAssembly ()
 		{
 			Assembly a = Assembly.ReflectionOnlyLoad (typeof (MethodInfoTest).Assembly.FullName);
 			Type t = a.GetType (typeof (RefOnlyMethodClass).FullName);

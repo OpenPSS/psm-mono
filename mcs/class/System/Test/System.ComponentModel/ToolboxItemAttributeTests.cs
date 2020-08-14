@@ -8,7 +8,6 @@
 
 using System;
 using System.ComponentModel;
-using System.Drawing.Design;
 
 using NUnit.Framework;
 

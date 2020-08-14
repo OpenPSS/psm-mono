@@ -30,6 +30,7 @@
 //
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[ComImport]
@@ -41,3 +42,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		void FindConnectionPoint ([In] ref Guid riid, out IConnectionPoint ppCP);
 	}
 }
+#endif

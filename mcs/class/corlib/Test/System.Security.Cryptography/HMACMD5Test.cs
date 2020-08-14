@@ -36,7 +36,7 @@ namespace MonoTests.System.Security.Cryptography {
 		protected HMACMD5 algo;
 
 		[SetUp]
-		public override void SetUp () 
+		protected override void SetUp () 
 		{
 			algo = new HMACMD5 ();
 			algo.Key = new byte [8];

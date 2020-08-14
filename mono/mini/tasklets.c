@@ -54,7 +54,7 @@ continuation_mark_frame (MonoContinuation *cont)
 	if (cont->domain)
 		return mono_get_exception_argument ("cont", "Already marked");
 
-	jit_tls = TlsGetValue (mono_jit_tls_id);
+	jit_tls = mono_native_tls_get_value (mono_jit_tls_id);
 	lmf = mono_get_lmf();
 	cont->domain = mono_domain_get ();
 	cont->thread_id = GetCurrentThreadId ();
@@ -104,10 +104,8 @@ continuation_store (MonoContinuation *cont, int state, MonoException **e)
 
 	if (cont->saved_stack && num_bytes <= cont->stack_alloc_size) {
 		/* clear to avoid GC retention */
-		if (num_bytes < cont->stack_used_size) {
+		if (num_bytes < cont->stack_used_size)
 			memset ((char*)cont->saved_stack + num_bytes, 0, cont->stack_used_size - num_bytes);
-			cont->stack_used_size = num_bytes;
-		}
 	} else {
 		tasklets_lock ();
 		internal_init ();

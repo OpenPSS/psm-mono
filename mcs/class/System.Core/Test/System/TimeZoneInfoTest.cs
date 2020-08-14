@@ -4,6 +4,8 @@
  * Author(s)
  * 	Stephane Delcroix <stephane@delcroix.org>
  *
+ * Copyright 2011 Xamarin Inc.
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -347,15 +349,6 @@ namespace MonoTests.System
 				Assert.AreEqual (back.Kind, DateTimeKind.Utc);
 				Assert.AreEqual (utc, back);
 		
-			}
-
-			[Test]
-			public void ConvertToTimeZone ()
-			{
-				if (Environment.OSVersion.Platform != PlatformID.Unix)
-					return;
-
-				TimeZoneInfo.ConvertTime (DateTime.Now, TimeZoneInfo.FindSystemTimeZoneById("Pacific/Auckland"));
 			}
 		}
 		

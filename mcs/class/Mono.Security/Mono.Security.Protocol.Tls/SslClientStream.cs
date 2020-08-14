@@ -291,10 +291,10 @@ namespace Mono.Security.Protocol.Tls
 			}
 		}
 
-		private void SafeReceiveRecord (Stream s, bool ignoreEmpty = false)
+		private void SafeReceiveRecord (Stream s)
 		{
 			byte[] record = this.protocol.ReceiveRecord (s);
-			if (!ignoreEmpty && ((record == null) || (record.Length == 0))) {
+			if ((record == null) || (record.Length == 0)) {
 				throw new TlsException (
 					AlertDescription.HandshakeFailiure,
 					"The server stopped the handshake.");
@@ -308,8 +308,8 @@ namespace Mono.Security.Protocol.Tls
 			// Read server response
 			while (this.context.LastHandshakeMsg != HandshakeType.ServerHelloDone) 
 			{
-				// Read next record (skip empty, e.g. warnings alerts)
-				SafeReceiveRecord (this.innerStream, true);
+				// Read next record
+				SafeReceiveRecord (this.innerStream);
 
 				// special case for abbreviated handshake where no ServerHelloDone is sent from the server
 				if (this.context.AbbreviatedHandshake && (this.context.LastHandshakeMsg == HandshakeType.ServerHello))

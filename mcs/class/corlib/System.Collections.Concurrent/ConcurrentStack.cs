@@ -47,6 +47,21 @@ namespace System.Collections.Concurrent
 		Node head = null;
 		
 		int count;
+
+		class NodeObjectPool : ObjectPool<Node> {
+			protected override Node Creator ()
+			{
+				return new Node ();
+			}
+		}
+		static readonly NodeObjectPool pool = new NodeObjectPool ();
+
+		static Node ZeroOut (Node node)
+		{
+			node.Value = default(T);
+			node.Next = null;
+			return node;
+		}
 		
 		public ConcurrentStack ()
 		{
@@ -66,7 +81,7 @@ namespace System.Collections.Concurrent
 		
 		public void Push (T item)
 		{
-			Node temp = new Node ();
+			Node temp = pool.Take ();
 			temp.Value = item;
 			do {
 			  temp.Next = head;
@@ -86,7 +101,7 @@ namespace System.Collections.Concurrent
 			Node first = null;
 			
 			for (int i = startIndex; i < count; i++) {
-				Node temp = new Node ();
+				Node temp = pool.Take ();
 				temp.Value = items[i];
 				temp.Next = insert;
 				insert = temp;
@@ -117,27 +132,18 @@ namespace System.Collections.Concurrent
 			Interlocked.Decrement (ref count);
 			
 			result = temp.Value;
+			pool.Release (ZeroOut (temp));
+
 			return true;
 		}
 
 		public int TryPopRange (T[] items)
 		{
-			if (items == null)
-				throw new ArgumentNullException ("items");
 			return TryPopRange (items, 0, items.Length);
 		}
 
 		public int TryPopRange (T[] items, int startIndex, int count)
 		{
-			if (items == null)
-				throw new ArgumentNullException ("items");
-			if (startIndex < 0 || startIndex >= items.Length)
-				throw new ArgumentOutOfRangeException ("startIndex");
-			if (count < 0)
-				throw new ArgumentOutOfRangeException ("count");
-			if (startIndex + count > items.Length)
-				throw new ArgumentException ("startIndex + count is greater than the length of items.");
-
 			Node temp;
 			Node end;
 			
@@ -146,7 +152,7 @@ namespace System.Collections.Concurrent
 				if (temp == null)
 					return -1;
 				end = temp;
-				for (int j = 0; j < count; j++) {
+				for (int j = 0; j < count - 1; j++) {
 					end = end.Next;
 					if (end == null)
 						break;
@@ -154,13 +160,14 @@ namespace System.Collections.Concurrent
 			} while (Interlocked.CompareExchange (ref head, end, temp) != temp);
 			
 			int i;
-			for (i = startIndex; i < startIndex + count && temp != null; i++) {
+			for (i = startIndex; i < count && temp != null; i++) {
 				items[i] = temp.Value;
+				end = temp;
 				temp = temp.Next;
+				pool.Release (ZeroOut (end));
 			}
-			this.count -= (i - startIndex);
 			
-			return i - startIndex;
+			return i - 1;
 		}
 		
 		public bool TryPeek (out T result)

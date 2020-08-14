@@ -30,6 +30,7 @@
 //
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[Flags, Serializable]
@@ -50,3 +51,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		FUNCFLAG_FIMMEDIATEBIND = 4096
 	}
 }
+#endif

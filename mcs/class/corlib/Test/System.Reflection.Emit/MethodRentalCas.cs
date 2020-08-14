@@ -37,6 +37,7 @@ namespace MonoCasTests.System.Reflection.Emit {
 
 	[TestFixture]
 	[Category ("CAS")]
+	[Category("NotMobile")] // mobile profile doesn't support S.R.E
 	public class MethodRentalCas {
 
 		[SetUp]

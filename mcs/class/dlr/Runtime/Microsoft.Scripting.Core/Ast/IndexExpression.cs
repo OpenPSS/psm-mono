@@ -34,7 +34,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents indexing a property or array.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.IndexExpressionProxy))]
 #endif
     public sealed class IndexExpression : Expression, IArgumentProvider {

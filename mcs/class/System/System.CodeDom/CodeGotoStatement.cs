@@ -27,6 +27,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Runtime.InteropServices;
 
 namespace System.CodeDom
@@ -42,11 +43,10 @@ namespace System.CodeDom
 		//
 		// Constructors
 		//
-#if NET_2_0
 		public CodeGotoStatement ()
 		{
 		}
-#endif
+
 		public CodeGotoStatement (string label)
 		{
 			Label = label;
@@ -60,11 +60,9 @@ namespace System.CodeDom
 				return label;
 			}
 			set {
-#if NET_2_0
 				if (value == null || value.Length == 0) {
 					throw new ArgumentNullException ("value");
 				}
-#endif
 				label = value;
 			}
 		}
@@ -78,3 +76,4 @@ namespace System.CodeDom
 		}
 	}
 }
+#endif

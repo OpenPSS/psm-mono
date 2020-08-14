@@ -30,8 +30,10 @@
 //
 
 using System;
+#if !MOBILE
 using System.CodeDom;
 using System.CodeDom.Compiler;
+#endif
 using System.Web.Services;
 using System.Web.Services.Protocols;
 using System.Web.Services.Description;

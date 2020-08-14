@@ -15,7 +15,7 @@
 using System; using Microsoft;
 
 
-#if !SILVERLIGHT // ComObject
+#if !SILVERLIGHT && !MOBILE // ComObject
 
 using System.Collections;
 using System.Collections.Generic;

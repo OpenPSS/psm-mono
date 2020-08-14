@@ -28,6 +28,7 @@
 // Kazuki Oikawa (kazuki@panicode.com)
 //
 // (C) 2002 Ximian, Inc.
+#if !MOBILE
 using System;
 using System.Runtime.InteropServices.ComTypes;
 
@@ -52,3 +53,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		void ReleaseTLibAttr (IntPtr pTLibAttr);
 	}
 }
+#endif

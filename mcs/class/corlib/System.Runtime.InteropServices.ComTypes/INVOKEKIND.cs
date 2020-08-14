@@ -30,6 +30,7 @@
 // (C) 2002 Ximian, Inc.
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[Flags]
@@ -41,3 +42,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		INVOKE_PROPERTYPUTREF = 8
 	}
 }
+#endif

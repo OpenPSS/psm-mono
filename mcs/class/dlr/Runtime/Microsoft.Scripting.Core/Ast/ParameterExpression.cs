@@ -30,7 +30,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents a named parameter expression.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.ParameterExpressionProxy))]
 #endif
     public class ParameterExpression : Expression {

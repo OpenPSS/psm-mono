@@ -6,6 +6,7 @@
 //
 // Copyright (C) 2004-2005 Novell, Inc (http://www.novell.com)
 // Copyright (C) 2005 David Waite (mass@akuma.org)
+// Copyright 2011 Xamarin Inc (http://www.xamarin.com).
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -994,6 +995,17 @@ namespace MonoTests.System.Collections.Generic {
 			enumerator.MoveNext ();
 		}
 
+		[Test, ExpectedException (typeof (InvalidOperationException))] // #699182
+		public void VersionCheck_Indexer ()
+		{
+			var list = new List<int> () { 0, 2, 3 };
+			var enumerator = list.GetEnumerator ();
+
+			list [0] = 1;
+
+			enumerator.MoveNext ();
+		}
+
 		[Test]
 		public void VersionCheck_Reverse ()
 		{
@@ -1306,12 +1318,6 @@ namespace MonoTests.System.Collections.Generic {
 			} catch (Exception e) {
 				Assert.IsTrue (e is ArgumentException, "#10");
 			}
-		}
-
-		[Test]
-		public void LastIndexOfEmpty_2558 () {
-			var l = new List<int> ();
-			Assert.AreEqual (-1, l.IndexOf (-1));
 		}
 	}
 }

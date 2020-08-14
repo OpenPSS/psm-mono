@@ -149,7 +149,7 @@ namespace System.Dynamic.Utils {
 
         internal static bool AreEquivalent(Type t1, Type t2)
         {
-#if CLR2 || SILVERLIGHT
+#if CLR2 || SILVERLIGHT || MOBILE
             return t1 == t2;
 #else
             return t1 == t2 || t1.IsEquivalentTo(t2);

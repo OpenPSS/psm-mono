@@ -32,6 +32,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Globalization;
 using System.CodeDom;
 using System.Reflection;
@@ -59,11 +60,7 @@ namespace System.CodeDom.Compiler {
 		//
 		// Properties
 		//
-#if NET_2_0
 		protected
-#else
-		internal
-#endif
 		CodeTypeDeclaration CurrentClass {
 			get {
 				return currentType;
@@ -188,13 +185,12 @@ namespace System.CodeDom.Compiler {
 		}
 
 		protected abstract void GenerateCastExpression (CodeCastExpression e);
-#if NET_2_0
+
 		[MonoTODO]
 		public virtual void GenerateCodeFromMember (CodeTypeMember member, TextWriter writer, CodeGeneratorOptions options)
 		{
 			throw new NotImplementedException ();
 		}
-#endif
 		protected abstract void GenerateComment (CodeComment comment);
 
 		protected virtual void GenerateCommentStatement (CodeCommentStatement statement)
@@ -231,20 +227,16 @@ namespace System.CodeDom.Compiler {
 
 		protected virtual void GenerateCompileUnitEnd (CodeCompileUnit compileUnit)
 		{
-#if NET_2_0
 			if (compileUnit.EndDirectives.Count > 0)
 				GenerateDirectives (compileUnit.EndDirectives);
-#endif
 		}
 
 		protected virtual void GenerateCompileUnitStart (CodeCompileUnit compileUnit)
 		{
-#if NET_2_0
 			if (compileUnit.StartDirectives.Count > 0) {
 				GenerateDirectives (compileUnit.StartDirectives);
 				Output.WriteLine ();
 			}
-#endif
 		}
 
 		protected abstract void GenerateConditionStatement (CodeConditionStatement s);
@@ -254,13 +246,13 @@ namespace System.CodeDom.Compiler {
 		{
 			Output.Write (d.ToString (CultureInfo.InvariantCulture));
 		}
-#if NET_2_0
+
 		[MonoTODO]
 		protected virtual void GenerateDefaultValueExpression (CodeDefaultValueExpression e)
 		{
 			throw new NotImplementedException ();
 		}
-#endif
+
 		protected abstract void GenerateDelegateCreateExpression (CodeDelegateCreateExpression e);
 		protected abstract void GenerateDelegateInvokeExpression (CodeDelegateInvokeExpression e);
 
@@ -438,16 +430,13 @@ namespace System.CodeDom.Compiler {
 
 		protected void GenerateStatement (CodeStatement s)
 		{
-#if NET_2_0
 			if (s.StartDirectives.Count > 0)
 				GenerateDirectives (s.StartDirectives);
-#endif
 			if (s.LinePragma != null)
 				GenerateLinePragmaStart (s.LinePragma);
 
 			CodeSnippetStatement snippet = s as CodeSnippetStatement;
 			if (snippet != null) {
-#if NET_2_0
 				int indent = Indent;
 				try {
 					Indent = 0;
@@ -455,9 +444,6 @@ namespace System.CodeDom.Compiler {
 				} finally {
 					Indent = indent;
 				}
-#else
-				GenerateSnippetStatement (snippet);
-#endif
 			} else {
 				try {
 					s.Accept (visitor);
@@ -469,10 +455,8 @@ namespace System.CodeDom.Compiler {
 			if (s.LinePragma != null)
 				GenerateLinePragmaEnd (s.LinePragma);
 
-#if NET_2_0
 			if (s.EndDirectives.Count > 0)
 				GenerateDirectives (s.EndDirectives);
-#endif			
 		}
 
 		protected void GenerateStatements (CodeStatementCollection c)
@@ -641,11 +625,7 @@ namespace System.CodeDom.Compiler {
 					output.Write ("internal ");
 					break;
 				case MemberAttributes.FamilyAndAssembly:
-#if NET_2_0
 					output.Write ("internal "); 
-#else
-					output.Write ("/*FamANDAssem*/ internal "); 
-#endif
 					break;
 				case MemberAttributes.Family:
 					output.Write ("protected ");
@@ -664,10 +644,8 @@ namespace System.CodeDom.Compiler {
 
 		protected virtual void OutputMemberScopeModifier (MemberAttributes attributes)
 		{
-#if NET_2_0
 			if ((attributes & MemberAttributes.VTableMask) == MemberAttributes.New)
 				output.Write( "new " );
-#endif
 
 			switch (attributes & MemberAttributes.ScopeMask) {
 				case MemberAttributes.Abstract:
@@ -898,10 +876,8 @@ namespace System.CodeDom.Compiler {
 			this.currentType = type;
 			this.currentMember = null;
 
-#if NET_2_0
 			if (type.StartDirectives.Count > 0)
 				GenerateDirectives (type.StartDirectives);
-#endif
 			foreach (CodeCommentStatement statement in type.Comments)
 				GenerateCommentStatement (statement);
 
@@ -913,10 +889,8 @@ namespace System.CodeDom.Compiler {
 			CodeTypeMember[] members = new CodeTypeMember[type.Members.Count];
 			type.Members.CopyTo (members, 0);
 
-#if NET_2_0
 			if (!Options.VerbatimOrder)
-#endif
- {
+			{
 				int[] order = new int[members.Length];
 				for (int n = 0; n < members.Length; n++)
 					order[n] = Array.IndexOf (memberTypes, members[n].GetType ()) * members.Length + n;
@@ -935,10 +909,8 @@ namespace System.CodeDom.Compiler {
 				if (prevMember != null && subtype == null) {
 					if (prevMember.LinePragma != null)
 						GenerateLinePragmaEnd (prevMember.LinePragma);
-#if NET_2_0
 					if (prevMember.EndDirectives.Count > 0)
 						GenerateDirectives (prevMember.EndDirectives);
-#endif
 				}
 
 				if (options.BlankLinesBetweenMembers)
@@ -951,10 +923,8 @@ namespace System.CodeDom.Compiler {
 					continue;
 				}
 
-#if NET_2_0
 				if (currentMember.StartDirectives.Count > 0)
 					GenerateDirectives (currentMember.StartDirectives);
-#endif
 				foreach (CodeCommentStatement statement in member.Comments)
 					GenerateCommentStatement (statement);
 
@@ -972,10 +942,8 @@ namespace System.CodeDom.Compiler {
 			if (currentMember != null && !(currentMember is CodeTypeDeclaration)) {
 				if (currentMember.LinePragma != null)
 					GenerateLinePragmaEnd (currentMember.LinePragma);
-#if NET_2_0
 				if (currentMember.EndDirectives.Count > 0)
 					GenerateDirectives (currentMember.EndDirectives);
-#endif
 			}
 
 			this.currentType = type;
@@ -984,10 +952,8 @@ namespace System.CodeDom.Compiler {
 			if (type.LinePragma != null)
 				GenerateLinePragmaEnd (type.LinePragma);
 
-#if NET_2_0
 			if (type.EndDirectives.Count > 0)
 				GenerateDirectives (type.EndDirectives);
-#endif
 		}
 
 		protected abstract string GetTypeOutput (CodeTypeReference type);
@@ -1083,11 +1049,9 @@ namespace System.CodeDom.Compiler {
 						typeof (CodeEntryPointMethod)
 					};
 
-#if NET_2_0
 		protected virtual void GenerateDirectives (CodeDirectiveCollection directives)
 		{
 		}
-#endif
 
 		internal class Visitor : ICodeDomVisitor {
 			CodeGenerator g;
@@ -1129,12 +1093,10 @@ namespace System.CodeDom.Compiler {
 				g.GenerateCastExpression (o);
 			}
 	
-#if NET_2_0
 			public void Visit (CodeDefaultValueExpression o)
 			{
 				g.GenerateDefaultValueExpression (o);
 			}
-#endif
 	
 			public void Visit (CodeDelegateCreateExpression o)
 			{
@@ -1337,3 +1299,4 @@ namespace System.CodeDom.Compiler {
 		}
 	}
 }
+#endif

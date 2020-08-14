@@ -29,6 +29,7 @@ using System.Reflection;
 namespace MonoTests.System.Net
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class FileWebRequestTest
 	{
 		private string _tempDirectory;

@@ -47,10 +47,6 @@ namespace Mono {
 		// Format is undefined only for use as a string for reporting
 		[MethodImplAttribute (MethodImplOptions.InternalCall)]
 		internal static extern string GetDisplayName ();
-
-		[MethodImplAttribute (MethodImplOptions.InternalCall)]
-		public static extern string GetNativeStackTrace (Exception exception);
-
 	}
 	
 }

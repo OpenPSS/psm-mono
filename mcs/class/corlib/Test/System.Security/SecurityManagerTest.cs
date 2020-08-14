@@ -63,6 +63,7 @@ namespace MonoTests.System.Security {
 
 		[Test]
 		[ExpectedException (typeof (ArgumentNullException))]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void LoadPolicyLevelFromFile_Null ()
 		{
 			SecurityManager.LoadPolicyLevelFromFile (null, PolicyLevelType.AppDomain);
@@ -70,12 +71,14 @@ namespace MonoTests.System.Security {
 
 		[Test]
 		[ExpectedException (typeof (ArgumentNullException))]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void LoadPolicyLevelFromString_Null ()
 		{
 			SecurityManager.LoadPolicyLevelFromString (null, PolicyLevelType.AppDomain);
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void PolicyHierarchy () 
 		{
 			IEnumerator e = SecurityManager.PolicyHierarchy ();
@@ -133,6 +136,7 @@ namespace MonoTests.System.Security {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidence_Assembly_Zone ()
 		{
 			ResolveEvidenceAssembly (SecurityZone.Internet);
@@ -144,6 +148,7 @@ namespace MonoTests.System.Security {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidence_Null ()
 		{
 			Evidence e = null;
@@ -154,6 +159,7 @@ namespace MonoTests.System.Security {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidence_CurrentAssembly ()
 		{
 			PermissionSet granted = SecurityManager.ResolvePolicy (CurrentEvidence);
@@ -163,6 +169,7 @@ namespace MonoTests.System.Security {
 
 #if NET_2_0
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidences_Null ()
 		{
 			Evidence[] e = null;
@@ -174,6 +181,7 @@ namespace MonoTests.System.Security {
 #endif
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidence_AllNull_NoExecution ()
 		{
 			PermissionSet denied = null;
@@ -185,6 +193,7 @@ namespace MonoTests.System.Security {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidence_NullRequests_CurrentAssembly ()
 		{
 			PermissionSet denied = null;
@@ -212,6 +221,7 @@ namespace MonoTests.System.Security {
 
 		[Test]
 		[Category ("NotDotNet")] // MS bug - throws a NullReferenceException
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidence_DenyUnrestricted_NoExecution ()
 		{
 			PermissionSet deny = new PermissionSet (PermissionState.Unrestricted);
@@ -222,6 +232,7 @@ namespace MonoTests.System.Security {
 
 		[Test]
 		[ExpectedException (typeof (ArgumentNullException))]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicyGroups_Null ()
 		{
 			IEnumerator e = SecurityManager.ResolvePolicyGroups (null);
@@ -229,6 +240,7 @@ namespace MonoTests.System.Security {
 
 		[Test]
 		[ExpectedException (typeof (NullReferenceException))]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void SavePolicyLevel_Null ()
 		{
 			SecurityManager.SavePolicyLevel (null);
@@ -236,6 +248,7 @@ namespace MonoTests.System.Security {
 
 		[Test]
 		[ExpectedException (typeof (PolicyException))]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void SavePolicyLevel_AppDomain ()
 		{
 			PolicyLevel adl = PolicyLevel.CreateAppDomainLevel ();
@@ -255,6 +268,7 @@ namespace MonoTests.System.Security {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidence_ArrayNull ()
 		{
 			Evidence[] e = null;
@@ -265,6 +279,7 @@ namespace MonoTests.System.Security {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidence_ArrayEmpty ()
 		{
 			Evidence[] e = new Evidence [0];
@@ -275,6 +290,7 @@ namespace MonoTests.System.Security {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ResolvePolicy_Evidence_Array ()
 		{
 			Evidence[] e = new Evidence[] { new Evidence () };

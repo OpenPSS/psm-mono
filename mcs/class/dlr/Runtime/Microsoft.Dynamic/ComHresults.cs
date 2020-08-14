@@ -15,7 +15,7 @@
 using System; using Microsoft;
 
 
-#if !SILVERLIGHT // ComObject
+#if !SILVERLIGHT && !MOBILE // ComObject
 
 #if CODEPLEX_40
 namespace System.Dynamic {

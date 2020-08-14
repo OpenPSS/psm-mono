@@ -4,14 +4,12 @@
 // Authors:	Marcin Szczepanski (marcins@zipworld.com.au)
 //		Patrik Torstensson
 //		Gonzalo Paniagua Javier (gonzalo@ximian.com)
+//		Marek Safar (marek.safar@gmail.com)
 //
 // (c) 2001,2002 Marcin Szczepanski, Patrik Torstensson
 // (c) 2003 Ximian, Inc. (http://www.ximian.com)
-// Copyright (C) 2004 Novell (http://www.novell.com)
-//
-
-//
 // Copyright (C) 2004 Novell, Inc (http://www.novell.com)
+// Copyright 2011 Xamarin, Inc (http://www.xamarin.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -35,6 +33,10 @@
 
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Threading;
+#if NET_4_5
+using System.Threading.Tasks;
+#endif
 
 namespace System.IO
 {
@@ -53,6 +55,9 @@ namespace System.IO
 		bool streamClosed;
 		int position;
 		int dirty_bytes;
+#if NET_4_5
+		Task<int> read_task;
+#endif
 
 		public MemoryStream () : this (0)
 		{
@@ -153,8 +158,6 @@ namespace System.IO
 
 			set {
 				CheckIfClosedThrowDisposed ();
-				if (value == capacity)
-					return; // LAMENESS: see MemoryStreamTest.ConstructorFive
 
 				if (!expandable)
 					throw new NotSupportedException ("Cannot expand this MemoryStream");
@@ -234,8 +237,6 @@ namespace System.IO
 
 		public override int Read ([In,Out] byte [] buffer, int offset, int count)
 		{
-			CheckIfClosedThrowDisposed ();
-
 			if (buffer == null)
 				throw new ArgumentNullException ("buffer");
 
@@ -245,6 +246,8 @@ namespace System.IO
 			if (buffer.Length - offset < count )
 				throw new ArgumentException ("offset+count",
 							      "The size of the buffer is less than offset + count.");
+
+			CheckIfClosedThrowDisposed ();
 
 			if (position >= length || count == 0)
 				return 0;
@@ -372,8 +375,6 @@ namespace System.IO
 
 		public override void Write (byte [] buffer, int offset, int count)
 		{
-			CheckIfClosedThrowDisposed ();
-
 			if (!canWrite)
 				throw new NotSupportedException ("Cannot write to this stream.");
 
@@ -386,6 +387,8 @@ namespace System.IO
 			if (buffer.Length - offset < count)
 				throw new ArgumentException ("offset+count",
 							     "The size of the buffer is less than offset + count.");
+
+			CheckIfClosedThrowDisposed ();
 
 			// reordered to avoid possible integer overflow
 			if (position > length - count)
@@ -421,9 +424,38 @@ namespace System.IO
 			stream.Write (internalBuffer, initialIndex, length - initialIndex);
 		}
 
-#if NET_4_0
-		protected override void ObjectInvariant ()
+#if NET_4_5
+
+		public override Task FlushAsync (CancellationToken cancellationToken)
 		{
+			if (cancellationToken.IsCancellationRequested)
+				return TaskConstants<int>.Canceled;
+
+			Flush ();
+			return TaskConstants.Finished;
+		}
+
+		public override Task<int> ReadAsync (byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+		{
+			if (cancellationToken.IsCancellationRequested)
+				return TaskConstants<int>.Canceled;
+
+			count = Read (buffer, offset, count);
+
+			// Try not to allocate a new task for every buffer read
+			if (read_task == null || read_task.Result != count)
+				read_task = Task<int>.FromResult (count);
+
+			return read_task;
+		}
+
+		public override Task WriteAsync (byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+		{
+			if (cancellationToken.IsCancellationRequested)
+				return TaskConstants<int>.Canceled;
+
+			Write (buffer, offset, count);
+			return TaskConstants.Finished;
 		}
 #endif
 	}               

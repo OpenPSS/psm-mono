@@ -166,7 +166,7 @@ namespace System.Dynamic {
         }
 
         private static BindingRestrictions AddRemoteObjectRestrictions(BindingRestrictions restrictions, object[] args, ReadOnlyCollection<ParameterExpression> parameters) {
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
 
             for (int i = 0; i < parameters.Count; i++) {
                 var expr = parameters[i];
@@ -279,7 +279,7 @@ namespace System.Dynamic {
             }
         }
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
         private static readonly Type ComObjectType = typeof(object).Assembly.GetType("System.__ComObject");
         private static bool IsComObject(object obj) {
             // we can't use System.Runtime.InteropServices.Marshal.IsComObject(obj) since it doesn't work in partial trust

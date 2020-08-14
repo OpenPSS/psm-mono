@@ -211,6 +211,7 @@ namespace MonoCasTests.System {
 			string s = Environment.GetEnvironmentVariable ("PATH");
 		}
 
+#if !NET_2_1
 		[Test]
 		[EnvironmentPermission (SecurityAction.Deny, Read = "MONO")]
 		public void GetEnvironmentVariable_Target_Process ()
@@ -246,6 +247,7 @@ namespace MonoCasTests.System {
 			// it takes Unrestricted access to read from Machine
 			// and User environment variables
 		}
+#endif
 
 		[Test]
 		[EnvironmentPermission (SecurityAction.Deny, Read = "PATH")]
@@ -268,6 +270,7 @@ namespace MonoCasTests.System {
 			IDictionary d = Environment.GetEnvironmentVariables ();
 		}
 
+#if !NET_2_1
 		[Test]
 		[EnvironmentPermission (SecurityAction.Deny, Read = "PATH")]
 		[ExpectedException (typeof (SecurityException))]
@@ -292,6 +295,7 @@ namespace MonoCasTests.System {
 			// it takes Unrestricted access to read from Machine
 			// and User environment variables
 		}
+#endif
 
 		[Test]
 		[EnvironmentPermission (SecurityAction.Deny, Unrestricted = true)]
@@ -385,6 +389,7 @@ namespace MonoCasTests.System {
 			int i = Environment.ProcessorCount;
 		}
 
+#if !NET_2_1
 		[Test]
 		[EnvironmentPermission (SecurityAction.Deny, Write = "MONO")]
 		[ExpectedException (typeof (SecurityException))]
@@ -430,6 +435,7 @@ namespace MonoCasTests.System {
 			// it takes Unrestricted access to read from Machine
 			// and User environment variables
 		}
+#endif
 
 		[Test]
 		[EnvironmentPermission (SecurityAction.Deny, Write = "MONO")]
@@ -442,6 +448,7 @@ namespace MonoCasTests.System {
 			string s = Environment.StackTrace;
 		}
 
+#if !NET_2_1
 		[Test]
 #if false && RUN_ONDOTNET
 		[FileIOPermission (SecurityAction.Deny, PathDiscovery = "C:\\")]
@@ -454,6 +461,7 @@ namespace MonoCasTests.System {
 			// note: Under Linux SystemDirectory is empty (so it's not a path)
 			Assert.AreEqual (String.Empty, s);
 		}
+#endif
 
 		[Test]
 		[PermissionSet (SecurityAction.Deny, Unrestricted = true)]

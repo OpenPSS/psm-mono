@@ -29,37 +29,8 @@ public enum AnEnum {
 	B= 1
 }
 
-public sealed class Tests3 {
-	public static void M1 () {
-	}
-
-	static void M2 () {
-	}
-
-	public void M3 () {
-	}
-
-	void M4 () {
-	}
-
-}
-
-public static class Tests4 {
-	static Tests4 () {
-	}
-}
-
-public class AAttribute : Attribute {
-	public int afield;
-}
-
-public class BAttribute : AAttribute {
-	public int bfield;
-}
-
 [DebuggerDisplay ("Tests", Name="FOO", Target=typeof (int))]
 [DebuggerTypeProxy (typeof (Tests))]
-[BAttribute (afield = 1, bfield = 2)]
 public class Tests2 {
 	[DebuggerBrowsableAttribute (DebuggerBrowsableState.Collapsed)]
 	public int field_j;
@@ -146,7 +117,6 @@ public class Tests : TestsBase
 	double field_double;
 	Thread field_class;
 	IntPtr field_intptr;
-	int? field_nullable;
 	static int static_i = 55;
 	static string static_s = "A";
 	public const int literal_i = 56;
@@ -191,18 +161,6 @@ public class Tests : TestsBase
 		if (args.Length > 0 && args [0] == "suspend-test")
 			/* This contains an infinite loop, so execute it conditionally */
 			suspend ();
-		if (args.Length >0 && args [0] == "unhandled-exception") {
-			unhandled_exception ();
-			return 0;
-		}
-		if (args.Length >0 && args [0] == "unhandled-exception-endinvoke") {
-			unhandled_exception_endinvoke ();
-			return 0;
-		}
-		if (args.Length >0 && args [0] == "unhandled-exception-user") {
-			unhandled_exception_user ();
-			return 0;
-		}
 		breakpoints ();
 		single_stepping ();
 		arguments ();
@@ -218,6 +176,7 @@ public class Tests : TestsBase
 		exception_filter ();
 		threads ();
 		dynamic_methods ();
+		user ();
 		if (args.Length > 0 && args [0] == "domain-test")
 			/* This takes a lot of time, so execute it conditionally */
 			domains ();
@@ -454,22 +413,15 @@ public class Tests : TestsBase
 
 	[MethodImplAttribute (MethodImplOptions.NoInlining)]
 	public static void locals () {
-		string s = null;
 		locals1 (null);
-		locals2<string> (null, 5, "ABC", ref s);
+		locals2<string> (null, 5, "ABC");
 		locals3 ();
-	}
-
-	[MethodImplAttribute (MethodImplOptions.NoInlining)]
-	static void locals11 (double a, ref double b) {
+		locals6 ();
 	}
 
 	[MethodImplAttribute (MethodImplOptions.NoInlining)]
 	public static void locals1 (string[] args) {
 		long foo = 42;
-
-		double ri = 1;
-		locals11 (b: ref ri, a: ri);
 
 		for (int j = 0; j < 10; ++j) {
 			foo ++;
@@ -477,7 +429,7 @@ public class Tests : TestsBase
 	}
 
 	[MethodImplAttribute (MethodImplOptions.NoInlining)]
-	public static void locals2<T> (string[] args, int arg, T t, ref string rs) {
+	public static void locals2<T> (string[] args, int arg, T t) {
 		long i = 42;
 		string s = "AB";
 
@@ -487,7 +439,6 @@ public class Tests : TestsBase
 			if (t != null)
 				i ++;
 		}
-		rs = "A";
 	}
 
 	[MethodImplAttribute (MethodImplOptions.NoInlining)]
@@ -517,6 +468,59 @@ public class Tests : TestsBase
 
 	[MethodImplAttribute (MethodImplOptions.NoInlining)]
 	public static void locals5 () {
+	}
+
+	[MethodImplAttribute (MethodImplOptions.NoInlining)]
+	public static void locals6 () {
+		int i = 0;
+		int j = 0;
+		for (i = 0; i < 10; ++i)
+			j ++;
+		sbyte sb = 0;
+		for (i = 0; i < 10; ++i)
+			sb ++;
+		locals6_1 ();
+		locals6_2 (j);
+		locals6_3 ();
+		locals6_4 (j);
+		locals6_5 ();
+		locals6_6 (sb);
+	}
+
+	[MethodImplAttribute (MethodImplOptions.NoInlining)]
+	public static void locals6_1 () {
+	}
+
+	[MethodImplAttribute (MethodImplOptions.NoInlining)]
+	public static void locals6_2 (int arg) {
+	}
+
+	[MethodImplAttribute (MethodImplOptions.NoInlining)]
+	public static void locals6_3 () {
+		// Clobber all registers
+		int sum = 0, i, j, k, l, m;
+		for (i = 0; i < 100; ++i)
+			sum ++;
+		for (j = 0; j < 100; ++j)
+			sum ++;
+		for (k = 0; k < 100; ++k)
+			sum ++;
+		for (l = 0; l < 100; ++l)
+			sum ++;
+		for (m = 0; m < 100; ++m)
+			sum ++;
+	}
+
+	[MethodImplAttribute (MethodImplOptions.NoInlining)]
+	public static void locals6_4 (int arg) {
+	}
+
+	[MethodImplAttribute (MethodImplOptions.NoInlining)]
+	public static void locals6_5 () {
+	}
+
+	[MethodImplAttribute (MethodImplOptions.NoInlining)]
+	public static void locals6_6 (int arg) {
 	}
 
 	[MethodImplAttribute (MethodImplOptions.NoInlining)]
@@ -704,50 +708,6 @@ public class Tests : TestsBase
 		}
 	}
 
-	[MethodImplAttribute (MethodImplOptions.NoInlining)]
-	public static void unhandled_exception () {
-		ThreadPool.QueueUserWorkItem (delegate {
-				throw new InvalidOperationException ();
-			});
-		Thread.Sleep (10000);
-	}
-
-	[MethodImplAttribute (MethodImplOptions.NoInlining)]
-	public static void unhandled_exception_endinvoke_2 () {
-	}
-
-	[MethodImplAttribute (MethodImplOptions.NoInlining)]
-	public static void unhandled_exception_endinvoke () {
-			Action action = new Action (() => 
-			{
-				throw new Exception ("thrown");
-			});
-			action.BeginInvoke ((ar) => {
-				try {
-					action.EndInvoke (ar);
-				} catch (Exception ex) {
-					//Console.WriteLine (ex);
-				}
-			}, null);
-		Thread.Sleep (1000);
-		unhandled_exception_endinvoke_2 ();
-	}
-
-	[MethodImplAttribute (MethodImplOptions.NoInlining)]
-	public static void unhandled_exception_user () {
-#if NET_4_5
-		System.Threading.Tasks.Task.Factory.StartNew (() => {
-				Throw ();
-			});
-		Thread.Sleep (10000);
-#endif
-	}
-
-	[MethodImplAttribute (MethodImplOptions.NoInlining)]
-	public static void Throw () {
-		throw new Exception ();
-	}
-
 	internal static Delegate create_filter_delegate (Delegate dlg, MethodInfo filter_method)
 	{
 		if (dlg == null)
@@ -917,23 +877,6 @@ public class Tests : TestsBase
 	[MethodImplAttribute (MethodImplOptions.NoInlining)]
 	public static void frames_in_native () {
 		Thread.Sleep (500);
-		var evt = new ManualResetEvent (false);
-		
-		object mon = new object ();
-		ThreadPool.QueueUserWorkItem (delegate {
-				frames_in_native_2 ();
-				evt.Set ();
-			});
-		evt.WaitOne ();
-	}
-
-	[MethodImplAttribute (MethodImplOptions.NoInlining)]
-	static void frames_in_native_2 () {
-		frames_in_native_3 ();
-	}
-
-	[MethodImplAttribute (MethodImplOptions.NoInlining)]
-	static void frames_in_native_3 () {
 	}
 
 	[MethodImplAttribute (MethodImplOptions.NoInlining)]
@@ -946,6 +889,13 @@ public class Tests : TestsBase
 			string h = "hi";
 			string_call (h);
 		}
+	}
+
+	[MethodImplAttribute (MethodImplOptions.NoInlining)]
+	public static void user () {
+		Debugger.Break ();
+
+		Debugger.Log (5, Debugger.IsLogging () ? "A" : "", "B");
 	}
 }
 

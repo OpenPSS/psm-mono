@@ -29,6 +29,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -39,9 +40,7 @@ using System.Security.Permissions;
 
 namespace System.CodeDom.Compiler {
 
-#if NET_2_0
 	[ComVisible (true)]
-#endif
 	[ToolboxItem (false)]
 	public abstract class CodeDomProvider : Component
 	{
@@ -70,14 +69,10 @@ namespace System.CodeDom.Compiler {
 		//
 		// Methods
 		//
-#if NET_2_0
 		[Obsolete ("ICodeCompiler is obsolete")]
-#endif
 		public abstract ICodeCompiler CreateCompiler();
 
-#if NET_2_0
 		[Obsolete ("ICodeGenerator is obsolete")]
-#endif
 		public abstract ICodeGenerator CreateGenerator();
 		
 		public virtual ICodeGenerator CreateGenerator (string fileName)
@@ -90,9 +85,7 @@ namespace System.CodeDom.Compiler {
 			return CreateGenerator();
 		}
 
-#if NET_2_0
 		[Obsolete ("ICodeParser is obsolete")]
-#endif
 		public virtual ICodeParser CreateParser()
 		{
 			return null;
@@ -103,7 +96,6 @@ namespace System.CodeDom.Compiler {
 			return TypeDescriptor.GetConverter (type);
 		}
 
-#if NET_2_0
 		public virtual CompilerResults CompileAssemblyFromDom (CompilerParameters options, params CodeCompileUnit[] compilationUnits)
 		{
 			ICodeCompiler cc = CreateCompiler ();
@@ -319,6 +311,6 @@ namespace System.CodeDom.Compiler {
 		{
 			return new NotImplementedException ();
 		}		
-#endif
 	}
 }
+#endif

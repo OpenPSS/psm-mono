@@ -17,6 +17,7 @@ using System.Threading;
 namespace MonoTests.System.Net.Mail
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class SmtpClientTest
 	{
 		SmtpClient smtp;

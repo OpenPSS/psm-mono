@@ -36,7 +36,7 @@ namespace MonoTests.System.Security.Cryptography {
 		protected HMACSHA256 algo;
 
 		[SetUp]
-		public override void SetUp () 
+		protected override void SetUp () 
 		{
 			algo = new HMACSHA256 ();
 			algo.Key = new byte [8];

@@ -325,7 +325,7 @@
         These aren't used when dyld support is enabled (it is by default) */
 #    define DATASTART ((ptr_t) get_etext())
 #    define DATAEND	((ptr_t) get_end())
-#    define STACKBOTTOM ((ptr_t) pthread_get_stackaddr_np(pthread_self()))
+#    define STACKBOTTOM ((ptr_t) 0xc0000000)
 #    define USE_MMAP
 #    define USE_MMAP_ANON
 #    define USE_ASM_PUSH_REGS
@@ -722,7 +722,7 @@
 #	     if defined(__GLIBC__)&& __GLIBC__>=2
 #              define SEARCH_FOR_DATA_START
 #	     else /* !GLIBC2 */
-#              if defined(PLATFORM_ANDROID)
+#              if defined(__ANDROID__)
 #                      define __environ environ
 #              endif
                extern char **__environ;
@@ -896,20 +896,6 @@
 #     define DATASTART GC_data_start
 #     define DYNAMIC_LOADING
 #   endif
-#   ifdef SN_TARGET_PS3
-#       define NO_GETENV
-#       define CPP_WORDSZ 32
-#       define ALIGNMENT 4
-        extern int _end [];
-//       extern int _dso_handle[];
-		extern int __bss_start;
-
-#       define DATAEND (_end)
-#       define DATASTART (__bss_start)
-#       define STACKBOTTOM ((ptr_t) ps3_get_stack_bottom ())
-#       define USE_GENERIC_PUSHREGS
-#   endif
-
 #   ifdef NOSYS
 #     define ALIGNMENT 4
 #     define OS_TYPE "NOSYS"
@@ -1202,7 +1188,8 @@
 #   ifdef NACL
 #	define OS_TYPE "NACL"
 	extern int etext[];
-#	define DATASTART ((ptr_t)((((word) (etext)) + 0xfff) & ~0xfff))
+//#	define DATASTART ((ptr_t)((((word) (etext)) + 0xfff) & ~0xfff))
+#       define DATASTART ((ptr_t)0x10000000)
 	extern int _end[];
 #	define DATAEND (_end)
 #	ifdef STACK_GRAN
@@ -1944,7 +1931,7 @@
 #	     include <features.h>
 #	     if defined(__GLIBC__) && __GLIBC__ >= 2
 #		 define SEARCH_FOR_DATA_START
-#	     elif defined(PLATFORM_ANDROID)
+#	     elif defined(__ANDROID__)
 #		 define SEARCH_FOR_DATA_START
 #	     else
      	         extern char **__environ;
@@ -2325,7 +2312,7 @@
 
 # if defined(PCR) || defined(SRC_M3) || \
 		defined(GC_SOLARIS_THREADS) || defined(GC_WIN32_THREADS) || \
-		defined(GC_PTHREADS) || defined(SN_TARGET_PS3)
+		defined(GC_PTHREADS)
 #   define THREADS
 # endif
 
@@ -2476,13 +2463,8 @@
 			  GC_amiga_get_mem((size_t)bytes + GC_page_size) \
 			  + GC_page_size-1)
 #	      else
-#           if defined(SN_TARGET_PS3)
-	           extern void *ps3_get_mem (size_t size);
-#              define GET_MEM(bytes) (struct hblk*) ps3_get_mem (bytes)
-#           else
-		extern ptr_t GC_unix_get_mem();
-#               define GET_MEM(bytes) (struct hblk *)GC_unix_get_mem(bytes)
-#endif
+		extern ptr_t GC_unix_get_mem(word size);
+#		define GET_MEM(bytes) (struct hblk *)GC_unix_get_mem(bytes)
 #	      endif
 #	    endif
 #	  endif

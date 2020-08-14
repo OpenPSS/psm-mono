@@ -70,7 +70,7 @@ namespace System.Threading {
 		private IntPtr stack_ptr;
 		private UIntPtr static_data; /* GC-tracked */
 		private IntPtr jit_data;
-		private IntPtr lock_data;
+		private IntPtr runtime_thread_info;
 		/* current System.Runtime.Remoting.Contexts.Context instance
 		   keep as an object to avoid triggering its class constructor when not needed */
 		private object current_appcontext;
@@ -103,7 +103,6 @@ namespace System.Threading {
 		private IntPtr unused4;
 		private IntPtr unused5;
 		internal int managed_id;
-		int ignore_next_signal;
 		#endregion
 #pragma warning restore 169, 414, 649
 
@@ -186,6 +185,77 @@ namespace System.Threading {
 		private extern static byte[] ByteArrayToCurrentDomain (byte[] arr);
 
 #if !MOONLIGHT
+		static void DeserializePrincipal (Thread th)
+		{
+			MemoryStream ms = new MemoryStream (ByteArrayToCurrentDomain (th.Internal._serialized_principal));
+			int type = ms.ReadByte ();
+			if (type == 0) {
+				BinaryFormatter bf = new BinaryFormatter ();
+				th.principal = (IPrincipal) bf.Deserialize (ms);
+				th.principal_version = th.Internal._serialized_principal_version;
+			} else if (type == 1) {
+				BinaryReader reader = new BinaryReader (ms);
+				string name = reader.ReadString ();
+				string auth_type = reader.ReadString ();
+				int n_roles = reader.ReadInt32 ();
+				string [] roles = null;
+				if (n_roles >= 0) {
+					roles = new string [n_roles];
+					for (int i = 0; i < n_roles; i++)
+						roles [i] = reader.ReadString ();
+				}
+				th.principal = new GenericPrincipal (new GenericIdentity (name, auth_type), roles);
+			} else if (type == 2 || type == 3) {
+				string [] roles = type == 2 ? null : new string [0];
+				th.principal = new GenericPrincipal (new GenericIdentity ("", ""), roles);
+			}
+		}
+
+		static void SerializePrincipal (Thread th, IPrincipal value)
+		{
+			MemoryStream ms = new MemoryStream ();
+			bool done = false;
+			if (value.GetType () == typeof (GenericPrincipal)) {
+				GenericPrincipal gp = (GenericPrincipal) value;
+				if (gp.Identity != null && gp.Identity.GetType () == typeof (GenericIdentity)) {
+					GenericIdentity id = (GenericIdentity) gp.Identity;
+					if (id.Name == "" && id.AuthenticationType == "") {
+						if (gp.Roles == null) {
+							ms.WriteByte (2);
+							done = true;
+						} else if (gp.Roles.Length == 0) {
+							ms.WriteByte (3);
+							done = true;
+						}
+					} else {
+						ms.WriteByte (1);
+						BinaryWriter br = new BinaryWriter (ms);
+						br.Write (gp.Identity.Name);
+						br.Write (gp.Identity.AuthenticationType);
+						string [] roles = gp.Roles;
+						if  (roles == null) {
+							br.Write ((int) (-1));
+						} else {
+							br.Write (roles.Length);
+							foreach (string s in roles) {
+								br.Write (s);
+							}
+						}
+						br.Flush ();
+						done = true;
+					}
+				}
+			}
+			if (!done) {
+				ms.WriteByte (0);
+				BinaryFormatter bf = new BinaryFormatter ();
+				try {
+					bf.Serialize (ms, value);
+				} catch {}
+			}
+			th.Internal._serialized_principal = ByteArrayToRootDomain (ms.ToArray ());
+		}
+
 		public static IPrincipal CurrentPrincipal {
 			get {
 				Thread th = CurrentThread;
@@ -198,13 +268,9 @@ namespace System.Threading {
 
 				if (th.Internal._serialized_principal != null) {
 					try {
-						BinaryFormatter bf = new BinaryFormatter ();
-						MemoryStream ms = new MemoryStream (ByteArrayToCurrentDomain (th.Internal._serialized_principal));
-						th.principal = (IPrincipal) bf.Deserialize (ms);
-						th.principal_version = th.Internal._serialized_principal_version;
+						DeserializePrincipal (th);
 						return th.principal;
-					} catch (Exception) {
-					}
+					} catch {}
 				}
 
 				th.principal = GetDomain ().DefaultPrincipal;
@@ -215,25 +281,33 @@ namespace System.Threading {
 			set {
 				Thread th = CurrentThread;
 
-				++th.Internal._serialized_principal_version;
-				try {
-					BinaryFormatter bf = new BinaryFormatter ();
-					MemoryStream ms = new MemoryStream ();
-					bf.Serialize (ms, value);
-					th.Internal._serialized_principal = ByteArrayToRootDomain (ms.ToArray ());
-				} catch (Exception) {
+				if (value != GetDomain ().DefaultPrincipal) {
+					++th.Internal._serialized_principal_version;
+					try {
+						SerializePrincipal (th, value);
+					} catch (Exception) {
+						th.Internal._serialized_principal = null;
+					}
+					th.principal_version = th.Internal._serialized_principal_version;
+				} else {
 					th.Internal._serialized_principal = null;
 				}
 
 				th.principal = value;
-				th.principal_version = th.Internal._serialized_principal_version;
 			}
 		}
 #endif
 
 		// Looks up the object associated with the current thread
+		// this is called by the JIT directly, too
 		[MethodImplAttribute(MethodImplOptions.InternalCall)]
 		private extern static InternalThread CurrentInternalThread_internal();
+
+		[MethodImplAttribute(MethodImplOptions.InternalCall)]
+		internal extern static uint AllocTlsData (Type type);
+
+		[MethodImplAttribute(MethodImplOptions.InternalCall)]
+		internal extern static void DestroyTlsData (uint offset);
 
 		public static Thread CurrentThread {
 			[ReliabilityContract (Consistency.WillNotCorruptState, Cer.MayFail)]
@@ -360,6 +434,7 @@ namespace System.Threading {
 #if NET_4_0 || MOBILE
 		[HostProtectionAttribute (SecurityAction.LinkDemand, Synchronization = true, ExternalThreading = true)]
 		[MethodImplAttribute(MethodImplOptions.InternalCall)]
+		[ReliabilityContract (Consistency.WillNotCorruptState, Cer.Success)]
 		public extern static bool Yield ();
 #endif
 
@@ -397,11 +472,6 @@ namespace System.Threading {
 
 		private Thread (InternalThread it) {
 			internal_thread = it;
-		}
-		
-		// part of ".NETPortable,Version=v4.0,Profile=Profile3" i.e. FX4 and SL4
-		~Thread ()
-		{
 		}
 
 #if !MOONLIGHT
@@ -639,7 +709,7 @@ namespace System.Threading {
 		}
 
 #if MOONLIGHT
-		private void StartInternal ()
+		private void StartSafe ()
 		{
 			current_thread = this;
 
@@ -676,32 +746,9 @@ namespace System.Threading {
 				}
 			}
 		}
-#elif MONOTOUCH
-		static ConstructorInfo nsautoreleasepool_ctor;
-		
-		IDisposable GetNSAutoreleasePool ()
-		{
-			if (nsautoreleasepool_ctor == null) {
-				Type t = Type.GetType ("MonoTouch.Foundation.NSAutoreleasePool, monotouch, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
-				nsautoreleasepool_ctor = t.GetConstructor (Type.EmptyTypes);
-			}
-			return (IDisposable) nsautoreleasepool_ctor.Invoke (null);
-		}
-		
-		private void StartInternal ()
-		{
-			using (var pool = GetNSAutoreleasePool ()) {
-				current_thread = this;
-			
-				if (threadstart is ThreadStart) {
-					((ThreadStart) threadstart) ();
-				} else {
-					((ParameterizedThreadStart) threadstart) (start_obj);
-				}
-			}
-		}
-#else
-		private void StartInternal ()
+#endif
+
+		private void StartUnsafe ()
 		{
 			current_thread = this;
 
@@ -711,7 +758,7 @@ namespace System.Threading {
 				((ParameterizedThreadStart) threadstart) (start_obj);
 			}
 		}
-#endif
+
 		public void Start() {
 			// propagate informations from the original thread to the new thread
 			if (!ExecutionContext.IsFlowSuppressed ())
@@ -719,7 +766,11 @@ namespace System.Threading {
 			Internal._serialized_principal = CurrentThread.Internal._serialized_principal;
 
 			// Thread_internal creates and starts the new thread, 
-			if (Thread_internal((ThreadStart) StartInternal) == (IntPtr) 0)
+#if MOONLIGHT
+			if (Thread_internal((ThreadStart) StartSafe) == (IntPtr) 0)
+#else
+			if (Thread_internal((ThreadStart) StartUnsafe) == (IntPtr) 0)
+#endif
 				throw new SystemException ("Thread creation failed.");
 		}
 

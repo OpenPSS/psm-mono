@@ -65,25 +65,18 @@ namespace System.ServiceModel
 			get { return instance; }
 		}
 
-		static Uri CreateUri (string address)
-		{
-			if (address.Length > 0 && address[0] == '/')
-				return new Uri (address.Substring (1), UriKind.Relative);
-			else
-				return new Uri (address, UriKind.RelativeOrAbsolute);
-		}
-
 		public ServiceEndpoint AddServiceEndpoint (
 			Type implementedContract, Binding binding, string address)
 		{
-			return AddServiceEndpoint (implementedContract, binding, CreateUri (address));
+			return AddServiceEndpoint (implementedContract, binding,
+				new Uri (address, UriKind.RelativeOrAbsolute));
 		}
 
 		public ServiceEndpoint AddServiceEndpoint (
 			Type implementedContract, Binding binding, string address, Uri listenUri)
 		{
 			return AddServiceEndpoint (implementedContract, binding,
-				CreateUri (address), listenUri);
+				new Uri (address, UriKind.RelativeOrAbsolute), listenUri);
 		}
 
 		public ServiceEndpoint AddServiceEndpoint (

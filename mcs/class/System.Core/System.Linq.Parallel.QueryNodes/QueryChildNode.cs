@@ -29,11 +29,7 @@ using System;
 
 namespace System.Linq.Parallel.QueryNodes
 {
-	internal interface QueryChildNode : IVisitableNode {
-		QueryBaseNode Parent { get; }
-	}
-
-	internal abstract class QueryChildNode<T, TParent> : QueryBaseNode<T>, QueryChildNode
+	internal abstract class QueryChildNode<T, TParent> : QueryBaseNode<T>
 	{
 		QueryBaseNode<TParent> parent;
 
@@ -41,10 +37,6 @@ namespace System.Linq.Parallel.QueryNodes
 		//	: base (isOrdered, true)
 		{
 			this.parent = parent;
-		}
-
-		QueryBaseNode QueryChildNode.Parent {
-			get { return parent; }
 		}
 
 		internal QueryBaseNode<TParent> Parent {
@@ -55,7 +47,7 @@ namespace System.Linq.Parallel.QueryNodes
 
 		public override void Visit (INodeVisitor visitor)
 		{
-			visitor.Visit ((QueryChildNode)this);
+			visitor.Visit<T, TParent> (this);
 		}
 	}
 }

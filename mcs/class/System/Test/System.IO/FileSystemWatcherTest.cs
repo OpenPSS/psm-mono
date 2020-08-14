@@ -50,6 +50,7 @@ namespace MonoTests.System.IO
 
 		[Test]
 		[ExpectedException (typeof (ArgumentNullException))]
+		[Category("PssFileIO")]
 		public void CheckCtor4 ()
 		{
 			FileSystemWatcher fw = new FileSystemWatcher (Path.GetTempPath (), null);
@@ -58,6 +59,7 @@ namespace MonoTests.System.IO
 		[Test]
 		// Doesn't throw here :-?
 		// [ExpectedException (typeof (ArgumentException))]
+		[Category("PssFileIO")]
 		public void CheckCtor5 ()
 		{
 			FileSystemWatcher fw = new FileSystemWatcher (Path.GetTempPath (), "invalidpath|");
@@ -67,6 +69,7 @@ namespace MonoTests.System.IO
 		[Test]
 		// ...But here it does...
 		[ExpectedException (typeof (ArgumentException))]
+		[Category("PssFileIO")]
 		public void CheckInvalidPath ()
 		{
 			FileSystemWatcher fw = new FileSystemWatcher (Path.GetTempPath (), "invalidpath|");
@@ -76,6 +79,7 @@ namespace MonoTests.System.IO
 		[Test]
 		// ...and here too
 		[ExpectedException (typeof (ArgumentException))]
+		[Category("PssFileIO")]
 		public void CheckPathWildcard ()
 		{
 			FileSystemWatcher fw = new FileSystemWatcher (Path.GetTempPath (), "*");

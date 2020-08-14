@@ -27,6 +27,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System;
 using System.CodeDom;
 using System.CodeDom.Compiler;
@@ -44,12 +45,11 @@ namespace Microsoft.VisualBasic {
 		{
 		}
 
-#if NET_2_0
 		public VBCodeProvider(System.Collections.Generic.IDictionary<string, string> providerOptions)
 		{
 			// TODO: Do something meaningful here...
 		}
-#endif
+
 		public override string FileExtension {
 			get {
 				return "vb";
@@ -62,17 +62,13 @@ namespace Microsoft.VisualBasic {
 			}
 		}
 
-#if NET_2_0
 		[Obsolete ("Use CodeDomProvider class")]
-#endif
 		public override ICodeCompiler CreateCompiler()
 		{
 			return new Microsoft.VisualBasic.VBCodeCompiler ();
 		}
 
-#if NET_2_0
 		[Obsolete ("Use CodeDomProvider class")]
-#endif
 		public override ICodeGenerator CreateGenerator()
 		{
 			return new Microsoft.VisualBasic.VBCodeGenerator();
@@ -83,12 +79,11 @@ namespace Microsoft.VisualBasic {
 			return TypeDescriptor.GetConverter (type);
 		}
 
-#if NET_2_0
 		[MonoTODO]
 		public override void GenerateCodeFromMember (CodeTypeMember member, TextWriter writer, CodeGeneratorOptions options)
 		{
 			throw new NotImplementedException();
 		}
-#endif
 	}
 }
+#endif

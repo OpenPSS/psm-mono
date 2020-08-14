@@ -50,10 +50,7 @@ namespace System.Threading
 		public static SynchronizationContext Current
 		{
 			get {
-#if MONODROID
-				if (currentContext == null)
-					currentContext = AndroidPlatform.GetDefaultSyncContext ();
-#elif NET_2_1
+#if NET_2_1
 				if (currentContext == null)
 					currentContext = new SynchronizationContext ();
 #endif

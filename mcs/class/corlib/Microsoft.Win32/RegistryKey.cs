@@ -358,10 +358,10 @@ namespace Microsoft.Win32
 
 		[ComVisible (false)]
 		[MonoLimitation ("permissionCheck and registrySecurity are ignored in Mono")]
-		public RegistryKey CreateSubKey (string subkey, RegistryKeyPermissionCheck permissionCheck, RegistryOptions options,
+		public RegistryKey CreateSubKey (string subkey, RegistryKeyPermissionCheck permissionCheck, RegistryOptions registryOptions,
 			RegistrySecurity registrySecurity)
 		{
-			return CreateSubKey (subkey, permissionCheck, options);
+			return CreateSubKey (subkey, permissionCheck, registryOptions);
 		}
 #endif
 
@@ -514,7 +514,7 @@ namespace Microsoft.Win32
 		[ComVisible (false)]
 		[SecurityPermission (SecurityAction.Demand, Flags = SecurityPermissionFlag.UnmanagedCode)]
 		[MonoTODO ("Not implemented on unix")]
-		public static RegistryKey FromHandle (SafeRegistryHandle handle, RegistryKey view)
+		public static RegistryKey FromHandle (SafeRegistryHandle handle, RegistryView view)
 		{
 			return FromHandle (handle);
 		}
@@ -568,14 +568,14 @@ namespace Microsoft.Win32
 		[MonoLimitation ("permissionCheck is ignored in Mono")]
 		public RegistryKey OpenSubKey (string name, RegistryKeyPermissionCheck permissionCheck)
 		{
-			return OpenSubKey (name, permissionCheck == RegistryKeyPermissionCheck.ReadWriteSubTree);
+			return OpenSubKey (name);
 		}
 		
 		[ComVisible (false)]
 		[MonoLimitation ("permissionCheck and rights are ignored in Mono")]
 		public RegistryKey OpenSubKey (string name, RegistryKeyPermissionCheck permissionCheck, RegistryRights rights)
 		{
-			return OpenSubKey (name, permissionCheck == RegistryKeyPermissionCheck.ReadWriteSubTree);
+			return OpenSubKey (name);
 		}
 		
 		public void SetAccessControl (RegistrySecurity registrySecurity)

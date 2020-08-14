@@ -20,6 +20,7 @@ using System.Threading;
 namespace MonoTests.System.Security.Cryptography.X509Certificates {
 
 [TestFixture]
+[Category("PssFileIO")]
 public class X509CertificateTest {
 
 private CultureInfo oldcult;

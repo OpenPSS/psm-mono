@@ -83,7 +83,9 @@ namespace MonoTests.System.Security {
 			Assert.AreEqual ("mono", se.PermissionState, "PermissionState");
 			Assert.AreEqual (typeof (EnvironmentPermission), se.PermissionType, "PermissionType");
 
+#if !MOBILE
 			Assert.IsTrue ((se.ToString ().IndexOf ("mono") > 0), "ToString().Include(mono)");
+#endif
 			// note: can't check for PermissionType as it's not shown with MS class lib
 		}
 	}

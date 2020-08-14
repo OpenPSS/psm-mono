@@ -5,6 +5,7 @@
 //	Sebastien Pouliot <sebastien@ximian.com>
 //
 // (C) 2004-2005 Novell (http://www.novell.com)
+// Copyright 2011 Xamarin Inc (http://www.xamarin.com).
 //
 
 using System;
@@ -55,6 +56,9 @@ namespace MonoTests.System
 		}
 		
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void ExpandEnvironmentVariables_Alone () 
 		{
 			ExpandDifferent ("%PATH%");
@@ -96,6 +100,9 @@ namespace MonoTests.System
 		}
 
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void ExpandEnvironmentVariables_ExpandableAndNonExpandable () 
 		{
 			string path = Environment.GetEnvironmentVariable ("PATH");
@@ -105,6 +112,9 @@ namespace MonoTests.System
 
 
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void ExpandEnvironmentVariables_ExpandableWithTrailingPercent () 
 		{
 			string path = Environment.GetEnvironmentVariable ("PATH");

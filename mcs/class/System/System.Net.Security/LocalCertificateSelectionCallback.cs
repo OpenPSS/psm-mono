@@ -31,7 +31,7 @@
 
 #if NET_2_0 && SECURITY_DEP
 
-#if !MOONLIGHT
+#if !MOONLIGHT && !MOBILE
 extern alias PrebuiltSystem;
 
 using X509CertificateCollection = PrebuiltSystem::System.Security.Cryptography.X509Certificates.X509CertificateCollection;

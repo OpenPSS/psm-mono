@@ -686,6 +686,7 @@ mgk3bWUV6ChegutbguiKrI/DbO7wPiDLxw==
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void Base64_AsFile_Properties ()
 		{
 			string temp = Path.GetTempFileName ();

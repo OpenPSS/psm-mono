@@ -30,6 +30,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Runtime.InteropServices;
 
 namespace System.CodeDom
@@ -45,11 +46,8 @@ namespace System.CodeDom
 		private CodeCommentStatementCollection comments;
 		private CodeAttributeDeclarationCollection customAttributes;
 		private CodeLinePragma linePragma;
-
-#if NET_2_0
 		CodeDirectiveCollection endDirectives;
 		CodeDirectiveCollection startDirectives;
-#endif
 
 		//
 		// Constructors
@@ -111,7 +109,6 @@ namespace System.CodeDom
 			}
 		}
 
-#if NET_2_0
 		public CodeDirectiveCollection EndDirectives {
 			get {
 				if (endDirectives == null)
@@ -127,6 +124,6 @@ namespace System.CodeDom
 				return startDirectives;
 			}
 		}
-#endif
 	}
 }
+#endif

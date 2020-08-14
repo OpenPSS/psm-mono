@@ -30,7 +30,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents an expression that has a conditional operator.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.ConditionalExpressionProxy))]
 #endif
     public class ConditionalExpression : Expression {

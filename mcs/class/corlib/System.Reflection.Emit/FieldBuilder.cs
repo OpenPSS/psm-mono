@@ -207,6 +207,12 @@ namespace System.Reflection.Emit {
 			throw CreateNotSupportedException ();
 		}
 
+		internal override UnmanagedMarshal UMarshal {
+			get {
+				return marshal_info;
+			}
+		}
+
 		private Exception CreateNotSupportedException ()
 		{
 			return new NotSupportedException ("The invoked member is not supported in a dynamic module.");

@@ -28,6 +28,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Runtime.InteropServices;
 
 namespace System.CodeDom 
@@ -47,11 +48,10 @@ namespace System.CodeDom
 		//
 		// Constructors
 		//
-#if NET_2_0
 		public CodeLinePragma ()
 		{
 		}
-#endif
+
 		public CodeLinePragma (string fileName, int lineNumber)
 		{
 			this.fileName = fileName;
@@ -83,3 +83,4 @@ namespace System.CodeDom
 		}
 	}
 }
+#endif

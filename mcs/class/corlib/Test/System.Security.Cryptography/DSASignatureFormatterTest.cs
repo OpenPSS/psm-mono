@@ -35,12 +35,14 @@ using System.Security.Cryptography;
 namespace MonoTests.System.Security.Cryptography {
 
 [TestFixture]
+[Category("NotMobile")] // mobile profile doesn't have DSACryptoServiceProvider
 public class DSASignatureFormatterTest {
 	protected DSASignatureFormatter fmt;
 	protected static DSA dsa;
 	protected static RSA rsa;
 
-	public DSASignatureFormatterTest () 
+	[TestFixtureSetUp]
+	public void FixtureSetUp () 
 	{
 		// key generation is VERY long so one time is enough
 		dsa = DSA.Create ();

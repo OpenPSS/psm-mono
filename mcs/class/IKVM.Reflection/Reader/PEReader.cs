@@ -207,6 +207,12 @@ namespace IKVM.Reflection.Reader
 			VirtualAddress = br.ReadUInt32();
 			Size = br.ReadUInt32();
 		}
+
+		internal void Write(IKVM.Reflection.Writer.MetadataWriter mw)
+		{
+			mw.Write(VirtualAddress);
+			mw.Write(Size);
+		}
 	}
 
 	class SectionHeader
@@ -313,6 +319,22 @@ namespace IKVM.Reflection.Reader
 				}
 			}
 			throw new BadImageFormatException();
+		}
+
+		internal bool GetSectionInfo(int rva, out string name, out int characteristics)
+		{
+			for (int i = 0; i < sections.Length; i++)
+			{
+				if (rva >= sections[i].VirtualAddress && rva < sections[i].VirtualAddress + sections[i].VirtualSize)
+				{
+					name = sections[i].Name;
+					characteristics = (int)sections[i].Characteristics;
+					return true;
+				}
+			}
+			name = null;
+			characteristics = 0;
+			return false;
 		}
 	}
 }

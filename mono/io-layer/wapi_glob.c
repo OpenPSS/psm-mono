@@ -39,12 +39,18 @@
  * GLOB_MAGCHAR:
  *	Set in gl_flags if pattern contained a globbing character.
  */
+#include <config.h>
+
 #include <sys/types.h>
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
 
 #include <glib.h>
 #include <ctype.h>
+#ifdef HAVE_DIRENT_H
 #include <dirent.h>
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,8 +65,6 @@
 #define	QUOTE		'\\'
 #define	STAR		'*'
 
-#ifndef DEBUG
-
 #define	M_QUOTE		0x8000
 #define	M_PROTECT	0x4000
 #define	M_MASK		0xffff
@@ -68,36 +72,31 @@
 
 typedef u_short Char;
 
-#else
-
-#define	M_QUOTE		0x80
-#define	M_PROTECT	0x40
-#define	M_MASK		0xff
-#define	M_ASCII		0x7f
-
-typedef char Char;
-
-#endif
-
-
-#define	CHAR(c)		((gchar)((c)&M_ASCII))
-#define	META(c)		((gchar)((c)|M_QUOTE))
+#define	CHAR(c)		((Char)((c)&M_ASCII))
+#define	META(c)		((Char)((c)|M_QUOTE))
 #define	M_ALL		META('*')
 #define	M_ONE		META('?')
 #define	ismeta(c)	(((c)&M_QUOTE) != 0)
 
 
 static int	 g_Ctoc(const gchar *, char *, u_int);
-static int	 glob0(GDir *dir, const gchar *, wapi_glob_t *, gboolean,
-		       gboolean);
-static int	 glob1(GDir *dir, gchar *, gchar *, wapi_glob_t *, size_t *,
-		       gboolean, gboolean);
-static int	 glob3(GDir *dir, gchar *, gchar *, wapi_glob_t *, size_t *,
-		       gboolean, gboolean);
+static int	 glob0(GDir *dir, const Char *, wapi_glob_t *, gboolean, gboolean);
+static int	 glob1(GDir *dir, Char *, Char *, wapi_glob_t *, size_t *, gboolean, gboolean);
+static int	 glob3(GDir *dir, Char *, Char *, wapi_glob_t *, size_t *, gboolean, gboolean);
 static int	 globextend(const gchar *, wapi_glob_t *, size_t *);
-static int	 match(const gchar *, gchar *, gchar *, gboolean);
-#ifdef DEBUG
+static int	 match(Char *, Char *, Char *, gboolean);
+#ifdef DEBUG_GLOB
 static void	 qprintf(const char *, Char *);
+#endif
+
+#if !HAVE_STRNLEN
+/* like strlen, but returns max_len if the string is longer */
+static int
+strnlen (const char *str, int max_len)
+{
+  int len = strlen (str);
+  return len > max_len ? max_len : len;
+}
 #endif
 
 int
@@ -105,7 +104,10 @@ _wapi_glob(GDir *dir, const char *pattern, int flags, wapi_glob_t *pglob)
 {
 	const u_char *patnext;
 	int c;
-	gchar *bufnext, *bufend, patbuf[PATH_MAX];
+	Char *bufnext, *bufend, patbuf[PATH_MAX];
+
+	if (strnlen(pattern, PATH_MAX) == PATH_MAX)
+		return(WAPI_GLOB_NOMATCH);
 
 	patnext = (u_char *) pattern;
 	if (!(flags & WAPI_GLOB_APPEND)) {
@@ -131,8 +133,7 @@ _wapi_glob(GDir *dir, const char *pattern, int flags, wapi_glob_t *pglob)
 
 	*bufnext = EOS;
 
-	return glob0(dir, patbuf, pglob, flags & WAPI_GLOB_IGNORECASE,
-		     flags & WAPI_GLOB_UNIQUE);
+	return glob0(dir, patbuf, pglob, flags & WAPI_GLOB_IGNORECASE, flags & WAPI_GLOB_UNIQUE);
 }
 
 /*
@@ -143,12 +144,11 @@ _wapi_glob(GDir *dir, const char *pattern, int flags, wapi_glob_t *pglob)
  * to find no matches.
  */
 static int
-glob0(GDir *dir, const gchar *pattern, wapi_glob_t *pglob, gboolean ignorecase,
-	gboolean unique)
+glob0(GDir *dir, const Char *pattern, wapi_glob_t *pglob, gboolean ignorecase,	gboolean unique)
 {
-	const gchar *qpatnext;
+	const Char *qpatnext;
 	int c, err, oldpathc;
-	gchar *bufnext, patbuf[PATH_MAX];
+	Char *bufnext, patbuf[PATH_MAX];
 	size_t limit = 0;
 
 	qpatnext = pattern;
@@ -176,12 +176,11 @@ glob0(GDir *dir, const gchar *pattern, wapi_glob_t *pglob, gboolean ignorecase,
 		}
 	}
 	*bufnext = EOS;
-#ifdef DEBUG
+#ifdef DEBUG_GLOB
 	qprintf("glob0:", patbuf);
 #endif
 
-	if ((err = glob1(dir, patbuf, patbuf+PATH_MAX-1, pglob, &limit,
-			 ignorecase, unique)) != 0)
+	if ((err = glob1(dir, patbuf, bufnext, pglob, &limit, ignorecase, unique)) != 0)
 		return(err);
 
 	if (pglob->gl_pathc == oldpathc) {
@@ -192,7 +191,7 @@ glob0(GDir *dir, const gchar *pattern, wapi_glob_t *pglob, gboolean ignorecase,
 }
 
 static int
-glob1(GDir *dir, gchar *pattern, gchar *pattern_last, wapi_glob_t *pglob,
+glob1(GDir *dir, Char *pattern, Char *pattern_last, wapi_glob_t *pglob,
       size_t *limitp, gboolean ignorecase, gboolean unique)
 {
 	/* A null pathname is invalid -- POSIX 1003.1 sect. 2.4. */
@@ -222,14 +221,31 @@ static gboolean contains (wapi_glob_t *pglob, const gchar *name)
 }
 
 static int
-glob3(GDir *dir, gchar *pattern, gchar *pattern_last, wapi_glob_t *pglob,
+glob3(GDir *dir, Char *pattern, Char *pattern_last, wapi_glob_t *pglob,
       size_t *limitp, gboolean ignorecase, gboolean unique)
 {
 	const gchar *name;
+	int err;
+
+	err = 0;
 
 	/* Search directory for matching names. */
 	while ((name = g_dir_read_name(dir))) {
-		if (!match(name, pattern, pattern + strlen (pattern),
+		Char pathend[PATH_MAX];
+		Char *pathend_last = pathend+PATH_MAX-1;
+		Char *dc = pathend;
+		const gchar *sc = name;
+
+		while (dc < pathend_last && (*dc++ = *sc++) != EOS)
+			;
+		
+		if (dc >= pathend_last) {
+			*dc = EOS;
+			err = 1;
+			break;
+		}
+
+		if (!match(pathend, pattern, pattern_last,
 			   ignorecase)) {
 			continue;
 		}
@@ -239,7 +255,7 @@ glob3(GDir *dir, gchar *pattern, gchar *pattern_last, wapi_glob_t *pglob,
 		}
 	}
 
-	return(0);
+	return(err);
 }
 
 
@@ -267,8 +283,8 @@ globextend(const gchar *path, wapi_glob_t *pglob, size_t *limitp)
 	const gchar *p;
 
 	newsize = sizeof(*pathv) * (2 + pglob->gl_pathc + pglob->gl_offs);
-	pathv = pglob->gl_pathv ? realloc((char *)pglob->gl_pathv, newsize) :
-	    malloc(newsize);
+	pathv = (char**)(pglob->gl_pathv ? realloc((char *)pglob->gl_pathv, newsize) :
+					 malloc(newsize));
 	if (pathv == NULL) {
 		if (pglob->gl_pathv) {
 			free(pglob->gl_pathv);
@@ -289,7 +305,7 @@ globextend(const gchar *path, wapi_glob_t *pglob, size_t *limitp)
 		;
 	len = (size_t)(p - path);
 	*limitp += len;
-	if ((copy = malloc(len)) != NULL) {
+	if ((copy = (char*)malloc(len)) != NULL) {
 		if (g_Ctoc(path, copy, len)) {
 			free(copy);
 			return(WAPI_GLOB_NOSPACE);
@@ -316,9 +332,9 @@ globextend(const gchar *path, wapi_glob_t *pglob, size_t *limitp)
  * pattern causes a recursion level.
  */
 static int
-match(const gchar *name, gchar *pat, gchar *patend, gboolean ignorecase)
+match(Char *name, Char *pat, Char *patend, gboolean ignorecase)
 {
-	gchar c;
+	Char c;
 
 	while (pat < patend) {
 		c = *pat++;
@@ -326,6 +342,8 @@ match(const gchar *name, gchar *pat, gchar *patend, gboolean ignorecase)
 		case M_ALL:
 			if (pat == patend)
 				return(1);
+			while (pat < patend && (*pat & M_MASK) == M_ALL)
+				pat++;	/* eat consecutive '*' */
 			do {
 				if (match(name, pat, patend, ignorecase))
 					return(1);
@@ -337,7 +355,9 @@ match(const gchar *name, gchar *pat, gchar *patend, gboolean ignorecase)
 			break;
 		default:
 			if (ignorecase) {
-				if (g_ascii_tolower (*name++) != g_ascii_tolower (c))
+				gchar char_name = (gchar)CHAR(*name++);
+				gchar char_c = (gchar)CHAR(c);
+				if (g_ascii_tolower (char_name) != g_ascii_tolower (char_c))
 					return(0);
 			} else {
 				if (*name++ != c)
@@ -378,7 +398,7 @@ g_Ctoc(const gchar *str, char *buf, u_int len)
 	return (1);
 }
 
-#ifdef DEBUG
+#ifdef DEBUG_GLOB
 static void
 qprintf(const char *str, Char *s)
 {

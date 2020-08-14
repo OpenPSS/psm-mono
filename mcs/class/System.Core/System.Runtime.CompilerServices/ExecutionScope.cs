@@ -32,7 +32,7 @@ using System.Linq.Expressions;
 
 namespace System.Runtime.CompilerServices {
 
-#if MOONLIGHT || MONODROID
+#if MOONLIGHT
 	[Obsolete ("do not use this type", true)]
 #endif
 	public class ExecutionScope {
@@ -41,12 +41,12 @@ namespace System.Runtime.CompilerServices {
 		public object [] Locals;
 		public ExecutionScope Parent;
 
-#if !MOONLIGHT && !MONODROID
+#if !MOONLIGHT
 		internal CompilationContext context;
 #endif
 		internal int compilation_unit;
 
-#if !MOONLIGHT && !MONODROID
+#if !MOONLIGHT
 		ExecutionScope (CompilationContext context, int compilation_unit)
 		{
 			this.context = context;
@@ -68,7 +68,7 @@ namespace System.Runtime.CompilerServices {
 #endif
 		public Delegate CreateDelegate (int indexLambda, object [] locals)
 		{
-#if MOONLIGHT || MONODROID
+#if MOONLIGHT
 			throw new NotSupportedException ();
 #else
 			return context.CreateDelegate (
@@ -79,7 +79,7 @@ namespace System.Runtime.CompilerServices {
 
 		public object [] CreateHoistedLocals ()
 		{
-#if MOONLIGHT || MONODROID
+#if MOONLIGHT
 			throw new NotSupportedException ();
 #else
 			return context.CreateHoistedLocals (compilation_unit);
@@ -88,7 +88,7 @@ namespace System.Runtime.CompilerServices {
 
 		public Expression IsolateExpression (Expression expression, object [] locals)
 		{
-#if MOONLIGHT || MONODROID
+#if MOONLIGHT
 			throw new NotSupportedException ();
 #else
 			return context.IsolateExpression (this, locals, expression);

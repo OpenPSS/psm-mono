@@ -205,6 +205,7 @@ namespace MonoTests.System.Security.Policy {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void FromXml_PolicyLevel () 
 		{
 			SiteMembershipCondition smc = new SiteMembershipCondition ("*.go-mono.com");
@@ -230,6 +231,7 @@ namespace MonoTests.System.Security.Policy {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ToXml_PolicyLevel () 
 		{
 			SiteMembershipCondition smc = new SiteMembershipCondition ("*.go-mono.com");

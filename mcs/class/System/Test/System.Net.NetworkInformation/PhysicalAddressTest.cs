@@ -1,7 +1,9 @@
 using NUnit.Framework;
 using System;
 #if NET_2_0
+#if !MOBILE
 using System.Net.NetworkInformation;
+#endif
 
 namespace MonoTests.System.Net.NetworkInformation
 {

@@ -12,6 +12,7 @@
 // Copyright (C) 2004 Novell, Inc (http://www.novell.com)
 // Copyright (C) 2005 David Waite
 // Copyright (C) 2007 HotFeet GmbH (http://www.hotfeet.ch)
+// Copyright (C) 2011 Xamarin, Inc (http://www.xamarin.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -57,13 +58,10 @@ namespace System.Collections.Generic {
 	[Serializable]
 	[DebuggerDisplay ("Count={Count}")]
 	[DebuggerTypeProxy (typeof (CollectionDebuggerView<,>))]
-	public class Dictionary<TKey, TValue> : IDictionary<TKey, TValue>,
-		IDictionary,
-		ICollection,
-		ICollection<KeyValuePair<TKey, TValue>>,
-		IEnumerable<KeyValuePair<TKey, TValue>>,
-		ISerializable,
-		IDeserializationCallback
+	public class Dictionary<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, ISerializable, IDeserializationCallback
+#if NET_4_5
+		, IReadOnlyDictionary<TKey, TValue>
+#endif
 	{
 		// The implementation of this class uses a hash table and linked lists
 		// (see: http://msdn2.microsoft.com/en-us/library/ms379571(VS.80).aspx).
@@ -100,6 +98,10 @@ namespace System.Collections.Generic {
 		TKey [] keySlots;
 		TValue [] valueSlots;
 
+		//Leave those 2 fields here to improve heap layout.
+		IEqualityComparer<TKey> hcp;
+		SerializationInfo serialization_info;
+
 		// The number of slots in "linkSlots" and "keySlots"/"valueSlots" that
 		// are in use (i.e. filled with data) or have been used and marked as
 		// "empty" later on.
@@ -117,9 +119,6 @@ namespace System.Collections.Generic {
 		// The number of (key,value) pairs the dictionary can hold without
 		// resizing the hash table and the slots arrays.
 		int threshold;
-
-		IEqualityComparer<TKey> hcp;
-		SerializationInfo serialization_info;
 
 		// The number of changes made to this dictionary. Used by enumerators
 		// to detect changes and invalidate themselves.
@@ -301,24 +300,16 @@ namespace System.Collections.Generic {
 				throw new ArgumentException ("Destination array cannot hold the requested elements!");
 		}
 
-		void CopyKeys (TKey[] array, int index)
-		{
-			for (int i = 0; i < touchedSlots; i++) {
-				if ((linkSlots [i].HashCode & HASH_FLAG) != 0)
-					array [index++] = keySlots [i];
-			}
-		}
-
-		void CopyValues (TValue[] array, int index)
-		{
-			for (int i = 0; i < touchedSlots; i++) {
-				if ((linkSlots [i].HashCode & HASH_FLAG) != 0)
-					array [index++] = valueSlots [i];
-			}
-		}
-
 		delegate TRet Transform<TRet> (TKey key, TValue value);
 
+		void Do_CopyTo<TRet, TElem> (TElem [] array, int index, Transform<TRet> transform)
+			where TRet : TElem
+		{
+			for (int i = 0; i < touchedSlots; i++) {
+				if ((linkSlots [i].HashCode & HASH_FLAG) != 0)
+					array [index++] = transform (keySlots [i], valueSlots [i]);
+			}
+		}
 
 		static KeyValuePair<TKey, TValue> make_pair (TKey key, TValue value)
 		{
@@ -338,10 +329,7 @@ namespace System.Collections.Generic {
 		void CopyTo (KeyValuePair<TKey, TValue> [] array, int index)
 		{
 			CopyToCheck (array, index);
-			for (int i = 0; i < touchedSlots; i++) {
-				if ((linkSlots [i].HashCode & HASH_FLAG) != 0)
-					array [index++] = new KeyValuePair<TKey, TValue> (keySlots [i], valueSlots [i]);
-			}
+			Do_CopyTo<KeyValuePair<TKey, TValue>, KeyValuePair<TKey, TValue>> (array, index, make_pair);
 		}
 
 		void Do_ICollectionCopyTo<TRet> (Array array, int index, Transform<TRet> transform)
@@ -357,11 +345,7 @@ namespace System.Collections.Generic {
 				// BOOTSTRAP: gmcs 2.4.x seems to have trouble compiling the alternative
 				throw new Exception ();
 #else
-				object[] dest = (object[])array;
-				for (int i = 0; i < touchedSlots; i++) {
-					if ((linkSlots [i].HashCode & HASH_FLAG) != 0)
-						dest [index++] = transform (keySlots [i], valueSlots [i]);
-				}
+				Do_CopyTo ((object []) array, index, transform);
 #endif
 
 			} catch (Exception e) {
@@ -656,6 +640,16 @@ namespace System.Collections.Generic {
 		ICollection<TValue> IDictionary<TKey, TValue>.Values {
 			get { return Values; }
 		}
+		
+#if NET_4_5
+		IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys {
+			get { return Keys; }
+		}
+ 
+		IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values {
+			get { return Values; }
+		}
+#endif
 
 		public KeyCollection Keys {
 			get { return new KeyCollection (this); }
@@ -785,10 +779,7 @@ namespace System.Collections.Generic {
 			CopyToCheck (array, index);
 			DictionaryEntry [] entries = array as DictionaryEntry [];
 			if (entries != null) {
-				for (int i = 0; i < touchedSlots; i++) {
-					if ((linkSlots [i].HashCode & HASH_FLAG) != 0)
-						entries [index++] = new DictionaryEntry (keySlots [i], valueSlots [i]);
-				}
+				Do_CopyTo (entries, index, delegate (TKey key, TValue value) { return new DictionaryEntry (key, value); });
 				return;
 			}
 
@@ -988,7 +979,7 @@ namespace System.Collections.Generic {
 			public void CopyTo (TKey [] array, int index)
 			{
 				dictionary.CopyToCheck (array, index);
-				dictionary.CopyKeys (array, index);
+				dictionary.Do_CopyTo<TKey, TKey> (array, index, pick_key);
 			}
 
 			public Enumerator GetEnumerator ()
@@ -1105,7 +1096,7 @@ namespace System.Collections.Generic {
 			public void CopyTo (TValue [] array, int index)
 			{
 				dictionary.CopyToCheck (array, index);
-				dictionary.CopyValues (array, index);
+				dictionary.Do_CopyTo<TValue, TValue> (array, index, pick_value);
 			}
 
 			public Enumerator GetEnumerator ()

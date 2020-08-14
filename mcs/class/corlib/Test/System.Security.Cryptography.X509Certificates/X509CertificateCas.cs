@@ -163,6 +163,7 @@ namespace MonoCasTests.System.Security.Cryptography.X509Certificates {
 			X509Certificate disk = X509Certificate.CreateFromCertFile (certfile);
 		}
 
+#if !MOBILE
 		[Test]
 		[PermissionSet (SecurityAction.Deny, Unrestricted = true)]
 		[ExpectedException (typeof (SecurityException))]
@@ -190,6 +191,7 @@ namespace MonoCasTests.System.Security.Cryptography.X509Certificates {
 				// anyway this indicates that the security check is ok
 			}
 		}
+#endif
 
 		// test demands by denying the required permission
 

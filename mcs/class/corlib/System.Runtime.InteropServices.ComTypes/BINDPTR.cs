@@ -30,6 +30,7 @@
 // (C) 2002 Ximian, Inc.
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[StructLayout (LayoutKind.Explicit, CharSet = CharSet.Unicode)]
@@ -42,3 +43,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		public IntPtr lpvardesc;
 	}
 }
+#endif

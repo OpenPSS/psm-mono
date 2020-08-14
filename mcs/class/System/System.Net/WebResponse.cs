@@ -87,12 +87,7 @@ namespace System.Net
 		public virtual Uri ResponseUri {		
 			get { throw new NotSupportedException (); }
 		}		
-#if NET_4_5 || MOBILE
-		[MonoTODO ("for portable library support")]
-		public virtual bool SupportsHeaders {
-			get { throw new NotImplementedException (); }
-		}
-#endif
+
 		// Methods
 		
 		public virtual void Close()
@@ -106,8 +101,6 @@ namespace System.Net
 		}
 #if TARGET_JVM //enable overrides for extenders
 		public virtual void Dispose()
-#elif NET_4_0 || MOBILE
-		public void Dispose ()
 #else
 		void IDisposable.Dispose()
 #endif

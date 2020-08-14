@@ -28,7 +28,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if NET_2_0 && CONFIGURATION_DEP
+#if CONFIGURATION_DEP && !MOBILE
 extern alias PrebuiltSystem;
 using TypeDescriptor = PrebuiltSystem.System.ComponentModel.TypeDescriptor;
 

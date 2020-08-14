@@ -22,6 +22,9 @@ using System.Collections.Generic;
 namespace MonoTests.System.Net.Sockets
 {
 	[TestFixture]
+#if MOBILE
+	[Category("NotWorking")] // this test causes later async SocketExceptions in random tests
+#endif
 	public class SocketTest
 	{
 		// note: also used in SocketCas tests
@@ -1940,6 +1943,9 @@ namespace MonoTests.System.Net.Sockets
 		
 		[Test]
 		[Category ("NotDotNet")] // "Needs XP or later"
+#if MOBILE
+		[Category ("NotWorking")]
+#endif
 		public void BeginDisconnect ()
 		{
 			Socket sock = new Socket (AddressFamily.InterNetwork,
@@ -3295,6 +3301,9 @@ namespace MonoTests.System.Net.Sockets
 		}
 
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void ReceiveRemoteClosed ()
 		{
 			Socket sock = new Socket (AddressFamily.InterNetwork,
@@ -4081,6 +4090,9 @@ namespace MonoTests.System.Net.Sockets
 
 		[Test]
 		[ExpectedException (typeof (NullReferenceException))]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void SendAsync_Default ()
 		{
 			using (Socket s = new Socket (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)) {
@@ -4092,6 +4104,9 @@ namespace MonoTests.System.Net.Sockets
 
 		[Test]
 		[ExpectedException (typeof (NullReferenceException))]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void SendAsync_NullBuffer ()
 		{
 			using (Socket s = new Socket (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)) {
@@ -4103,6 +4118,9 @@ namespace MonoTests.System.Net.Sockets
 
 		[Test]
 		[ExpectedException (typeof (ObjectDisposedException))]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void SendAsync_ClosedSocket ()
 		{
 			Socket s = new Socket (AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);

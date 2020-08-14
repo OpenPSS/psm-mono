@@ -27,6 +27,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Collections;
 using System.IO;
 using System.Security;
@@ -35,9 +36,7 @@ using System.Runtime.InteropServices;
 
 namespace System.CodeDom.Compiler {
 
-#if NET_2_0
 	[Serializable]
-#endif
 	[PermissionSet (SecurityAction.LinkDemand, Unrestricted = true)]
 	public class TempFileCollection:ICollection, IEnumerable, IDisposable
 	{
@@ -279,3 +278,4 @@ namespace System.CodeDom.Compiler {
 		[DllImport ("libc")] private static extern int mkdir (string olpath, uint mode);
 	}
 }
+#endif

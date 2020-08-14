@@ -4,10 +4,8 @@
 // Author:
 //	Atsushi Enomoto <atsushi@ximian.com>
 //	Ankit Jain <JAnkit@novell.com>
-//	Martin Baulig <martin.baulig@xamarin.com>
 //
 // Copyright (C) 2005 Novell, Inc.  http://www.novell.com
-// Copyright (c) 2012 Xamarin Inc. (http://www.xamarin.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -67,23 +65,10 @@ namespace System.ServiceModel.Description
 			public List<IWsdlExportExtension> Results { get; private set; }
 		}
 
-		class EndpointExportMap
-		{
-			public EndpointExportMap (string name, ServiceEndpoint endpoint)
-			{
-				Name = name;
-				Endpoint = endpoint;
-			}
-
-			public string Name { get; private set; }
-			public ServiceEndpoint Endpoint { get; private set; }
-		}
-
-		MetadataSet metadata;
-		ServiceDescriptionCollection wsdl_colln;
-		XsdDataContractExporter xsd_exporter;
-		Dictionary<ContractDescription, ContractExportMap> exported_contracts;
-		List<EndpointExportMap> exported_endpoints;
+		private MetadataSet metadata;
+		private ServiceDescriptionCollection wsdl_colln;
+		private XsdDataContractExporter xsd_exporter;
+		private List<ContractExportMap> exported_contracts;
 
 		public override MetadataSet GetGeneratedMetadata ()
 		{
@@ -104,19 +89,20 @@ namespace System.ServiceModel.Description
 
 		public override void ExportContract (ContractDescription contract)
 		{
-			ExportContractInternal (contract);
+			ExportContractInternal (contract, true);
 		}
 
-		ContractExportMap ExportContractInternal (ContractDescription contract)
+		List<IWsdlExportExtension> ExportContractInternal (ContractDescription contract, bool rejectDuplicate)
 		{
-			if (ExportedContracts.ContainsKey (contract))
-				return ExportedContracts [contract];
-
 			QName qname = new QName (contract.Name, contract.Namespace);
-			if (ExportedContracts.Any (m => m.Value.QName == qname))
+			var map = ExportedContracts.FirstOrDefault (m => m.QName == qname);
+			if (map != null) {
+				if (map.Results != null && !rejectDuplicate)
+					return null; // already exported.
 				throw new ArgumentException (String.Format (
-					"A ContractDescription with Namespace : {0} and Name : {1} has already been exported.",
+					"A ContractDescription with Namespace : {0} and Name : {1} has already been exported.", 
 					contract.Namespace, contract.Name));
+			}
 
 			WSServiceDescription sd = GetServiceDescription (contract.Namespace);
 
@@ -183,38 +169,24 @@ namespace System.ServiceModel.Description
 			sd.Types.Schemas.Add (xs_import);
 
 			sd.PortTypes.Add (ws_port);
-			var map = new ContractExportMap (qname, contract, extensions);
-			ExportedContracts.Add (contract, map);
+			ExportedContracts.Add (new ContractExportMap (qname, contract, extensions));
 
 			WsdlContractConversionContext context = new WsdlContractConversionContext (contract, ws_port);
 			foreach (IWsdlExportExtension extn in extensions)
 				extn.ExportContract (this, context);
 
-			return map;
+			return extensions;
 		}
 
 		public override void ExportEndpoint (ServiceEndpoint endpoint)
 		{
-			ExportEndpoint_Internal (endpoint);
+			ExportEndpoint (endpoint, true);
 		}
 
-		EndpointExportMap ExportEndpoint_Internal (ServiceEndpoint endpoint)
+		void ExportEndpoint (ServiceEndpoint endpoint, bool rejectDuplicate)
 		{
-			var map = ExportedEndpoints.FirstOrDefault (m => m.Endpoint == endpoint);
-			if (map != null)
-				return map;
-
-			int index = 0;
-			var baseName = String.Concat (endpoint.Binding.Name, "_", endpoint.Contract.Name);
-			var name = baseName;
-			while (ExportedEndpoints.Exists (m => m.Name == name))
-				name = String.Concat (baseName, (++index).ToString ());
-
-			map = new EndpointExportMap (name, endpoint);
-			ExportedEndpoints.Add (map);
-
-			var contract = ExportContractInternal (endpoint.Contract);
-
+			List<IWsdlExportExtension> extensions = ExportContractInternal (endpoint.Contract, rejectDuplicate);
+			
 			//FIXME: Namespace
 			WSServiceDescription sd = GetServiceDescription ("http://tempuri.org/");
 			if (sd.TargetNamespace != endpoint.Contract.Namespace) {
@@ -232,48 +204,70 @@ namespace System.ServiceModel.Description
 					"Binding for ServiceEndpoint named '{0}' is null",
 					endpoint.Name));
 
-			var extensions = new List<IWsdlExportExtension> ();
-			var extensionTypes = new Dictionary<Type, IWsdlExportExtension> ();
-			if (contract.Results != null) {
-				foreach (var extension in contract.Results) {
-					var type = extension.GetType ();
-					if (extensionTypes.ContainsKey (type))
-						continue;
-					extensionTypes.Add (type, extension);
-					extensions.Add (extension);
-				}
-			}
-
-			var bindingElements = endpoint.Binding.CreateBindingElements ();
-			foreach (var element in bindingElements) {
-				var extension = element as IWsdlExportExtension;
-				if (extension == null)
-					continue;
-				var type = extension.GetType ();
-				if (extensionTypes.ContainsKey (type))
-					continue;
-				extensionTypes.Add (type, extension);
-				extensions.Add (extension);
-			}
-
+			bool msg_version_none =
+				endpoint.Binding.MessageVersion != null &&
+				endpoint.Binding.MessageVersion.Equals (MessageVersion.None);
 			//ExportBinding
 			WSBinding ws_binding = new WSBinding ();
 			
 			//<binding name = .. 
-			ws_binding.Name = name;
+			ws_binding.Name = String.Concat (endpoint.Binding.Name, "_", endpoint.Contract.Name);
 
 			//<binding type = ..
 			ws_binding.Type = new QName (endpoint.Contract.Name, endpoint.Contract.Namespace);
 			sd.Bindings.Add (ws_binding);
 
+			if (!msg_version_none) {
+				SoapBinding soap_binding = new SoapBinding ();
+				soap_binding.Transport = SoapBinding.HttpTransport;
+				soap_binding.Style = SoapBindingStyle.Document;
+				ws_binding.Extensions.Add (soap_binding);
+			}
+
 			//	<operation
-			foreach (OperationDescription sm_op in endpoint.Contract.Operations) {
-				var op_binding = CreateOperationBinding (endpoint, sm_op);
+			foreach (OperationDescription sm_op in endpoint.Contract.Operations){
+				OperationBinding op_binding = new OperationBinding ();
+				op_binding.Name = sm_op.Name;
+
+				//FIXME: Move to IWsdlExportExtension .. ?
+				foreach (MessageDescription sm_md in sm_op.Messages) {
+					if (sm_md.Direction == MessageDirection.Input) {
+						//<input
+						InputBinding in_binding = new InputBinding ();
+
+						if (!msg_version_none) {
+							SoapBodyBinding soap_body_binding = new SoapBodyBinding ();
+							soap_body_binding.Use = SoapBindingUse.Literal;
+							in_binding.Extensions.Add (soap_body_binding);
+
+							//Set Action
+							//<operation > <soap:operation soapAction .. >
+							SoapOperationBinding soap_operation_binding = new SoapOperationBinding ();
+							soap_operation_binding.SoapAction = sm_md.Action;
+							soap_operation_binding.Style = SoapBindingStyle.Document;
+							op_binding.Extensions.Add (soap_operation_binding);
+						}
+
+						op_binding.Input = in_binding;
+					} else {
+						//<output
+						OutputBinding out_binding = new OutputBinding ();
+
+						if (!msg_version_none) {
+							SoapBodyBinding soap_body_binding = new SoapBodyBinding ();
+							soap_body_binding.Use = SoapBindingUse.Literal;
+							out_binding.Extensions.Add (soap_body_binding);
+						}
+						
+						op_binding.Output = out_binding;
+					}
+				}
+
 				ws_binding.Operations.Add (op_binding);
 			}
 
 			//Add <service
-			Port ws_port = ExportService (sd, ws_binding, endpoint.Address);
+			Port ws_port = ExportService (sd, ws_binding, endpoint.Address, msg_version_none);
 
 			//Call IWsdlExportExtension.ExportEndpoint
 			WsdlContractConversionContext contract_context = new WsdlContractConversionContext (
@@ -281,105 +275,14 @@ namespace System.ServiceModel.Description
 			WsdlEndpointConversionContext endpoint_context = new WsdlEndpointConversionContext (
 				contract_context, endpoint, ws_port, ws_binding);
 
-			foreach (var extension in extensions) {
-				try {
-					extension.ExportEndpoint (this, endpoint_context);
-				} catch (Exception ex) {
-					var error = AddError (
-						"Failed to export endpoint '{0}': wsdl exporter '{1}' " +
-						"threw an exception: {2}", endpoint.Name, extension.GetType (), ex);
-					throw new MetadataExportException (error, ex);
-				}
-			}
+			if (extensions != null)
+				foreach (IWsdlExportExtension extn in extensions)
+					extn.ExportEndpoint (this, endpoint_context);
 
-			try {
-				ExportPolicy (endpoint, ws_binding);
-			} catch (MetadataExportException) {
-				throw;
-			} catch (Exception ex) {
-				var error = AddError (
-					"Failed to export endpoint '{0}': unhandled exception " +
-					"while exporting policy: {1}", endpoint.Name, ex);
-				throw new MetadataExportException (error, ex);
-			}
-
-			return map;
-		}
-
-		OperationBinding CreateOperationBinding (ServiceEndpoint endpoint, OperationDescription sm_op)
-		{
-			OperationBinding op_binding = new OperationBinding ();
-			op_binding.Name = sm_op.Name;
-			
-			foreach (MessageDescription sm_md in sm_op.Messages) {
-				if (sm_md.Direction == MessageDirection.Input) {
-					//<input
-					CreateInputBinding (endpoint, op_binding, sm_md);
-				} else {
-					//<output
-					CreateOutputBinding (endpoint, op_binding, sm_md);
-				}
-			}
-
-			return op_binding;
-		}
-
-		void CreateInputBinding (ServiceEndpoint endpoint, OperationBinding op_binding,
-		                         MessageDescription sm_md)
-		{
-			var in_binding = new InputBinding ();
-			op_binding.Input = in_binding;
-
-			var message_version = endpoint.Binding.MessageVersion ?? MessageVersion.None;
-			if (message_version == MessageVersion.None)
-				return;
-
-			SoapBodyBinding soap_body_binding;
-			SoapOperationBinding soap_operation_binding;
-			if (message_version.Envelope == EnvelopeVersion.Soap11) {
-				soap_body_binding = new SoapBodyBinding ();
-				soap_operation_binding = new SoapOperationBinding ();
-			} else if (message_version.Envelope == EnvelopeVersion.Soap12) {
-				soap_body_binding = new Soap12BodyBinding ();
-				soap_operation_binding = new Soap12OperationBinding ();
-			} else {
-				throw new InvalidOperationException ();
-			}
-
-			soap_body_binding.Use = SoapBindingUse.Literal;
-			in_binding.Extensions.Add (soap_body_binding);
 				
-			//Set Action
-			//<operation > <soap:operation soapAction .. >
-			soap_operation_binding.SoapAction = sm_md.Action;
-			soap_operation_binding.Style = SoapBindingStyle.Document;
-			op_binding.Extensions.Add (soap_operation_binding);
 		}
 
-		void CreateOutputBinding (ServiceEndpoint endpoint, OperationBinding op_binding,
-		                          MessageDescription sm_md)
-		{
-			var out_binding = new OutputBinding ();
-			op_binding.Output = out_binding;
-
-			var message_version = endpoint.Binding.MessageVersion ?? MessageVersion.None;
-			if (message_version == MessageVersion.None)
-				return;
-
-			SoapBodyBinding soap_body_binding;
-			if (message_version.Envelope == EnvelopeVersion.Soap11) {
-				soap_body_binding = new SoapBodyBinding ();
-			} else if (message_version.Envelope == EnvelopeVersion.Soap12) {
-				soap_body_binding = new Soap12BodyBinding ();
-			} else {
-				throw new InvalidOperationException ();
-			}
-
-			soap_body_binding.Use = SoapBindingUse.Literal;
-			out_binding.Extensions.Add (soap_body_binding);
-		}
-		
-		Port ExportService (WSServiceDescription sd, WSBinding ws_binding, EndpointAddress address)
+		Port ExportService (WSServiceDescription sd, WSBinding ws_binding, EndpointAddress address, bool msg_version_none)
 		{
 			if (address == null)
 				return null;
@@ -387,9 +290,16 @@ namespace System.ServiceModel.Description
 			Service ws_svc = GetService (sd, "service");
 			sd.Name = "service";
 
-			Port ws_port = new Port ();
-			ws_port.Name = ws_binding.Name;
-			ws_port.Binding = new QName (ws_binding.Name, sd.TargetNamespace);
+				Port ws_port = new Port ();
+				ws_port.Name = ws_binding.Name;
+				ws_port.Binding = new QName (ws_binding.Name, sd.TargetNamespace);
+
+				if (!msg_version_none) {
+					SoapAddressBinding soap_addr = new SoapAddressBinding ();
+					soap_addr.Location = address.Uri.AbsoluteUri;
+
+					ws_port.Extensions.Add (soap_addr);
+				}
 
 			ws_svc.Ports.Add (ws_port);
 
@@ -451,7 +361,7 @@ namespace System.ServiceModel.Description
 				if (ep.Contract.Name == ServiceMetadataBehavior.MexContractName)
 					continue;
 
-				ExportEndpoint (ep);
+				ExportEndpoint (ep, false);
 			}
 		}
 
@@ -464,19 +374,11 @@ namespace System.ServiceModel.Description
 			}
 		}
 
-		Dictionary<ContractDescription, ContractExportMap> ExportedContracts {
+		List<ContractExportMap> ExportedContracts {
 			get {
 				if (exported_contracts == null)
-					exported_contracts = new Dictionary<ContractDescription, ContractExportMap> ();
+					exported_contracts = new List<ContractExportMap> ();
 				return exported_contracts;
-			}
-		}
-		
-		List<EndpointExportMap> ExportedEndpoints {
-			get {
-				if (exported_endpoints == null)
-					exported_endpoints = new List<EndpointExportMap> ();
-				return exported_endpoints;
 			}
 		}
 		
@@ -673,50 +575,6 @@ namespace System.ServiceModel.Description
 			GeneratedXmlSchemas.Add (schema);
 
 			return schema;
-		}
-
-		PolicyConversionContext ExportPolicy (ServiceEndpoint endpoint, WSBinding binding)
-		{
-			var context = new CustomPolicyConversionContext (endpoint);
-
-			var elements = endpoint.Binding.CreateBindingElements ();
-			foreach (var element in elements) {
-				var exporter = element as IPolicyExportExtension;
-				if (exporter == null)
-					continue;
-
-				try {
-					exporter.ExportPolicy (this, context);
-				} catch (Exception ex) {
-					var error = AddError (
-						"Failed to export endpoint '{0}': policy exporter " +
-						"'{1}' threw an exception: {2}", endpoint.Name,
-						element.GetType (), ex);
-					throw new MetadataExportException (error, ex);
-				}
-			}
-
-			var assertions = context.GetBindingAssertions ();
-			if (assertions.Count == 0)
-				return context;
-
-			var doc = new XmlDocument ();
-			var policy = doc.CreateElement ("wsp", "Policy", PolicyImportHelper.PolicyNS);
-			doc.AppendChild (policy);
-
-			var exactlyOne = doc.CreateElement ("wsp", "ExactlyOne", PolicyImportHelper.PolicyNS);
-			var all = doc.CreateElement ("wsp", "All", PolicyImportHelper.PolicyNS);
-
-			policy.AppendChild (exactlyOne);
-			exactlyOne.AppendChild (all);
-
-			foreach (var assertion in assertions) {
-				var imported = doc.ImportNode (assertion, true);
-				all.AppendChild (imported);
-			}
-
-			binding.Extensions.Add (policy);
-			return context;
 		}
 
 	}

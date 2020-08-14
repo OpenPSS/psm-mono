@@ -43,12 +43,12 @@ namespace Mono.Security.X509 {
 #endif
 	class X509Stores {
 
-		private string _storePath;
-		private X509Store _personal;
-		private X509Store _other;
-		private X509Store _intermediate;
-		private X509Store _trusted;
-		private X509Store _untrusted;
+		internal string _storePath;
+		internal X509Store _personal;
+		internal X509Store _other;
+		internal X509Store _intermediate;
+		internal X509Store _trusted;
+		internal X509Store _untrusted;
 
 		internal X509Stores (string path) 
 		{
@@ -57,7 +57,7 @@ namespace Mono.Security.X509 {
 
 		// properties
 
-		public X509Store Personal {
+		public virtual X509Store Personal {
 			get { 
 				if (_personal == null) {
 					string path = Path.Combine (_storePath, Names.Personal);
@@ -67,7 +67,7 @@ namespace Mono.Security.X509 {
 			}
 		}
 
-		public X509Store OtherPeople {
+		public virtual X509Store OtherPeople {
 			get { 
 				if (_other == null) {
 					string path = Path.Combine (_storePath, Names.OtherPeople);
@@ -77,7 +77,7 @@ namespace Mono.Security.X509 {
 			}
 		}
 
-		public X509Store IntermediateCA {
+		public virtual X509Store IntermediateCA {
 			get { 
 				if (_intermediate == null) {
 					string path = Path.Combine (_storePath, Names.IntermediateCA);
@@ -87,7 +87,7 @@ namespace Mono.Security.X509 {
 			}
 		}
 
-		public X509Store TrustedRoot {
+		public virtual X509Store TrustedRoot {
 			get { 
 				if (_trusted == null) {
 					string path = Path.Combine (_storePath, Names.TrustedRoot);
@@ -97,7 +97,7 @@ namespace Mono.Security.X509 {
 			}
 		}
 
-		public X509Store Untrusted {
+		public virtual X509Store Untrusted {
 			get { 
 				if (_untrusted == null) {
 					string path = Path.Combine (_storePath, Names.Untrusted);
@@ -129,7 +129,7 @@ namespace Mono.Security.X509 {
 			_untrusted = null;
 		}
 
-		public X509Store Open (string storeName, bool create)
+		public virtual X509Store Open (string storeName, bool create)
 		{
 			if (storeName == null)
 				throw new ArgumentNullException ("storeName");

@@ -2,9 +2,10 @@
 // System.Net.WebRequest
 //
 // Authors:
-//   Lawrence Pit (loz@cable.a2000.nl)
+//  Lawrence Pit (loz@cable.a2000.nl)
+//	Marek Safar (marek.safar@gmail.com)
 //
-
+// Copyright 2011 Xamarin Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -34,11 +35,13 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Globalization;
-#if NET_2_0
 using System.Net.Configuration;
 using System.Net.Security;
 using System.Net.Cache;
 using System.Security.Principal;
+using System.Runtime.CompilerServices;
+#if NET_4_5
+using System.Threading.Tasks;
 #endif
 
 #if NET_2_1
@@ -58,28 +61,36 @@ namespace System.Net
 	public abstract class WebRequest : MarshalByRefObject, ISerializable {
 #endif
 		static HybridDictionary prefixes = new HybridDictionary ();
-#if NET_2_0
 		static bool isDefaultWebProxySet;
 		static IWebProxy defaultWebProxy;
 		static RequestCachePolicy defaultCachePolicy;
-#endif
+		static MethodInfo cfGetDefaultProxy;
 		
 		// Constructors
 		
 		static WebRequest ()
 		{
+			if (Platform.IsMacOS) {
+#if MONOTOUCH
+				Type type = Type.GetType ("MonoTouch.CoreFoundation.CFNetwork, monotouch");
+#else
+				Type type = Type.GetType ("MonoMac.CoreFoundation.CFNetwork, monomac");
+#endif
+				if (type != null)
+					cfGetDefaultProxy = type.GetMethod ("GetDefaultProxy");
+			}
+			
 #if NET_2_1
-			AddPrefix ("http", typeof (HttpRequestCreator));
-			AddPrefix ("https", typeof (HttpRequestCreator));
+			IWebRequestCreate http = new HttpRequestCreator ();
+			RegisterPrefix ("http", http);
+			RegisterPrefix ("https", http);
 	#if MOBILE
-			AddPrefix ("file", typeof (FileWebRequestCreator));
-			AddPrefix ("ftp", typeof (FtpRequestCreator));
+			RegisterPrefix ("file", new FileWebRequestCreator ());
+			RegisterPrefix ("ftp", new FtpRequestCreator ());
 	#endif
 #else
-	#if NET_2_0
 			defaultCachePolicy = new HttpRequestCachePolicy (HttpRequestCacheLevel.NoCacheNoStore);
-	#endif
-	#if NET_2_0 && CONFIGURATION_DEP
+	#if CONFIGURATION_DEP
 			object cfg = ConfigurationManager.GetSection ("system.net/webRequestModules");
 			WebRequestModulesSection s = cfg as WebRequestModulesSection;
 			if (s != null) {
@@ -99,9 +110,6 @@ namespace System.Net
 		
 		protected WebRequest (SerializationInfo serializationInfo, StreamingContext streamingContext) 
 		{
-#if ONLY_1_1
-			throw GetMustImplement ();
-#endif
 		}
 
 		static Exception GetMustImplement ()
@@ -111,7 +119,6 @@ namespace System.Net
 		
 		// Properties
 
-#if NET_2_0
 		private AuthenticationLevel authentication_level = AuthenticationLevel.MutualAuthRequested;
 		
 		public AuthenticationLevel AuthenticationLevel
@@ -131,7 +138,6 @@ namespace System.Net
 			set {
 			}
 		}
-#endif
 		
 		public virtual string ConnectionGroupName {
 			get { throw GetMustImplement (); }
@@ -153,7 +159,6 @@ namespace System.Net
 			set { throw GetMustImplement (); }
 		}
 
-#if NET_2_0
 		public static RequestCachePolicy DefaultCachePolicy
 		{
 			get { return defaultCachePolicy; }
@@ -161,14 +166,13 @@ namespace System.Net
 				throw GetMustImplement ();
 			}
 		}
-#endif
 		
 		public virtual WebHeaderCollection Headers { 
 			get { throw GetMustImplement (); }
 			set { throw GetMustImplement (); }
 		}
 		
-#if NET_2_0 && !MOONLIGHT
+#if !MOONLIGHT
 		public TokenImpersonationLevel ImpersonationLevel {
 			get { throw GetMustImplement (); }
 			set { throw GetMustImplement (); }
@@ -198,7 +202,6 @@ namespace System.Net
 			set { throw GetMustImplement (); }
 		}
 		
-#if NET_2_0
 		public virtual bool UseDefaultCredentials
 		{
 			get {
@@ -244,14 +247,9 @@ namespace System.Net
 			
 			ProxyElement pe = sec.Proxy;
 			
-			if ((pe.UseSystemDefault != ProxyElement.UseSystemDefaultValues.False) && (pe.ProxyAddress == null)) {
-				IWebProxy proxy = GetSystemWebProxy ();
-				
-				if (!(proxy is WebProxy))
-					return proxy;
-				
-				p = (WebProxy) proxy;
-			} else
+			if ((pe.UseSystemDefault != ProxyElement.UseSystemDefaultValues.False) && (pe.ProxyAddress == null))
+				p = (WebProxy) GetSystemWebProxy ();
+			else
 				p = new WebProxy ();
 			
 			if (pe.ProxyAddress != null)
@@ -268,7 +266,6 @@ namespace System.Net
 			return GetSystemWebProxy ();
 #endif
 		}
-#endif
 
 		// Methods
 		
@@ -307,19 +304,7 @@ namespace System.Net
 				throw new ArgumentNullException ("requestUri");
 			return GetCreator (requestUri.Scheme).Create (requestUri);
 		}
-#if NET_4_5 || MOBILE	
-		[MonoTODO ("for portable library support")]
-		public static HttpWebRequest CreateHttp (string requestUriString)
-		{
-			throw new NotImplementedException ();
-		}
-			
-		[MonoTODO ("for portable library support")]
-		public static HttpWebRequest CreateHttp (Uri requestUri)
-		{
-			throw new NotImplementedException ();
-		}
-#endif
+
 		public virtual Stream EndGetRequestStream (IAsyncResult asyncResult)
 		{
 			throw GetMustImplement ();
@@ -340,68 +325,63 @@ namespace System.Net
 			throw GetMustImplement ();
 		}
 		
-#if NET_2_0
+		[MethodImplAttribute(MethodImplOptions.InternalCall)]
+		private extern static bool GetSystemWebProxy_internal(ref string a, ref string b);
+
 		[MonoTODO("Look in other places for proxy config info")]
 		public static IWebProxy GetSystemWebProxy ()
 		{
-			if (Platform.IsMacOS)
-				return CFNetwork.GetDefaultProxy ();
-			
-			string address = Environment.GetEnvironmentVariable ("http_proxy");
-			if (address == null)
-				address = Environment.GetEnvironmentVariable ("HTTP_PROXY");
+			string address = null;
+			string bypass = null;
 
-			if (address != null) {
-				try {
-					if (!address.StartsWith ("http://"))
-						address = "http://" + address;
-					Uri uri = new Uri (address);
-					IPAddress ip;
-					if (IPAddress.TryParse (uri.Host, out ip)) {
-						if (IPAddress.Any.Equals (ip)) {
-							UriBuilder builder = new UriBuilder (uri);
-							builder.Host = "127.0.0.1";
-							uri = builder.Uri;
-						} else if (IPAddress.IPv6Any.Equals (ip)) {
-							UriBuilder builder = new UriBuilder (uri);
-							builder.Host = "[::1]";
-							uri = builder.Uri;
-						}
+			if (!GetSystemWebProxy_internal (ref address, ref bypass))
+				return new WebProxy ();
+
+			try {
+				if (!address.StartsWith ("http://"))
+					address = "http://" + address;
+				Uri uri = new Uri (address);
+				IPAddress ip;
+				if (IPAddress.TryParse (uri.Host, out ip)) {
+					if (IPAddress.Any.Equals (ip)) {
+						UriBuilder builder = new UriBuilder (uri);
+						builder.Host = "127.0.0.1";
+						uri = builder.Uri;
+					} else if (IPAddress.IPv6Any.Equals (ip)) {
+						UriBuilder builder = new UriBuilder (uri);
+						builder.Host = "[::1]";
+						uri = builder.Uri;
 					}
-					
-					string[] bypassList=null;
-				        string bypass = Environment.GetEnvironmentVariable ("no_proxy");
+				}
 				
-				        if (bypass == null)
-				        	bypass = Environment.GetEnvironmentVariable ("NO_PROXY");
+				string[] bypassList=null;
 				
-				        if (bypass != null) {
-				                bypass = bypass.Remove (bypass.IndexOf("*.local"), 7);
-				                bypassList = bypass.Split (new char[]{','}, StringSplitOptions.RemoveEmptyEntries);
-				            }
-				
-				        return new WebProxy (uri, false, bypassList);
-				} catch (UriFormatException) { }
-			}
+				if (bypass != null) {
+					if (bypass.Contains ("*.local"))
+						bypass = bypass.Remove (bypass.IndexOf("*.local"), 7);
+					if (bypass.Contains ("<local>"))
+						bypass = bypass.Remove (bypass.IndexOf("<local>"), 7);
+					bypassList = bypass.Split (new char[]{',', ';'}, StringSplitOptions.RemoveEmptyEntries);
+				}
 			
+					return new WebProxy (uri, false, bypassList);
+			} catch (UriFormatException) { }
+			
+			if (cfGetDefaultProxy != null)
+				return (IWebProxy) cfGetDefaultProxy.Invoke (null, null);
+
 			return new WebProxy ();
 		}
-#endif
 
-		void ISerializable.GetObjectData
-		(SerializationInfo serializationInfo,
-		   				  StreamingContext streamingContext)
+		void ISerializable.GetObjectData (SerializationInfo serializationInfo, StreamingContext streamingContext)
 		{
 			throw new NotSupportedException ();
 		}
 
-
-#if NET_2_0
 		protected virtual void GetObjectData (SerializationInfo serializationInfo, StreamingContext streamingContext)
 		{
 			throw GetMustImplement ();
 		}
-#endif
 
 		public static bool RegisterPrefix (string prefix, IWebRequestCreate creator)
 		{
@@ -469,6 +449,18 @@ namespace System.Net
 			object o = Activator.CreateInstance (type, true);
 			prefixes [prefix] = o;
 		}
+
+#if NET_4_5
+		public virtual Task<Stream> GetRequestStreamAsync ()
+		{
+			return Task<Stream>.Factory.FromAsync (BeginGetRequestStream, EndGetRequestStream, null);
+		}
+
+		public virtual Task<WebResponse> GetResponseAsync ()
+		{
+			return Task<WebResponse>.Factory.FromAsync (BeginGetResponse, EndGetResponse, null);
+		}
+#endif
+
 	}
 }
-

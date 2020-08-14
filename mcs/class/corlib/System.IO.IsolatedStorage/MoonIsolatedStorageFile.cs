@@ -28,7 +28,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-#if MOONLIGHT
+#if MOONLIGHT && SCE_DISABLED
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -163,6 +163,21 @@ namespace System.IO.IsolatedStorage {
 		{
 			PreCheck ();
 			return File.Exists (Verify (path));
+		}
+
+		public DateTimeOffset GetCreationTime (string path)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public DateTimeOffset GetLastAccessTime (string path)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public DateTimeOffset GetLastWriteTime (string path)
+		{
+			throw new NotImplementedException ();
 		}
 
 		private string HideAppDir (string path)
@@ -325,6 +340,32 @@ namespace System.IO.IsolatedStorage {
 			if (result)
 				IsolatedStorage.Quota = newQuotaSize;
 			return result;
+		}
+		
+		public void CopyFile (string sourceFileName, string destinationFileName)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public void CopyFile (string sourceFileName, string destinationFileName, bool overwrite)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public void MoveDirectory (string sourceDirectoryName, string destinationDirectoryName)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public void MoveFile (string sourceFileName, string destinationFileName)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public long UsedSize {
+			get {
+				throw new NotImplementedException ();
+			}
 		}
 	}
 }

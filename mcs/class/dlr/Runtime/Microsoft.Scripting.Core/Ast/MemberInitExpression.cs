@@ -28,7 +28,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents calling a constructor and initializing one or more members of the new object.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.MemberInitExpressionProxy))]
 #endif
     public sealed class MemberInitExpression : Expression {

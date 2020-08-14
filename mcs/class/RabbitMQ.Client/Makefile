@@ -4,9 +4,6 @@ SUBDIRS = src/apigen docs/specs src/client
 include ../../build/rules.make
 
 DISTFILES = \
-	src/apigen/RabbitMQ.Client.Apigen_net_2_0.exe.sources \
-	src/apigen/RabbitMQ.Client.Apigen_net_4_0.exe.sources \
-	src/apigen/RabbitMQ.Client.Apigen_net_4_5.exe.sources \
 	src/util/BlockingCell.cs \
 	src/util/DebugUtil.cs \
 	src/util/Either.cs \
@@ -30,3 +27,4 @@ DISTFILES = \
 all-local install-local clean-local test-local run-test-local run-test-ondotnet-local uninstall-local doc-update-local csproj-local:
 
 dist-local: dist-default
+

@@ -18,6 +18,7 @@ using System.IO.Compression;
 namespace MonoTests.System.IO.Compression
 {
 	[TestFixture]
+	[Category("PssCompression")]
 	public class GZipStreamTest
 	{
 		private static void CopyStream (Stream src, Stream dest)
@@ -122,6 +123,7 @@ namespace MonoTests.System.IO.Compression
 			decompressing.Read (dummy, 10, 20);
 		}
 
+#if !MOBILE
 		[Test]
 		[Category("NotWorking")]
 		public void CheckInvalidDataRead ()
@@ -136,6 +138,7 @@ namespace MonoTests.System.IO.Compression
 			} catch (InvalidDataException) {
 			}
 		}
+#endif
 
 		[Test]
 		public void CheckClosedRead ()

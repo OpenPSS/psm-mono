@@ -55,7 +55,9 @@ namespace System {
 		 * of icalls, do not require an increment.
 		 */
 #pragma warning disable 169
-		private const int mono_corlib_version = 108 + 0x0210;
+		//private const int mono_corlib_version = 97;
+		// Due to the VITA path changes
+		private const int mono_corlib_version = 1024;
 #pragma warning restore 169
 
 		[ComVisible (true)]
@@ -651,13 +653,7 @@ namespace System {
 					return Path.Combine (home, "Library", "Caches");
 				else
 					return String.Empty;
-
-#if NET_4_0
-				// #2873
-			case SpecialFolder.UserProfile:
-				return home;
-#endif
-
+				
 			case SpecialFolder.Programs:
 			case SpecialFolder.SendTo:
 			case SpecialFolder.StartMenu:
@@ -675,6 +671,7 @@ namespace System {
 			case SpecialFolder.CommonDesktopDirectory:
 			case SpecialFolder.PrinterShortcuts:
 			case SpecialFolder.Windows:
+			case SpecialFolder.UserProfile:
 			case SpecialFolder.SystemX86:
 			case SpecialFolder.ProgramFilesX86:
 			case SpecialFolder.CommonProgramFilesX86:

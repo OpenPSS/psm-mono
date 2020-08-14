@@ -6,6 +6,7 @@
 //
 
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[Serializable]
@@ -18,3 +19,4 @@ namespace System.Runtime.InteropServices.ComTypes
 	}
 }
 
+#endif

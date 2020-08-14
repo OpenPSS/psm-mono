@@ -28,6 +28,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Runtime.InteropServices;
 
 namespace System.CodeDom
@@ -44,11 +45,10 @@ namespace System.CodeDom
 		//
 		// Constructors
 		//
-#if NET_2_0
 		public CodeSnippetCompileUnit ()
 		{
 		}
-#endif
+
 		public CodeSnippetCompileUnit( string value )
 		{
 			this.value = value;
@@ -79,3 +79,4 @@ namespace System.CodeDom
 		}
 	}
 }
+#endif

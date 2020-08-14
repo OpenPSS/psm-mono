@@ -15,7 +15,7 @@
 using System; using Microsoft;
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
 
 using System.Diagnostics;
 #if CODEPLEX_40

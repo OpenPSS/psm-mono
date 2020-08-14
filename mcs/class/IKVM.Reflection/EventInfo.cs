@@ -26,6 +26,11 @@ namespace IKVM.Reflection
 {
 	public abstract class EventInfo : MemberInfo
 	{
+		// prevent external subclasses
+		internal EventInfo()
+		{
+		}
+
 		public sealed override MemberTypes MemberType
 		{
 			get { return MemberTypes.Event; }
@@ -36,6 +41,7 @@ namespace IKVM.Reflection
 		public abstract MethodInfo GetRaiseMethod(bool nonPublic);
 		public abstract MethodInfo GetRemoveMethod(bool nonPublic);
 		public abstract MethodInfo[] GetOtherMethods(bool nonPublic);
+		public abstract MethodInfo[] __GetMethods();
 		public abstract Type EventHandlerType { get; }
 		internal abstract bool IsPublic { get; }
 		internal abstract bool IsStatic { get; }
@@ -68,6 +74,11 @@ namespace IKVM.Reflection
 		internal virtual EventInfo BindTypeParameters(Type type)
 		{
 			return new GenericEventInfo(this.DeclaringType.BindTypeParameters(type), this);
+		}
+
+		public override string ToString()
+		{
+			return this.DeclaringType.ToString() + " " + Name;
 		}
 	}
 }

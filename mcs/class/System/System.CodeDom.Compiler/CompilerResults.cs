@@ -28,6 +28,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Collections.Specialized;
 using System.Reflection;
 using System.Security.Permissions;
@@ -35,18 +36,14 @@ using System.Security.Policy;
 
 namespace System.CodeDom.Compiler {
 
-#if NET_2_0
 	[Serializable]
-#endif
 	[PermissionSet (SecurityAction.LinkDemand, Unrestricted = true)]
 	[PermissionSet (SecurityAction.InheritanceDemand, Unrestricted = true)]
 	public class CompilerResults {
 
 		private Assembly compiledAssembly;
 		private CompilerErrorCollection errors = new CompilerErrorCollection ();
-#if NET_1_1
 		private Evidence evidence;
-#endif
 		private int nativeCompilerReturnValue = 0;
 		private StringCollection output = new StringCollection ();
 		private string pathToAssembly;
@@ -82,7 +79,6 @@ namespace System.CodeDom.Compiler {
 			}
 		}
 
-#if NET_1_1
 #if NET_4_0
 		[Obsolete]
 #endif
@@ -91,7 +87,6 @@ namespace System.CodeDom.Compiler {
 			[SecurityPermission (SecurityAction.Demand, ControlEvidence = true)]
 			set { evidence = value; }
 		}
-#endif
 
 		public int NativeCompilerReturnValue {
 			get {
@@ -132,3 +127,4 @@ namespace System.CodeDom.Compiler {
 		}
 	}
 }
+#endif

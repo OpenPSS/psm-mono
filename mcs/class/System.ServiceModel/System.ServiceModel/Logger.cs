@@ -3,6 +3,7 @@
 //	Atsushi Enomoto <atsushi@ximian.com>
 //
 // Copyright (C) 2011 Novell, Inc.  http://www.novell.com
+// Copyright 2011 Xamarin Inc (http://www.xamarin.com).
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -139,20 +140,18 @@ namespace System.ServiceModel
 
 		static void Log (TraceEventType eventType, string message, params object [] args)
 		{
-			lock (log_writer){
-				event_id++;
+			event_id++;
 #if NET_2_1
-				log_writer.Write ("[{0}] ", event_id);
+			log_writer.Write ("[{0}] ", event_id);
 #endif
-				TraceCore (TraceEventType.Information, event_id,
-					false, Guid.Empty, // FIXME
-					message, args);
-				log_writer.WriteLine (message, args);
-				log_writer.Flush ();
+			TraceCore (TraceEventType.Information, event_id,
+				false, Guid.Empty, // FIXME
+				message, args);
+			log_writer.WriteLine (message, args);
+			log_writer.Flush ();
 #if !NET_2_1
-				source.TraceEvent (eventType, event_id, message, args);
+			source.TraceEvent (eventType, event_id, message, args);
 #endif
-			}
 		}
 		
 		#endregion
@@ -192,18 +191,18 @@ namespace System.ServiceModel
 			xw.Close ();
 
 			event_id++;
-			lock (log_writer){
+
 #if NET_2_1
-				log_writer.Write ("[{0}] ", event_id);
+			log_writer.Write ("[{0}] ", event_id);
 
-				TraceCore (TraceEventType.Information, event_id, /*FIXME*/false, /*FIXME*/Guid.Empty, sw);
+			TraceCore (TraceEventType.Information, event_id, /*FIXME*/false, /*FIXME*/Guid.Empty, sw);
 #else
-				TraceCore (TraceEventType.Information, event_id, /*FIXME*/false, /*FIXME*/Guid.Empty, doc.CreateNavigator ());
+			TraceCore (TraceEventType.Information, event_id, /*FIXME*/false, /*FIXME*/Guid.Empty, doc.CreateNavigator ());
 
-				message_source.TraceData (TraceEventType.Information, event_id, doc.CreateNavigator ());
+			message_source.TraceData (TraceEventType.Information, event_id, doc.CreateNavigator ());
 #endif
-				log_writer.Flush ();
-			}
+
+			log_writer.Flush ();
 		}
 
 		#endregion

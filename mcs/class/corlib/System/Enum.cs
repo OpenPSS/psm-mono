@@ -167,7 +167,7 @@ namespace System
 			names = other.names;
 			name_hash = other.name_hash;
 		}
-		
+
 		internal static void GetInfo (Type enumType, out MonoEnumInfo info)
 		{
 			/* First check the thread-local cache without locking */
@@ -187,23 +187,8 @@ namespace System
 
 			get_enum_info (enumType, out info);
 
-			Type et = Enum.GetUnderlyingType (enumType);
-			SortEnums (et, info.values, info.names);
-			
-			if (info.names.Length > 50) {
-				info.name_hash = new Hashtable (info.names.Length);
-				for (int i = 0; i <  info.names.Length; ++i)
-					info.name_hash [info.names [i]] = i;
-			}
-			MonoEnumInfo cached = new MonoEnumInfo (info);
-			lock (global_cache_monitor) {
-				global_cache [enumType] = cached;
-			}
-		}
-		
-		internal static void SortEnums (Type et, Array values, Array names)
-		{
 			IComparer ic = null;
+			Type et = Enum.GetUnderlyingType (enumType);
 			if (et == typeof (int))
 				ic = int_comparer;
 			else if (et == typeof (short))
@@ -213,7 +198,16 @@ namespace System
 			else if (et == typeof (long))
 				ic = long_comparer;
 			
-			Array.Sort (values, names, ic);
+			Array.Sort (info.values, info.names, ic);
+			if (info.names.Length > 50) {
+				info.name_hash = new Hashtable (info.names.Length);
+				for (int i = 0; i <  info.names.Length; ++i)
+					info.name_hash [info.names [i]] = i;
+			}
+			MonoEnumInfo cached = new MonoEnumInfo (info);
+			lock (global_cache_monitor) {
+				global_cache [enumType] = cached;
+			}
 		}
 	};
 
@@ -437,8 +431,8 @@ namespace System
 
 				return FindPosition (enumType, value, info.values) >= 0;
 			} else {
-				throw new ArgumentException("The value parameter is not the correct type."
-					+ "It must be type String or the same type as the underlying type"
+				throw new ArgumentException("The value parameter is not the correct type. "
+					+ "It must be type String or the same type as the underlying type "
 					+ "of the Enum.");
 			}
 		}

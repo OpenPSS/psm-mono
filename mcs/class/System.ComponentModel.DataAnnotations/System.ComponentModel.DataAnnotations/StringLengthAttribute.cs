@@ -57,11 +57,7 @@ namespace System.ComponentModel.DataAnnotations
 
 		public override string FormatErrorMessage (string name)
 		{
-#if NET_4_0
-			return String.Format (ErrorMessageString, name, MaximumLength, MinimumLength);
-#else
 			return String.Format (ErrorMessageString, name, MaximumLength);
-#endif
 		}
 
 		public override bool IsValid (object value)

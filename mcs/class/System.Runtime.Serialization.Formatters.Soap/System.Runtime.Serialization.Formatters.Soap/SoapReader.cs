@@ -33,8 +33,6 @@ using System.Xml;
 using System.Xml.Schema;
 using System.Reflection;
 using System.Collections;
-using System.Threading;
-using System.Globalization;
 using System.Runtime.Remoting;
 using System.Runtime.Serialization;
 using System.Runtime.Remoting.Messaging;
@@ -91,21 +89,7 @@ namespace System.Runtime.Serialization.Formatters.Soap {
 
 		#region Public Methods
 
-		public object Deserialize(Stream inStream, ISoapMessage soapMessage)
-		{
-			var savedCi = CultureInfo.CurrentCulture;
-			try {
-				Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
-				Deserialize_inner(inStream, soapMessage);
-			}
-			finally {
-				Thread.CurrentThread.CurrentCulture = savedCi;
-			}
-
-			return TopObject;
-		}
-
-		void Deserialize_inner(Stream inStream, ISoapMessage soapMessage)
+		public object Deserialize(Stream inStream, ISoapMessage soapMessage) 
 		{
 			ArrayList headers = null;
 			xmlReader = new XmlTextReader(inStream);
@@ -163,6 +147,8 @@ namespace System.Runtime.Serialization.Formatters.Soap {
 			{
 				if(xmlReader != null) xmlReader.Close();
 			}
+
+			return TopObject;
 		}
 		
 		#endregion

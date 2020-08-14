@@ -30,7 +30,7 @@
 
 #if NET_2_0
 
-#if SECURITY_DEP
+#if SECURITY_DEP && !MOBILE
 extern alias PrebuiltSystem;
 #endif
 
@@ -51,7 +51,7 @@ using System.Configuration;
 using System.Net.Security;
 using System.Security.Authentication;
 
-#if SECURITY_DEP
+#if SECURITY_DEP && !MOBILE
 using X509CertificateCollection = PrebuiltSystem::System.Security.Cryptography.X509Certificates.X509CertificateCollection;
 #endif
 

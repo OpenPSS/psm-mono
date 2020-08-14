@@ -26,7 +26,7 @@
 //
 //
 
-#if NET_4_0 || MOBILE
+#if NET_4_5
 
 namespace System.Threading.Tasks
 {

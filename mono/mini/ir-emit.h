@@ -58,10 +58,8 @@ alloc_ireg_ref (MonoCompile *cfg)
 {
 	int vreg = alloc_ireg (cfg);
 
-#ifdef HAVE_SGEN_GC
 	if (cfg->compute_gc_maps)
 		mono_mark_vreg_as_ref (cfg, vreg);
-#endif
 
 	return vreg;
 }
@@ -71,10 +69,8 @@ alloc_ireg_mp (MonoCompile *cfg)
 {
 	int vreg = alloc_ireg (cfg);
 
-#ifdef HAVE_SGEN_GC
 	if (cfg->compute_gc_maps)
 		mono_mark_vreg_as_mp (cfg, vreg);
-#endif
 
 	return vreg;
 }
@@ -109,7 +105,7 @@ alloc_dreg (MonoCompile *cfg, MonoStackType stack_type)
  * JIT code still uses the left and right fields, so it has to stay.
  */
 #define MONO_INST_NEW(cfg,dest,op) do {	\
-		(dest) = mono_mempool_alloc ((cfg)->mempool, sizeof (MonoInst));	\
+		(dest) = (MonoInst *) mono_mempool_alloc ((cfg)->mempool, sizeof (MonoInst));	\
 		(dest)->inst_c0 = (dest)->inst_c1 = 0; \
 		(dest)->next = (dest)->prev = NULL;    \
 		(dest)->opcode = (op);	\
@@ -265,7 +261,7 @@ alloc_dreg (MonoCompile *cfg, MonoStackType stack_type)
 
 #define NEW_TYPE_FROM_HANDLE_CONST(cfg,dest,image,token,generic_context) NEW_AOTCONST_TOKEN ((cfg), (dest), MONO_PATCH_INFO_TYPE_FROM_HANDLE, (image), (token), (generic_context), STACK_OBJ, mono_defaults.monotype_class)
 
-#define NEW_LDTOKENCONST(cfg,dest,image,token,generic_context) NEW_AOTCONST_TOKEN ((cfg), (dest), MONO_PATCH_INFO_LDTOKEN, (image), (token), (generic_context), STACK_PTR, NULL)
+#define NEW_LDTOKENCONST(cfg,dest,image,token) NEW_AOTCONST_TOKEN ((cfg), (dest), MONO_PATCH_INFO_LDTOKEN, (image), (token), NULL, STACK_PTR, NULL)
 
 #define NEW_DECLSECCONST(cfg,dest,image,entry) do { \
 		if (cfg->compile_aot) { \
@@ -428,7 +424,7 @@ alloc_dreg (MonoCompile *cfg, MonoStackType stack_type)
 
 #define EMIT_NEW_TYPE_FROM_HANDLE_CONST(cfg,dest,image,token,generic_context) do { NEW_AOTCONST_TOKEN ((cfg), (dest), MONO_PATCH_INFO_TYPE_FROM_HANDLE, (image), (token), (generic_context), STACK_OBJ, mono_defaults.monotype_class); MONO_ADD_INS ((cfg)->cbb, (dest)); } while (0)
 
-#define EMIT_NEW_LDTOKENCONST(cfg,dest,image,token,generic_context) do { NEW_AOTCONST_TOKEN ((cfg), (dest), MONO_PATCH_INFO_LDTOKEN, (image), (token), (generic_context), STACK_PTR, NULL); MONO_ADD_INS ((cfg)->cbb, (dest)); } while (0)
+#define EMIT_NEW_LDTOKENCONST(cfg,dest,image,token) do { NEW_AOTCONST_TOKEN ((cfg), (dest), MONO_PATCH_INFO_LDTOKEN, (image), (token), NULL, STACK_PTR, NULL); MONO_ADD_INS ((cfg)->cbb, (dest)); } while (0)
 
 #define EMIT_NEW_DOMAINCONST(cfg,dest) do { NEW_DOMAINCONST ((cfg), (dest)); MONO_ADD_INS ((cfg)->cbb, (dest)); } while (0)
 
@@ -682,7 +678,7 @@ alloc_dreg (MonoCompile *cfg, MonoStackType stack_type)
  * block_num: unique ID assigned at bblock creation
  */
 #define NEW_BBLOCK(cfg,bblock) do { \
-	(bblock) = mono_mempool_alloc0 ((cfg)->mempool, sizeof (MonoBasicBlock)); \
+	(bblock) = (MonoBasicBlock *) mono_mempool_alloc0 ((cfg)->mempool, sizeof (MonoBasicBlock)); \
 	(bblock)->block_num = cfg->num_bblocks++; \
     } while (0)
 
@@ -712,7 +708,7 @@ static int ccount = 0;
             MONO_START_BB ((cfg), falsebb); \
         } else { \
             ccount ++; \
-		    ins->inst_many_bb = mono_mempool_alloc (cfg->mempool, sizeof(gpointer)*2);	\
+		    ins->inst_many_bb = (MonoBasicBlock **) mono_mempool_alloc (cfg->mempool, sizeof(gpointer)*2);	\
             ins->inst_true_bb = (truebb); \
             ins->inst_false_bb = NULL; \
             mono_link_bblock ((cfg), (cfg)->cbb, (truebb)); \
@@ -735,7 +731,7 @@ static int ccount = 0;
             MONO_ADD_INS ((cfg)->cbb, ins); \
             MONO_START_BB ((cfg), falsebb); \
         } else { \
-		    ins->inst_many_bb = mono_mempool_alloc (cfg->mempool, sizeof(gpointer)*2);	\
+		    ins->inst_many_bb = (MonoBasicBlock **) mono_mempool_alloc (cfg->mempool, sizeof(gpointer)*2);	\
             ins->inst_true_bb = (truebb); \
             ins->inst_false_bb = NULL; \
             mono_link_bblock ((cfg), (cfg)->cbb, (truebb)); \
@@ -756,7 +752,7 @@ static int ccount = 0;
 #define	MONO_EMIT_NEW_BRANCH_BLOCK2(cfg,op,truebb,falsebb) do { \
         MonoInst *ins; \
         MONO_INST_NEW ((cfg), (ins), (op)); \
-		ins->inst_many_bb = mono_mempool_alloc (cfg->mempool, sizeof(gpointer)*2);	\
+		ins->inst_many_bb = (MonoBasicBlock **) mono_mempool_alloc (cfg->mempool, sizeof(gpointer)*2);	\
         ins->inst_true_bb = (truebb); \
         ins->inst_false_bb = (falsebb); \
         mono_link_bblock ((cfg), (cfg)->cbb, (truebb)); \

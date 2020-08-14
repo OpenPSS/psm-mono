@@ -54,7 +54,7 @@ using System.Security;
 
 [assembly: System.Resources.NeutralResourcesLanguage("en-US")]
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
 [assembly: AssemblyVersion("2.0.0.0")]  // shouldn't change, this assembly is unchanged.  This is the version it originally shipped as.
 [assembly: AssemblyFileVersion("1.0.1.00")]
 [assembly: AssemblyInformationalVersion("1.0.1")]

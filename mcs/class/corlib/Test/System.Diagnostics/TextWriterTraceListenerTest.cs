@@ -1,3 +1,4 @@
+#if !MOBILE
 //
 // MonoTests.System.Diagnostics.TextWriterTraceListenerTest.cs
 //
@@ -56,3 +57,4 @@ namespace MonoTests.System.Diagnostics
 		}
 	}
 }
+#endif

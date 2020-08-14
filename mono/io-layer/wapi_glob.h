@@ -42,8 +42,8 @@
 
 struct stat;
 typedef struct {
-	int gl_pathc;		/* Count of total paths so far. */
-	int gl_offs;		/* Reserved at beginning of gl_pathv. */
+	guint32 gl_pathc;		/* Count of total paths so far. */
+	guint32 gl_offs;		/* Reserved at beginning of gl_pathv. */
 	int gl_flags;		/* Copy of flags parameter to glob. */
 	char **gl_pathv;	/* List of paths matching pattern. */
 } wapi_glob_t;

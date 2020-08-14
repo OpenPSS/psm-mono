@@ -245,11 +245,13 @@ namespace System.Security.Policy {
 
 			nps.AddPermission (new UIPermission (PermissionState.Unrestricted));
 
+#if !MOBILE
 			// DnsPermission requires stuff outside corlib (System)
 			nps.AddPermission (PermissionBuilder.Create (DnsPermissionClass, PermissionState.Unrestricted));
 
 			// PrintingPermission requires stuff outside corlib (System.Drawing)
 			nps.AddPermission (PermissionBuilder.Create (PrintingPermission ("SafePrinting")));
+#endif
 			return nps;
 		}
 
@@ -267,8 +269,10 @@ namespace System.Security.Policy {
 
 			nps.AddPermission (new UIPermission (UIPermissionWindow.SafeTopLevelWindows, UIPermissionClipboard.OwnClipboard));
 
+#if !MOBILE
 			// PrintingPermission requires stuff outside corlib (System.Drawing)
 			nps.AddPermission (PermissionBuilder.Create (PrintingPermission ("SafePrinting")));
+#endif
 			return nps;
 		}
 
@@ -311,12 +315,15 @@ namespace System.Security.Policy {
 			nps.AddPermission (new UIPermission (PermissionState.Unrestricted));
 
 			// others requires stuff outside corlib
+#if !MOBILE
 			nps.AddPermission (PermissionBuilder.Create (DnsPermissionClass, PermissionState.Unrestricted));
 			nps.AddPermission (PermissionBuilder.Create (PrintingPermissionClass, PermissionState.Unrestricted));
 			nps.AddPermission (PermissionBuilder.Create (EventLogPermissionClass, PermissionState.Unrestricted));
 
 			nps.AddPermission (PermissionBuilder.Create (SocketPermissionClass, PermissionState.Unrestricted));
+#endif
 			nps.AddPermission (PermissionBuilder.Create (WebPermissionClass, PermissionState.Unrestricted));
+#if !MOBILE
 			nps.AddPermission (PermissionBuilder.Create (PerformanceCounterPermissionClass, PermissionState.Unrestricted));
 			nps.AddPermission (PermissionBuilder.Create (DirectoryServicesPermissionClass, PermissionState.Unrestricted));
 			nps.AddPermission (PermissionBuilder.Create (MessageQueuePermissionClass, PermissionState.Unrestricted));
@@ -325,6 +332,7 @@ namespace System.Security.Policy {
 			nps.AddPermission (PermissionBuilder.Create (SqlClientPermissionClass, PermissionState.Unrestricted));
 //			nps.AddPermission (PermissionBuilder.Create (DataProtectionPermissionClass, PermissionState.Unrestricted));
 //			nps.AddPermission (PermissionBuilder.Create (StorePermissionClass, PermissionState.Unrestricted));
+#endif
 			return nps;
 		}
 

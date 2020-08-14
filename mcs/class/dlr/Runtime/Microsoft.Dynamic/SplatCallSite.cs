@@ -56,12 +56,16 @@ namespace Microsoft.Scripting {
                 return d.DynamicInvoke(args);
             }
 
+#if !SILVERLIGHT && !MOBILE
             // Otherwise, create a CallSite and invoke it.
             if (_site == null) {
                 _site = CallSite<Func<CallSite, object, object[], object>>.Create(SplatInvokeBinder.Instance);
             }
 
             return _site.Target(_site, _callable, args);
+#else
+			throw new ArgumentException ();
+#endif
         }
     }
 }

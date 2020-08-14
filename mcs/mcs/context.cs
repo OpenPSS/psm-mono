@@ -12,20 +12,22 @@
 
 using System;
 using System.Collections.Generic;
-
-#if STATIC
-using IKVM.Reflection.Emit;
-#else
-using System.Reflection.Emit;
-#endif
+using System.IO;
 
 namespace Mono.CSharp
 {
+	public enum LookupMode
+	{
+		Normal = 0,
+		Probing = 1,
+		IgnoreAccessibility = 2
+	}
+
 	//
 	// Implemented by elements which can act as independent contexts
 	// during resolve phase. Used mostly for lookups.
 	//
-	public interface IMemberContext
+	public interface IMemberContext : IModuleContext
 	{
 		//
 		// A scope type context, it can be inflated for generic types
@@ -48,17 +50,17 @@ namespace Mono.CSharp
 		bool IsObsolete { get; }
 		bool IsUnsafe { get; }
 		bool IsStatic { get; }
-		bool HasUnresolvedConstraints { get; }
-		ModuleContainer Module { get; }
 
 		string GetSignatureForError ();
 
-		IList<MethodSpec> LookupExtensionMethod (TypeSpec extensionType, string name, int arity, ref NamespaceEntry scope);
-		FullNamedExpression LookupNamespaceOrType (string name, int arity, Location loc, bool ignore_cs0104);
+		ExtensionMethodCandidates LookupExtensionMethod (TypeSpec extensionType, string name, int arity);
+		FullNamedExpression LookupNamespaceOrType (string name, int arity, LookupMode mode, Location loc);
 		FullNamedExpression LookupNamespaceAlias (string name);
+	}
 
-		// TODO: It has been replaced by module
-		CompilerContext Compiler { get; }
+	public interface IModuleContext
+	{
+		ModuleContainer Module { get; }
 	}
 
 	//
@@ -68,18 +70,7 @@ namespace Mono.CSharp
 	{
 		FlowBranching current_flow_branching;
 
-		TypeSpec return_type;
-
-		/// <summary>
-		///   The location where return has to jump to return the
-		///   value
-		/// </summary>
-		public Label ReturnLabel;	// TODO: It's emit dependant
-
-		/// <summary>
-		///   If we already defined the ReturnLabel
-		/// </summary>
-		public bool HasReturnLabel;
+		readonly TypeSpec return_type;
 
 		public int FlowOffset;
 
@@ -107,6 +98,10 @@ namespace Mono.CSharp
 
 		public override FlowBranching CurrentBranching {
 			get { return current_flow_branching; }
+		}
+
+		public TypeSpec ReturnType {
+			get { return return_type; }
 		}
 
 		// <summary>
@@ -138,9 +133,9 @@ namespace Mono.CSharp
 			return branching;
 		}
 
-		public FlowBranchingException StartFlowBranching (ExceptionStatement stmt)
+		public FlowBranchingTryFinally StartFlowBranching (TryFinallyBlock stmt)
 		{
-			FlowBranchingException branching = new FlowBranchingException (CurrentBranching, stmt);
+			FlowBranchingTryFinally branching = new FlowBranchingTryFinally (CurrentBranching, stmt);
 			current_flow_branching = branching;
 			return branching;
 		}
@@ -155,6 +150,13 @@ namespace Mono.CSharp
 		public FlowBranchingIterator StartFlowBranching (Iterator iterator, FlowBranching parent)
 		{
 			FlowBranchingIterator branching = new FlowBranchingIterator (parent, iterator);
+			current_flow_branching = branching;
+			return branching;
+		}
+
+		public FlowBranchingAsync StartFlowBranching (AsyncInitializer asyncBody, FlowBranching parent)
+		{
+			var branching = new FlowBranchingAsync (parent, asyncBody);
 			current_flow_branching = branching;
 			return branching;
 		}
@@ -189,19 +191,11 @@ namespace Mono.CSharp
 			current_flow_branching = current_flow_branching.Parent;
 		}
 
-		//
-		// This method is used during the Resolution phase to flag the
-		// need to define the ReturnLabel
-		//
+#if !STATIC
 		public void NeedReturnLabel ()
 		{
-			if (!HasReturnLabel)
-				HasReturnLabel = true;
 		}
-
-		public TypeSpec ReturnType {
-			get { return return_type; }
-		}
+#endif
 	}
 
 	//
@@ -259,6 +253,8 @@ namespace Mono.CSharp
 			ConstructorScope = 1 << 11,
 
 			UsingInitializerScope = 1 << 12,
+
+			LockScope = 1 << 13,
 
 			/// <summary>
 			///   Whether control flow analysis is enabled
@@ -353,7 +349,7 @@ namespace Mono.CSharp
 			//
 			// The default setting comes from the command line option
 			//
-			if (RootContext.Checked)
+			if (mc.Module.Compiler.Settings.Checked)
 				flags |= Options.CheckedScope;
 
 			//
@@ -368,8 +364,12 @@ namespace Mono.CSharp
 			flags |= options;
 		}
 
-		public CompilerContext Compiler {
-			get { return MemberContext.Compiler; }
+		#region Properties
+
+		public BuiltinTypes BuiltinTypes {
+			get {
+				return MemberContext.Module.Compiler.BuiltinTypes;
+			}
 		}
 
 		public virtual ExplicitBlock ConstructorBlock {
@@ -409,12 +409,35 @@ namespace Mono.CSharp
 			get { return (flags & Options.DoFlowAnalysis) != 0; }
 		}
 
-		public bool HasUnresolvedConstraints {
-			get { return false; }
+		public bool IsInProbingMode {
+			get {
+				return (flags & Options.ProbingMode) != 0;
+			}
 		}
 
-		public bool IsInProbingMode {
-			get { return (flags & Options.ProbingMode) != 0; }
+		public bool IsObsolete {
+			get {
+				// Disables obsolete checks when probing is on
+				return MemberContext.IsObsolete;
+			}
+		}
+
+		public bool IsStatic {
+			get {
+				return MemberContext.IsStatic;
+			}
+		}
+
+		public bool IsUnsafe {
+			get {
+				return HasSet (Options.UnsafeScope) || MemberContext.IsUnsafe;
+			}
+		}
+
+		public bool IsRuntimeBinder {
+			get {
+				return Module.Compiler.IsRuntimeBinder;
+			}
 		}
 
 		public bool IsVariableCapturingRequired {
@@ -433,6 +456,14 @@ namespace Mono.CSharp
 			get { return (flags & Options.OmitStructFlowAnalysis) != 0; }
 		}
 
+		public Report Report {
+			get {
+				return Module.Compiler.Report;
+			}
+		}
+
+		#endregion
+
 		public bool MustCaptureVariable (INamedBlockVariable local)
 		{
 			if (CurrentAnonymousMethod == null)
@@ -440,7 +471,7 @@ namespace Mono.CSharp
 
 			// FIXME: IsIterator is too aggressive, we should capture only if child
 			// block contains yield
-			if (CurrentAnonymousMethod.IsIterator)
+			if (CurrentAnonymousMethod.IsIterator || CurrentAnonymousMethod is AsyncInitializer)
 				return true;
 
 			return local.Block.ParametersBlock != CurrentBlock.ParametersBlock.Original;
@@ -456,11 +487,6 @@ namespace Mono.CSharp
 			return (this.flags & options) != 0;
 		}
 
-		public Report Report {
-			get {
-				return Compiler.Report;
-			}
-		}
 
 		// Temporarily set all the given flags to the given value.  Should be used in an 'using' statement
 		public FlagsHandle Set (Options options)
@@ -480,29 +506,14 @@ namespace Mono.CSharp
 			return MemberContext.GetSignatureForError ();
 		}
 
-		public bool IsObsolete {
-			get {
-				// Disables obsolete checks when probing is on
-				return MemberContext.IsObsolete;
-			}
-		}
-
-		public bool IsStatic {
-			get { return MemberContext.IsStatic; }
-		}
-
-		public bool IsUnsafe {
-			get { return HasSet (Options.UnsafeScope) || MemberContext.IsUnsafe; }
-		}
-
-		public IList<MethodSpec> LookupExtensionMethod (TypeSpec extensionType, string name, int arity, ref NamespaceEntry scope)
+		public ExtensionMethodCandidates LookupExtensionMethod (TypeSpec extensionType, string name, int arity)
 		{
-			return MemberContext.LookupExtensionMethod (extensionType, name, arity, ref scope);
+			return MemberContext.LookupExtensionMethod (extensionType, name, arity);
 		}
 
-		public FullNamedExpression LookupNamespaceOrType (string name, int arity, Location loc, bool ignore_cs0104)
+		public FullNamedExpression LookupNamespaceOrType (string name, int arity, LookupMode mode, Location loc)
 		{
-			return MemberContext.LookupNamespaceOrType (name, arity, loc, ignore_cs0104);
+			return MemberContext.LookupNamespaceOrType (name, arity, mode, loc);
 		}
 
 		public FullNamedExpression LookupNamespaceAlias (string name)
@@ -558,24 +569,35 @@ namespace Mono.CSharp
 	//
 	public class CompilerContext
 	{
-		readonly Report report;
-		readonly BuildinTypes buildin_types;
+		static readonly TimeReporter DisabledTimeReporter = new TimeReporter (false);
 
-		public CompilerContext (Report report)
+		readonly Report report;
+		readonly BuiltinTypes builtin_types;
+		readonly CompilerSettings settings;
+
+		Dictionary<string, SourceFile> all_source_files;
+
+		public CompilerContext (CompilerSettings settings, Report report)
 		{
+			this.settings = settings;
 			this.report = report;
-			this.buildin_types = new BuildinTypes ();
+			this.builtin_types = new BuiltinTypes ();
+			this.TimeReporter = DisabledTimeReporter;
 		}
 
 		#region Properties
 
-		public BuildinTypes BuildinTypes {
+		public BuiltinTypes BuiltinTypes {
 			get {
-				return buildin_types;
+				return builtin_types;
 			}
 		}
 
-		public bool IsRuntimeBinder { get; set; }
+		// Used for special handling of runtime dynamic context mostly
+		// by error reporting but also by member accessibility checks
+		public bool IsRuntimeBinder {
+			get; set;
+		}
 
 		public Report Report {
 			get {
@@ -583,7 +605,51 @@ namespace Mono.CSharp
 			}
 		}
 
+		public CompilerSettings Settings {
+			get {
+				return settings;
+			}
+		}
+
+		public List<CompilationSourceFile> SourceFiles {
+			get {
+				return settings.SourceFiles;
+			}
+		}
+
+		internal TimeReporter TimeReporter {
+			get; set;
+		}
+
 		#endregion
+
+		//
+		// This is used when we encounter a #line preprocessing directive during parsing
+		// to register additional source file names
+		//
+		public SourceFile LookupFile (CompilationSourceFile comp_unit, string name)
+		{
+			if (all_source_files == null) {
+				all_source_files = new Dictionary<string, SourceFile> ();
+				foreach (var source in SourceFiles)
+					all_source_files[source.FullPathName] = source;
+			}
+
+			string path;
+			if (!Path.IsPathRooted (name)) {
+				string root = Path.GetDirectoryName (comp_unit.FullPathName);
+				path = Path.Combine (root, name);
+			} else
+				path = name;
+
+			SourceFile retval;
+			if (all_source_files.TryGetValue (path, out retval))
+				return retval;
+
+			retval = Location.AddFile (name, path);
+			all_source_files.Add (path, retval);
+			return retval;
+		}
 	}
 
 	//
@@ -606,18 +672,11 @@ namespace Mono.CSharp
 			/// </summary>
 			CheckedScope = 1 << 0,
 
-			/// <summary>
-			///   The constant check state is always set to `true' and cant be changed
-			///   from the command line.  The source code can change this setting with
-			///   the `checked' and `unchecked' statements and expressions. 
-			/// </summary>
-			ConstantCheckState = 1 << 1,
-
-			AllCheckStateFlags = CheckedScope | ConstantCheckState,
-
 			OmitDebugInfo = 1 << 2,
 
-			ConstructorScope = 1 << 3
+			ConstructorScope = 1 << 3,
+
+			AsyncBody = 1 << 4
 		}
 
 		// utility helper for CheckExpr, UnCheckExpr, Checked and Unchecked statements
@@ -646,16 +705,7 @@ namespace Mono.CSharp
 			}
 		}
 
-		public BuilderContext ()
-		{
-			//
-			// The default setting comes from the command line option
-			//
-			if (RootContext.Checked)
-				flags |= Options.CheckedScope;
-		}
-
-		Options flags;
+		protected Options flags;
 
 		public bool HasSet (Options options)
 		{

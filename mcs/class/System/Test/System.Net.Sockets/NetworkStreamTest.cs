@@ -31,6 +31,9 @@ namespace MonoTests.System.Net.Sockets
 		}
 		
 		[Test]
+#if MOBILE
+		[Category("NotWorking")] // InvalidOperationException: Timeouts not supported on this stream.
+#endif
 		public void ReadTimeout ()
 		{
 			Socket sock = new Socket (AddressFamily.InterNetwork,

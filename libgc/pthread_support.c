@@ -688,9 +688,14 @@ extern pthread_mutex_t nacl_thread_alloc_lock;
 extern __thread int nacl_thread_idx;
 extern __thread GC_thread nacl_gc_thread_self;
 
+extern void nacl_pre_syscall_hook();
+extern void nacl_post_syscall_hook();
+extern void nacl_register_gc_hooks(void (*pre)(), void (*post)());
+
 void nacl_initialize_gc_thread()
 {
     int i;
+    nacl_register_gc_hooks(nacl_pre_syscall_hook, nacl_post_syscall_hook);
     pthread_mutex_lock(&nacl_thread_alloc_lock);
     if (!nacl_thread_parking_inited)
     {
@@ -742,7 +747,7 @@ GC_thread GC_new_thread(pthread_t id)
     }
     if (result == 0) return(0);
     result -> id = id;
-#ifdef PLATFORM_ANDROID
+#if defined(__ANDROID__)
     result -> kernel_id = gettid();
 #endif
     result -> next = GC_threads[hv];
@@ -946,7 +951,7 @@ int GC_get_nprocs()
 extern GC_bool GC_collection_in_progress();
 void GC_wait_for_gc_completion(GC_bool wait_for_all)
 {
-    if (GC_incremental && GC_collection_in_progress()) {
+	if (GC_incremental && GC_collection_in_progress()) {
 	int old_gc_no = GC_gc_no;
 
 	/* Make sure that no part of our stack is still on the mark stack, */
@@ -1175,7 +1180,7 @@ void GC_init_parallel()
 }
 
 
-#if !defined(GC_DARWIN_THREADS) && !defined(GC_OPENBSD_THREADS)
+#if !defined(GC_DARWIN_THREADS)  && !defined(GC_OPENBSD_THREADS)
 #ifndef NACL
 int WRAP_FUNC(pthread_sigmask)(int how, const sigset_t *set, sigset_t *oset)
 {
@@ -1244,7 +1249,7 @@ int WRAP_FUNC(sleep) (unsigned int seconds)
     int result;
 
     GC_start_blocking();
-    result = REAL_FUNC(sleep)(seconds);
+	result = REAL_FUNC(sleep)(seconds);
     GC_end_blocking();
     return result;
 }
@@ -1750,6 +1755,15 @@ yield:
 }
 
 #else  /* !USE_SPINLOCK */
+void GC_lock_init( )
+{
+	pthread_mutex_init(&GC_allocate_ml,0);
+}
+void GC_lock_destroy( )
+{
+	pthread_mutex_destroy(&GC_allocate_ml);
+}
+
 void GC_lock()
 {
 #ifndef NO_PTHREAD_TRYLOCK

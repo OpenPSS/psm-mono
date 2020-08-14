@@ -76,12 +76,10 @@ namespace System.Diagnostics {
 			set { System.Threading.Thread.SetData (_attributesStore, value); }
 		}
 
-#if !MOBILE
 		private TraceFilter filter {
 			get { return (TraceFilter) System.Threading.Thread.GetData (_filterStore); }
 			set { System.Threading.Thread.SetData (_filterStore, value); }
 		}
-#endif
 
 		private TraceOptions options {
 			get {
@@ -103,10 +101,8 @@ namespace System.Diagnostics {
 #if NET_2_0
 		[ThreadStatic]
 		private StringDictionary attributes = new StringDictionary ();
-#if !MOBILE
 		[ThreadStatic]
 		private TraceFilter filter;
-#endif
 		[ThreadStatic]
 		private TraceOptions options;
 #endif
@@ -238,7 +234,6 @@ namespace System.Diagnostics {
 			return String.Join (joiner, arr);
 		}
 
-#if !MOBILE
 		[ComVisible (false)]
 		public virtual void TraceData (TraceEventCache eventCache, string source,
 			TraceEventType eventType, int id, object data)
@@ -303,7 +298,6 @@ namespace System.Diagnostics {
 		{
 			TraceEvent (eventCache, source, TraceEventType.Transfer, id, String.Format ("{0}, relatedActivityId={1}", message, relatedActivityId));
 		}
-#endif
 
 		protected internal virtual string [] GetSupportedAttributes ()
 		{
@@ -314,13 +308,11 @@ namespace System.Diagnostics {
 			get { return attributes; }
 		}
 
-#if !MOBILE
 		[ComVisibleAttribute (false)]
 		public TraceFilter Filter {
 			get { return filter; }
 			set { filter = value; }
 		}
-#endif
 
 		[ComVisibleAttribute (false)]
 		public TraceOptions TraceOutputOptions {

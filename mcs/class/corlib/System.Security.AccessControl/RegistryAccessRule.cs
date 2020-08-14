@@ -45,7 +45,7 @@ namespace System.Security.AccessControl
 		public RegistryAccessRule (string identity,
 					   RegistryRights registryRights,
 					   AccessControlType type)
-			: this (new SecurityIdentifier (identity), registryRights, type)
+			: this (new NTAccount (identity), registryRights, type)
 		{
 		}
 
@@ -54,7 +54,8 @@ namespace System.Security.AccessControl
 					   InheritanceFlags inheritanceFlags,
 					   PropagationFlags propagationFlags,
 					   AccessControlType type)
-			: base (identity, (int)registryRights, false, inheritanceFlags, propagationFlags, type)
+			// FIXME: accessMask=0 likely causes an error
+			: base (identity.Translate(typeof(SecurityIdentifier)), 0, false, inheritanceFlags, propagationFlags, type)
 		{
 			this.rights = registryRights;
 		}
@@ -64,7 +65,7 @@ namespace System.Security.AccessControl
 					   InheritanceFlags inheritanceFlags,
 					   PropagationFlags propagationFlags,
 					   AccessControlType type)
-			: this (new SecurityIdentifier (identity), registryRights, inheritanceFlags, propagationFlags, type)
+			: this (new NTAccount (identity), registryRights, inheritanceFlags, propagationFlags, type)
 		{
 		}
 		

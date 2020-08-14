@@ -6,7 +6,7 @@
  *
  * Copyright 2001-2003 Ximian, Inc (http://www.ximian.com)
  * Copyright 2004-2009 Novell, Inc (http://www.novell.com)
- * Copyright 2011 Xamarin, Inc (http://www.xamarin.com)
+ * Copyright 2011 Xamarin Inc (http://www.xamarin.com)
  */
 
 #include <config.h>
@@ -21,7 +21,7 @@
 #include <mono/metadata/gc-internal.h>
 #include <string.h>
 
-#define DATA_TABLE_CHUNK_SIZE		16384
+#define DATA_TABLE_CHUNK_SIZE		(16384-sizeof (MonoDebugDataChunk))
 
 #define ALIGN_TO(val,align) ((((guint64)val) + ((align) - 1)) & ~((align) - 1))
 
@@ -653,12 +653,8 @@ mono_debug_add_method (MonoMethod *method, MonoDebugMethodJitInfo *jit, MonoDoma
 	g_assert (size < max_size);
 	total_size = size + sizeof (MonoDebugMethodAddress);
 
-	if (method->dynamic) {
-		address = g_malloc0 (total_size);
-	} else {
-		address = (MonoDebugMethodAddress *) allocate_data_item (
-				  table, MONO_DEBUG_DATA_ITEM_METHOD, total_size);
-	}
+	address = (MonoDebugMethodAddress *) allocate_data_item (
+		table, MONO_DEBUG_DATA_ITEM_METHOD, total_size);
 
 	address->header.size = total_size;
 	address->header.symfile_id = handle ? handle->index : 0;
@@ -696,47 +692,10 @@ mono_debug_add_method (MonoMethod *method, MonoDebugMethodJitInfo *jit, MonoDoma
 
 	g_hash_table_insert (table->method_address_hash, method, address);
 
-	if (!method->dynamic)
-		write_data_item (table, (guint8 *) address);
+	write_data_item (table, (guint8 *) address);
 
 	mono_debugger_unlock ();
 	return address;
-}
-
-void
-mono_debug_remove_method (MonoMethod *method, MonoDomain *domain)
-{
-	MonoMethod *declaring;
-	MonoDebugDataTable *table;
-	MonoDebugMethodHeader *header;
-	MonoDebugMethodAddress *address;
-
-	if (!mono_debug_initialized)
-		return;
-
-	g_assert (method->dynamic);
-
-	mono_debugger_lock ();
-
-	table = lookup_data_table (domain);
-
-	declaring = method->is_inflated ? ((MonoMethodInflated *) method)->declaring : method;
-	g_hash_table_remove (table->method_hash, declaring);
-
-	address = g_hash_table_lookup (table->method_address_hash, method);
-	if (address) {
-		header = &address->header;
-
-		if (header->wrapper_data) {
-			g_free ((char*)header->wrapper_data->method_name);
-			g_free (header->wrapper_data);
-		}
-		g_free (address);
-	}
-
-	g_hash_table_remove (table->method_address_hash, method);
-
-	mono_debugger_unlock ();
 }
 
 void

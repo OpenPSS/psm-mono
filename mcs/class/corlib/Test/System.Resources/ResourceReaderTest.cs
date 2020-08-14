@@ -19,6 +19,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Resources
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class ResourceReaderTest
 	{
 		internal static string m_ResourceFile;
@@ -293,6 +294,7 @@ namespace MonoTests.System.Resources
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile doesn't have System.Drawing.dll
 		public void GetResourceData2 ()
 		{
 			byte [] expected = new byte [] {

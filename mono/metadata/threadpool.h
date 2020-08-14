@@ -22,9 +22,6 @@ void mono_thread_pool_cleanup (void) MONO_INTERNAL;
 
 gboolean mono_thread_pool_remove_domain_jobs (MonoDomain *domain, int timeout) MONO_INTERNAL;
 
-void mono_thread_pool_suspend (void) MONO_INTERNAL;
-void mono_thread_pool_resume (void) MONO_INTERNAL;
-
 void
 ves_icall_System_Threading_ThreadPool_GetAvailableThreads (int *workerThreads,
 							   int *completionPortThreads) MONO_INTERNAL;
@@ -51,5 +48,6 @@ void mono_install_threadpool_thread_hooks (MonoThreadPoolFunc start_func, MonoTh
 typedef void  (*MonoThreadPoolItemFunc) (gpointer user_data);
 void mono_install_threadpool_item_hooks (MonoThreadPoolItemFunc begin_func, MonoThreadPoolItemFunc end_func, gpointer user_data);
 
+void mono_threadpool_set_max_threads (uint32_t tp_max, uint32_t io_max);
 #endif
 

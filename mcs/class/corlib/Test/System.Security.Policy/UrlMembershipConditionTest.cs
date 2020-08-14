@@ -342,6 +342,7 @@ namespace MonoTests.System.Security.Policy {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void FromXml_PolicyLevel () 
 		{
 			UrlMembershipCondition umc = new UrlMembershipCondition ("http://www.go-mono.com");
@@ -367,6 +368,7 @@ namespace MonoTests.System.Security.Policy {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ToXml_PolicyLevel () 
 		{
 			UrlMembershipCondition umc = new UrlMembershipCondition ("http://www.go-mono.com");

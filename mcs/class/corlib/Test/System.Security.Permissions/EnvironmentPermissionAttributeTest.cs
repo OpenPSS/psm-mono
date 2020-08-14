@@ -49,6 +49,7 @@ namespace MonoTests.System.Security.Permissions {
 			Assert.AreEqual (a.ToString (), a.TypeId.ToString (), "TypeId");
 			Assert.IsFalse (a.Unrestricted, "Unrestricted");
 
+#if !NET_2_1
 			EnvironmentPermission p = (EnvironmentPermission) a.CreatePermission ();
 #if NET_2_0
 			Assert.AreEqual (String.Empty, p.GetPathList (EnvironmentPermissionAccess.Read), "GetPathList(Read)");
@@ -58,6 +59,7 @@ namespace MonoTests.System.Security.Permissions {
 			Assert.IsNull (p.GetPathList (EnvironmentPermissionAccess.Write), "GetPathList(Write)");
 #endif
 			Assert.IsFalse (p.IsUnrestricted (), "CreatePermission-IsUnrestricted");
+#endif
 		}
 
 		[Test]
@@ -97,9 +99,11 @@ namespace MonoTests.System.Security.Permissions {
 			attr.All = envar;
 			Assert.AreEqual (envar, attr.Read, "All=Read");
 			Assert.AreEqual (envar, attr.Write, "All=Write");
+#if !NET_2_1
 			EnvironmentPermission p = (EnvironmentPermission) attr.CreatePermission ();
 			Assert.AreEqual (envar, p.GetPathList (EnvironmentPermissionAccess.Read), "All=EnvironmentPermission-Read");
 			Assert.AreEqual (envar, p.GetPathList (EnvironmentPermissionAccess.Write), "All=EnvironmentPermission-Write");
+#endif
 		}
 #if NET_1_1
 		[Test]
@@ -117,12 +121,14 @@ namespace MonoTests.System.Security.Permissions {
 			attr.Read = envar;
 			Assert.AreEqual (envar, attr.Read, "Read=Read");
 			Assert.IsNull (attr.Write, "Write=null");
+#if !NET_2_1
 			EnvironmentPermission p = (EnvironmentPermission) attr.CreatePermission ();
 			Assert.AreEqual (envar, p.GetPathList (EnvironmentPermissionAccess.Read), "Read=EnvironmentPermission-Read");
 #if NET_2_0
 			Assert.AreEqual (String.Empty, p.GetPathList (EnvironmentPermissionAccess.Write), "Read=EnvironmentPermission-Write");
 #else
 			Assert.IsNull (p.GetPathList (EnvironmentPermissionAccess.Write), "Read=EnvironmentPermission-Write");
+#endif
 #endif
 		}
 
@@ -133,6 +139,7 @@ namespace MonoTests.System.Security.Permissions {
 			attr.Write = envar;
 			Assert.IsNull (attr.Read, "Read=null");
 			Assert.AreEqual (envar, attr.Write, "Write=Write");
+#if !NET_2_1
 			EnvironmentPermission p = (EnvironmentPermission) attr.CreatePermission ();
 #if NET_2_0
 			Assert.AreEqual (String.Empty, p.GetPathList (EnvironmentPermissionAccess.Read), "Write=EnvironmentPermission-Read");
@@ -140,9 +147,13 @@ namespace MonoTests.System.Security.Permissions {
 			Assert.IsNull (p.GetPathList (EnvironmentPermissionAccess.Read), "Write=EnvironmentPermission-Read");
 #endif
 			Assert.AreEqual (envar, p.GetPathList (EnvironmentPermissionAccess.Write), "Write=EnvironmentPermission-Write");
+#endif
 		}
 
 		[Test]
+#if NET_2_1
+		[Category ("NotWorking")] // EnvironmentPermissionAttribute.CreatePermission returns null on 2.1
+#endif
 		public void Unrestricted () 
 		{
 			EnvironmentPermissionAttribute a = new EnvironmentPermissionAttribute (SecurityAction.Assert);

@@ -11,15 +11,15 @@ using NUnit.Framework;
 
 namespace MonoTests.System.Diagnostics
 {
-	public class DebugTest
-	{
 		[TestFixture]
-		private class DebugTest1
+		public class DebugTest2
 		{
 			[SetUp]
 			protected void SetUp()
 			{
-				Debug.Listeners.Add(new TextWriterTraceListener(Console.Error));	
+#if !NET_2_1
+				Debug.Listeners.Add(new TextWriterTraceListener(Console.Error));
+#endif
 			}
 			
 			[TearDown]
@@ -34,24 +34,30 @@ namespace MonoTests.System.Diagnostics
 				Debug.Assert(false, "Testing Assertions");
 			}
 
+#if !NET_2_1
 			[Test]			
 			public void TestFail ()
 			{
 				Debug.Fail("Testing Fail method");
 			}
+#endif
 
+#if !NET_2_1
 			[Test]			
 			public void TestWrite()
 			{
 				Debug.Write("Testing Write", "Testing the output of the Write method");
 			}
+#endif
 
+#if !NET_2_1
 			[Test]			
 			public void TestWriteIf()
 			{
 				Debug.WriteIf(true, "Testing WriteIf");
 				Debug.WriteIf(false, "Testing WriteIf", "Passed false");
 			}
+#endif
 
 			[Test]			
 			public void TestWriteLine()
@@ -59,12 +65,13 @@ namespace MonoTests.System.Diagnostics
 				Debug.WriteLine("Testing WriteLine method");
 			}
 
+#if !NET_2_1
 			[Test]			
 			public void TestWriteLineIf()
 			{
 				Debug.WriteLineIf(true, "Testing WriteLineIf");
 				Debug.WriteLineIf(false, "Testing WriteLineIf", "Passed false");
 			}
+#endif
 		}
-	}
 }

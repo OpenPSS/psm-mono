@@ -16,7 +16,11 @@ static MonoSecurityManager secman;
 static MonoBoolean mono_security_manager_activated = FALSE;
 static MonoBoolean mono_security_manager_enabled = TRUE;
 static MonoBoolean mono_security_manager_execution = TRUE;
+#if (defined(TARGET_ANDROID) || defined(TARGET_VITA)) && !defined(PSS_CRYPTO_DISABLED)
+const MonoSecurityMode mono_security_mode = MONO_SECURITY_MODE_CORE_CLR;
+#else
 static MonoSecurityMode mono_security_mode = MONO_SECURITY_MODE_NONE;
+#endif
 
 
 /* Public stuff */
@@ -24,7 +28,12 @@ static MonoSecurityMode mono_security_mode = MONO_SECURITY_MODE_NONE;
 void
 mono_security_set_mode (MonoSecurityMode mode)
 {
+#if (defined(TARGET_ANDROID) || defined(TARGET_VITA)) && !defined(PSS_CRYPTO_DISABLED)
+	if (mono_security_mode != mode)
+		g_assert_not_reached ();
+#else
 	mono_security_mode = mode;
+#endif
 }
 
 MonoSecurityMode

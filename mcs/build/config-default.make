@@ -10,7 +10,7 @@
 CODEPAGE = 65001
 
 RUNTIME_FLAGS = 
-TEST_HARNESS = $(topdir)/class/lib/$(PROFILE)/nunit-console.exe
+TEST_HARNESS = $(topdir)/class/lib/$(PROFILE)/nunitlite-console.exe
 MCS_FLAGS = $(PLATFORM_DEBUG_FLAGS)
 MBAS_FLAGS = $(PLATFORM_DEBUG_FLAGS)
 LIBRARY_FLAGS = /noconfig
@@ -30,6 +30,7 @@ TEST_RUNTIME = MONO_PATH="$(topdir)/class/lib/$(PROFILE)$(PLATFORM_PATH_SEPARATO
 
 DEFAULT_MCS_FLAGS := $(MCS_FLAGS)
 DEFAULT_MBAS_FLAGS := $(MBAS_FLAGS)
+DEFAULT_PROFILE := net_4_5
 
 # You shouldn't need to set these but might on a 
 # weird platform.

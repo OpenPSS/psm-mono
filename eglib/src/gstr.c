@@ -180,10 +180,10 @@ g_strconcat (const gchar *first, ...)
 		return NULL;
 
 	ret [total] = 0;
-	strcpy (ret, first);
+	strncpy (ret, first, strlen(first)+1);
 	va_start (args, first);
 	for (s = va_arg (args, char *); s != NULL; s = va_arg(args, char *)){
-		strcat (ret, s);
+		strncat (ret, s, strlen(s)+1);
 	}
 	va_end (args);
 
@@ -351,24 +351,18 @@ g_strsplit_set (const gchar *string, const gchar *delimiter, gint max_tokens)
 gchar *
 g_strreverse (gchar *str)
 {
-	size_t len, half;
-	size_t i;
+	size_t i, j;
 	gchar c;
 
 	if (str == NULL)
 		return NULL;
 
-	if (*str == 0)
-		return str;
-
-	len = strlen (str);
-	half = len / 2;
-	len--;
-	for (i = 0; i < half; i++, len--) {
+	for (i = 0, j = strlen (str) - 1; i < j; i++, j--) {
 		c = str [i];
-		str [i] = str [len];
-		str [len] = c;
+		str [i] = str [j];
+		str [j] = c;
 	}
+
 	return str;
 }
 
@@ -376,13 +370,14 @@ gchar *
 g_strjoin (const gchar *separator, ...)
 {
 	va_list args;
-	char *res, *s;
+	char *res, *s, *r;
 	size_t len, slen;
 
 	if (separator != NULL)
 		slen = strlen (separator);
 	else
 		slen = 0;
+	
 	len = 0;
 	va_start (args, separator);
 	for (s = va_arg (args, char *); s != NULL; s = va_arg (args, char *)){
@@ -390,21 +385,22 @@ g_strjoin (const gchar *separator, ...)
 		len += slen;
 	}
 	va_end (args);
+
 	if (len == 0)
 		return g_strdup ("");
 	
 	/* Remove the last separator */
 	if (slen > 0 && len > 0)
 		len -= slen;
-	len++;
-	res = g_malloc (len);
+
+	res = g_malloc (len + 1);
 	va_start (args, separator);
 	s = va_arg (args, char *);
-	strcpy (res, s);
+	r = g_stpcpy (res, s);
 	for (s = va_arg (args, char *); s != NULL; s = va_arg (args, char *)){
 		if (separator != NULL)
-			strcat (res, separator);
-		strcat (res, s);
+			r = g_stpcpy (r, separator);
+		r = g_stpcpy (r, s);
 	}
 	va_end (args);
 
@@ -414,7 +410,7 @@ g_strjoin (const gchar *separator, ...)
 gchar *
 g_strjoinv (const gchar *separator, gchar **str_array)
 {
-	char *res;
+	char *res, *r;
 	size_t slen, len, i;
 	
 	if (separator != NULL)
@@ -427,18 +423,21 @@ g_strjoinv (const gchar *separator, gchar **str_array)
 		len += strlen (str_array [i]);
 		len += slen;
 	}
+
 	if (len == 0)
 		return g_strdup ("");
+
 	if (slen > 0 && len > 0)
 		len -= slen;
-	len++;
-	res = g_malloc (len);
-	strcpy (res, str_array [0]);
+
+	res = g_malloc (len + 1);
+	r = g_stpcpy (res, str_array [0]);
 	for (i = 1; str_array [i] != NULL; i++){
 		if (separator != NULL)
-			strcat (res, separator);
-		strcat (res, str_array [i]);
+			r = g_stpcpy (r, separator);
+		r = g_stpcpy (r, str_array [i]);
 	}
+
 	return res;
 }
 
@@ -495,19 +494,6 @@ g_fprintf(FILE *file, gchar const *format, ...)
 
 	va_start(args, format);
 	ret = vfprintf(file, format, args);
-	va_end(args);
-
-	return ret;
-}
-
-gint
-g_sprintf(gchar *string, gchar const *format, ...)
-{
-	va_list args;
-	gint ret;
-
-	va_start(args, format);
-	ret = vsprintf(string, format, args);
 	va_end(args);
 
 	return ret;
@@ -581,7 +567,7 @@ g_filename_to_uri (const gchar *filename, const gchar *hostname, GError **error)
 			n++;
 	}
 	ret = g_malloc (n);
-	strcpy (ret, uriPrefix);
+	strncpy (ret, uriPrefix, strlen(uriPrefix)+1);
 	for (p = filename, rp = ret + strlen (ret); *p; p++){
 #ifdef G_OS_WIN32
 		if (*p == '\\') {
@@ -643,14 +629,14 @@ g_filename_from_uri (const gchar *uri, gchar **hostname, GError **error)
 		} 
 		flen++;
 	}
-#ifndef G_OS_WIN32
+#if !defined(G_OS_WIN32) && !defined(SN_TARGET_PSP2)
 	flen++;
 #endif
 
 	result = g_malloc (flen + 1);
 	result [flen] = 0;
 
-#ifndef G_OS_WIN32
+#if !defined(G_OS_WIN32) && !defined(SN_TARGET_PSP2)
 	*result = '/';
 	r = result + 1;
 #else
@@ -704,6 +690,31 @@ g_ascii_strdown (const gchar *str, gssize len)
 	return ret;
 }
 
+gchar
+g_ascii_toupper (gchar c)
+{
+	return c >= 'a' && c <= 'z' ? c + ('A' - 'a') : c;
+}
+
+gchar *
+g_ascii_strup (const gchar *str, gssize len)
+{
+	char *ret;
+	int i;
+	
+	g_return_val_if_fail  (str != NULL, NULL);
+
+	if (len == -1)
+		len = strlen (str);
+	
+	ret = g_malloc (len + 1);
+	for (i = 0; i < len; i++)
+		ret [i] = (guchar) g_ascii_toupper (str [i]);
+	ret [i] = 0;
+	
+	return ret;
+}
+
 gint
 g_ascii_strncasecmp (const gchar *s1, const gchar *s2, gsize n)
 {
@@ -712,20 +723,35 @@ g_ascii_strncasecmp (const gchar *s1, const gchar *s2, gsize n)
 	g_return_val_if_fail (s1 != NULL, 0);
 	g_return_val_if_fail (s2 != NULL, 0);
 
-	for (i = 0; i < n; i++){
+	for (i = 0; i < n; i++) {
 		gchar c1 = g_ascii_tolower (*s1++);
 		gchar c2 = g_ascii_tolower (*s2++);
 		
-		if (c1 == c2)
-			continue;
-		
-		if (c1 == 0)
-			return -1;
-		if (c2 == 0)
-			return 1;
-		return c1-c2;
+		if (c1 != c2)
+			return c1 - c2;
 	}
+	
 	return 0;
+}
+
+gint
+g_ascii_strcasecmp (const gchar *s1, const gchar *s2)
+{
+	const char *sp1 = s1;
+	const char *sp2 = s2;
+	
+	g_return_val_if_fail (s1 != NULL, 0);
+	g_return_val_if_fail (s2 != NULL, 0);
+	
+	while (*sp1 != '\0') {
+		char c1 = g_ascii_tolower (*sp1++);
+		char c2 = g_ascii_tolower (*sp2++);
+		
+		if (c1 != c2)
+			return c1 - c2;
+	}
+	
+	return (*sp1) - (*sp2);
 }
 
 gchar *
@@ -778,6 +804,24 @@ g_strlcpy (gchar *dest, const gchar *src, gsize dest_size)
 	/* we need to return the length of src here */
 	while (*s++) ; /* instead of a plain strlen, we use 's' */
 	return s - src - 1;
+#endif
+}
+
+gchar *
+g_stpcpy (gchar *dest, const char *src)
+{
+	g_return_val_if_fail (dest != NULL, dest);
+	g_return_val_if_fail (src != NULL, dest);
+
+#if HAVE_STPCPY
+	return stpcpy (dest, src);
+#else
+	while (*src)
+		*dest++ = *src++;
+	
+	*dest = '\0';
+	
+	return dest;
 #endif
 }
 

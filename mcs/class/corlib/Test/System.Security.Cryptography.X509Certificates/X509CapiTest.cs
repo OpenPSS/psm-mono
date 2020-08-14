@@ -6,6 +6,7 @@
 //
 // (C) 2003 Motus Technologies Inc. (http://www.motus.com)
 // Copyright (C) 2005 Novell, Inc (http://www.novell.com)
+// Copyright 2011 Xamarin Inc (http://www.xamarin.com).
 //
 #if !TARGET_JVM
 using NUnit.Framework;
@@ -29,6 +30,7 @@ namespace MonoTests.System.Security.Cryptography.X509Certificates {
 	// is similar to the one provided by CAPI.
 
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class X509CAPI {
 
 		// copied from X509Certificate for test uses only

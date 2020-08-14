@@ -31,9 +31,9 @@ namespace System.Xml.Linq
 {
 	public class XObjectChangeEventArgs : EventArgs
 	{
-		public XObjectChangeEventArgs (XObjectChange objectChange)
+		public XObjectChangeEventArgs (XObjectChange change)
 		{
-			this.type = objectChange;
+			this.type = change;
 		}
 
 		// Note that those fields cannot be directly referenced in

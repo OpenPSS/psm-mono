@@ -474,6 +474,37 @@ public class ArrayTest
 		Assert.IsTrue (copy[3] != orig[3], "#E38");
 	}
 
+    [Test]
+    public void TestCopy3() {
+        Array c1 = Array.CreateInstance (typeof(int), /* lengths */new int[] { 5 }, /* lower bounds */new int[] { 10 });
+        Array c2 = Array.CreateInstance (typeof(int), /* lengths */new int[] { 5 }, /* lower bounds */new int[] { 10 });
+
+        {
+            // should fail because sourceIndex is lower than source array lower bound
+			bool errorThrown = false;
+			try {
+				Array.Copy(c2, 1, c1, 10, 2);
+			} catch (ArgumentOutOfRangeException) {
+				errorThrown = true;
+			}
+			Assert.IsTrue (errorThrown, "#O1");
+		}
+
+        {
+            // should fail because destIndex is lower than dest array lower bound
+            bool errorThrown = false;
+            try
+            {
+                Array.Copy(c2, 10, c1, 1, 2);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                errorThrown = true;
+            }
+            Assert.IsTrue(errorThrown, "#O1");
+        }
+    }
+
 	[Test]
 	[ExpectedException (typeof (InvalidCastException))]
 	public void Copy_InvalidCast () {
@@ -3013,9 +3044,6 @@ public class ArrayTest
 		test = new object[] {null};
 		Assert.AreEqual (test.Contains (null), true, "array with null");
 
-		test = new object[] { 1, null};
-		Assert.IsTrue (test.Contains (null), "array with last null");
-		
 		test = new List<object>(test);
 		Assert.AreEqual (test.Contains (null), true, "List<object> with test");
 		

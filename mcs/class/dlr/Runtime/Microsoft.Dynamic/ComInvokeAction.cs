@@ -15,7 +15,7 @@
 using System; using Microsoft;
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
 
 using System.Collections.ObjectModel;
 using System.Diagnostics;

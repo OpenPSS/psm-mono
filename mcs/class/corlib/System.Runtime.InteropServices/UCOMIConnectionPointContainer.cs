@@ -26,6 +26,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 namespace System.Runtime.InteropServices
 {
 	[Obsolete]
@@ -38,3 +39,4 @@ namespace System.Runtime.InteropServices
 		void FindConnectionPoint (ref Guid riid, out UCOMIConnectionPoint ppCP);
 	}
 }
+#endif

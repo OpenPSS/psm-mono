@@ -51,7 +51,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents an unconditional jump. This includes return statements, break and continue statements, and other jumps.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.GotoExpressionProxy))]
 #endif
     public sealed class GotoExpression : Expression {

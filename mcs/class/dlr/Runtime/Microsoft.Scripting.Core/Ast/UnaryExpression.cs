@@ -32,7 +32,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents an expression that has a unary operator.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.UnaryExpressionProxy))]
 #endif
     public sealed class UnaryExpression : Expression {

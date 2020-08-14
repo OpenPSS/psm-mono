@@ -56,6 +56,20 @@ namespace MonoTests.System.Net {
 "<URI uri=\"Hello\"/>\n" + 
 "</AcceptAccess>\n" + 
 "</IPermission>\n";
+#elif MOBILE
+			string result1 = "<IPermission class=\"System.Net.WebPermission, System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=79439ffc308aa6a0\"\n" + 
+"version=\"1\">\n" + 
+"<ConnectAccess>\n" + 
+"<URI uri=\"Hello\"/>\n" + 
+"</ConnectAccess>\n" + 
+"</IPermission>\n";
+
+			string result2 = "<IPermission class=\"System.Net.WebPermission, System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=79439ffc308aa6a0\"\n" + 
+"version=\"1\">\n" + 
+"<AcceptAccess>\n" + 
+"<URI uri=\"Hello\"/>\n" + 
+"</AcceptAccess>\n" + 
+"</IPermission>\n";
 #else
 			string result1 = "<IPermission class=\"System.Net.WebPermission, System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089\"\n" + 
 "version=\"1\">\n" + 

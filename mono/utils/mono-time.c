@@ -4,13 +4,35 @@
  * Copyright (C) 2008 Novell, Inc.
  */
 
+#include "config.h"
 #include <utils/mono-time.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #define MTICKS_PER_SEC 10000000
 
-#ifdef HOST_WIN32
+#if TARGET_VITA
+#include "bridge.h"
+
+guint32
+mono_msec_ticks (void)
+{
+	return pss_get_ticks_32 ();
+}
+
+gint64
+mono_100ns_ticks (void)
+{
+	return pss_get_ticks_64 ();
+}
+
+gint64
+mono_100ns_datetime (void)
+{
+	return pss_get_ticks_since_111 ();
+}
+
+#elif defined(HOST_WIN32)
 #include <windows.h>
 
 guint32
@@ -68,11 +90,6 @@ mono_100ns_datetime (void)
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 #include <sys/param.h>
 #include <sys/sysctl.h>
-#endif
-
-#if defined(PLATFORM_MACOSX)
-#include <mach/mach.h>
-#include <mach/mach_time.h>
 #endif
 
 #include <time.h>
@@ -144,15 +161,6 @@ mono_100ns_ticks (void)
 		}
 	}
 	
-#elif defined(PLATFORM_MACOSX)
-	/* http://developer.apple.com/library/mac/#qa/qa1398/_index.html */
-	static mach_timebase_info_data_t timebase;
-	guint64 now = mach_absolute_time ();
-	if (timebase.denom == 0) {
-		mach_timebase_info (&timebase);
-		timebase.denom *= 100; /* we return 100ns ticks */
-	}
-	return now * timebase.numer / timebase.denom;
 #endif
 	if (gettimeofday (&tv, NULL) == 0)
 		return ((gint64)tv.tv_sec * 1000000 + tv.tv_usec) * 10;

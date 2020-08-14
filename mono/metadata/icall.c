@@ -8,6 +8,7 @@
  *
  * Copyright 2001-2003 Ximian, Inc (http://www.ximian.com)
  * Copyright 2004-2009 Novell, Inc (http://www.novell.com)
+ * Copyright 2011 Xamarin Inc (http://www.xamarin.com).
  */
 
 #include <config.h>
@@ -81,10 +82,13 @@
 #include <mono/utils/mono-error-internals.h>
 #include <mono/utils/mono-mmap.h>
 #include <mono/utils/mono-io-portability.h>
+#include <mono/utils/bsearch.h>
 
 #if defined (HOST_WIN32)
 #include <windows.h>
 #include <shlobj.h>
+#include <Wincrypt.h>
+#pragma comment(lib, "crypt32.lib")
 #endif
 #include "decimal.h"
 
@@ -1640,8 +1644,8 @@ ves_icall_get_attributes (MonoReflectionType *type)
 	return klass->flags;
 }
 
-static MonoReflectionMarshalAsAttribute*
-ves_icall_System_Reflection_FieldInfo_get_marshal_info (MonoReflectionField *field)
+static MonoReflectionMarshal*
+ves_icall_System_Reflection_FieldInfo_GetUnmanagedMarshal (MonoReflectionField *field)
 {
 	MonoClass *klass = field->field->parent;
 	MonoMarshalType *info;
@@ -1658,7 +1662,7 @@ ves_icall_System_Reflection_FieldInfo_get_marshal_info (MonoReflectionField *fie
 			if (!info->fields [i].mspec)
 				return NULL;
 			else
-				return mono_reflection_marshal_as_attribute_from_marshal_spec (field->object.vtable->domain, klass, info->fields [i].mspec);
+				return mono_reflection_marshal_from_marshal_spec (field->object.vtable->domain, klass, info->fields [i].mspec);
 		}
 	}
 
@@ -1748,11 +1752,11 @@ ves_icall_get_parameter_info (MonoMethod *method, MonoReflectionMethod *member)
 	return mono_param_get_objects_internal (domain, method, member->reftype ? mono_class_from_mono_type (member->reftype->type) : NULL);
 }
 
-static MonoReflectionMarshalAsAttribute*
+static MonoReflectionMarshal*
 ves_icall_System_MonoMethodInfo_get_retval_marshal (MonoMethod *method)
 {
 	MonoDomain *domain = mono_domain_get (); 
-	MonoReflectionMarshalAsAttribute* res = NULL;
+	MonoReflectionMarshal* res = NULL;
 	MonoMarshalSpec **mspecs;
 	int i;
 
@@ -1760,7 +1764,7 @@ ves_icall_System_MonoMethodInfo_get_retval_marshal (MonoMethod *method)
 	mono_method_get_marshal_info (method, mspecs);
 
 	if (mspecs [0])
-		res = mono_reflection_marshal_as_attribute_from_marshal_spec (domain, method->klass, mspecs [0]);
+		res = mono_reflection_marshal_from_marshal_spec (domain, method->klass, mspecs [0]);
 		
 	for (i = mono_method_signature (method)->param_count; i >= 0; i--)
 		if (mspecs [i])
@@ -1929,6 +1933,8 @@ ves_icall_MonoField_GetRawConstantValue (MonoReflectionField *this)
 	}
 
 	def_value = mono_class_get_field_default_value (field, &def_type);
+	if (!def_value) /*FIXME, maybe we should try to raise TLE if field->parent is broken */
+		mono_raise_exception (mono_get_exception_invalid_operation (NULL));
 
 	/*FIXME unify this with reflection.c:mono_get_object_from_blob*/
 	switch (def_type) {
@@ -4875,7 +4881,6 @@ ves_icall_System_Reflection_Assembly_GetExecutingAssembly (void)
 	MONO_ARCH_SAVE_REGS;
 
 	mono_stack_walk_no_il (get_executing, &dest);
-	g_assert (dest);
 	return mono_assembly_get_object (mono_domain_get (), dest->klass->image->assembly);
 }
 
@@ -6058,19 +6063,8 @@ ves_icall_System_CurrentSystemTimeZone_GetTimeZoneData (guint32 year, MonoArray 
 				mono_array_set ((*data), gint64, 1, ((gint64)t1 + EPOCH_ADJUST) * 10000000L);
 				return 1;
 			} else {
-				struct tm end;
-				time_t te;
-				
-				memset (&end, 0, sizeof (end));
-				end.tm_year = year-1900 + 1;
-				end.tm_mday = 1;
-				
-				te = mktime (&end);
-				
 				mono_array_setref ((*names), 1, mono_string_new (domain, tzone));
 				mono_array_set ((*data), gint64, 0, ((gint64)t1 + EPOCH_ADJUST) * 10000000L);
-				mono_array_setref ((*names), 0, mono_string_new (domain, tzone));
-				mono_array_set ((*data), gint64, 1, ((gint64)te + EPOCH_ADJUST) * 10000000L);
 				is_daylight = 1;
 			}
 
@@ -6236,10 +6230,6 @@ ves_icall_System_Buffer_BlockCopyInternal (MonoArray *src, gint32 src_offset, Mo
 
 	MONO_ARCH_SAVE_REGS;
 
-	/* This is called directly from the class libraries without going through the managed wrapper */
-	MONO_CHECK_ARG_NULL (src);
-	MONO_CHECK_ARG_NULL (dest);
-
 	/* watch out for integer overflow */
 	if ((src_offset > mono_array_get_byte_length (src) - count) || (dest_offset > mono_array_get_byte_length (dest) - count))
 		return FALSE;
@@ -6316,6 +6306,8 @@ ves_icall_System_Environment_get_MachineName (void)
 
 	g_free (buf);
 	return result;
+#elif defined(TARGET_VITA)
+	return mono_string_new (mono_domain_get (), "pss");
 #elif !defined(DISABLE_SOCKETS)
 	gchar buf [256];
 	MonoString *result;
@@ -6334,7 +6326,7 @@ ves_icall_System_Environment_get_MachineName (void)
 static int
 ves_icall_System_Environment_get_Platform (void)
 {
-#if defined (TARGET_WIN32)
+#if defined (TARGET_WIN32) && !defined(TARGET_PSS)
 	/* Win32NT */
 	return 2;
 #elif defined(__MACH__)
@@ -6387,6 +6379,102 @@ ves_icall_System_Environment_GetEnvironmentVariable (MonoString *name)
 	return mono_string_new (mono_domain_get (), value);
 }
 
+static gboolean
+ves_icall_System_GetSystemWebProxy_internal (MonoString **proxy_list, MonoString **bypass_list)
+{
+#if TARGET_WIN32
+	HKEY key;
+	long proxy_enabled, size, res;
+	gchar *buf;
+
+	MONO_ARCH_SAVE_REGS;
+
+	res = RegOpenKeyExA (HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", (long) NULL, KEY_QUERY_VALUE, &key);
+	
+	if (res != ERROR_SUCCESS)
+		return FALSE;
+
+	res = RegQueryValueExA (key, "ProxyEnable", NULL, NULL, &proxy_enabled, &size);
+	
+	if (res != ERROR_SUCCESS) {
+		RegCloseKey (key);
+		return FALSE;
+	}
+
+	if (proxy_enabled <= 0) {
+		RegCloseKey (key);
+		return FALSE;
+	}
+
+	res = RegQueryValueExA (key, "ProxyServer", NULL, NULL, (LPBYTE) NULL, &size);
+
+	if (res != ERROR_SUCCESS) {
+		RegCloseKey (key);
+		return FALSE;
+	}
+
+	buf = (gchar*)g_malloc0 (size+1);
+
+	res = RegQueryValueExA (key, "ProxyServer", NULL, NULL, (LPBYTE) buf, &size);
+
+	if (res != ERROR_SUCCESS) {
+		g_free (buf);
+		RegCloseKey (key);
+		return FALSE;
+	}
+	
+	mono_gc_wbarrier_generic_store (proxy_list, (MonoObject *) mono_string_new (mono_domain_get (), buf));
+
+	g_free (buf);
+
+	res = RegQueryValueExA (key, "ProxyOverride", NULL, NULL, (LPBYTE) NULL, &size);
+
+	if (res != ERROR_SUCCESS) {
+		RegCloseKey (key);
+		mono_gc_wbarrier_generic_store (bypass_list, NULL);
+		return TRUE;
+	}
+
+	buf = (gchar*)g_malloc0 (size+1);
+
+	res = RegQueryValueExA (key, "ProxyOverride", NULL, NULL, (LPBYTE) buf, &size);
+
+	if (res != ERROR_SUCCESS) {
+		g_free (buf);
+		RegCloseKey (key);
+		return FALSE;
+	}
+	
+	mono_gc_wbarrier_generic_store (bypass_list, (MonoObject *) mono_string_new (mono_domain_get (), buf));
+
+	g_free (buf);
+
+	RegCloseKey (key);
+
+	return TRUE;
+#else
+	const char *s;
+	gboolean proxy_set = FALSE;
+
+	MONO_ARCH_SAVE_REGS;
+
+	s = g_getenv("http_proxy");
+	if (s == NULL)
+		s = g_getenv("HTTP_PROXY");
+	if (s) {
+		mono_gc_wbarrier_generic_store (proxy_list, (MonoObject *) mono_string_new (mono_domain_get (), s));
+		proxy_set = TRUE;
+	}
+			
+	s = g_getenv("no_proxy");
+	if (s == NULL)
+		s = g_getenv("NO_PROXY");
+	if (s)
+		mono_gc_wbarrier_generic_store (bypass_list, (MonoObject *) mono_string_new (mono_domain_get (), s));
+
+	return proxy_set;
+#endif
+}
 /*
  * There is no standard way to get at environ.
  */
@@ -6456,7 +6544,6 @@ ves_icall_System_Environment_GetEnvironmentVariableNames (void)
 	}
 
 	return names;
-
 #else
 	MonoArray *names;
 	MonoDomain *domain;
@@ -6564,7 +6651,7 @@ ves_icall_System_Environment_Exit (int result)
 	mono_runtime_quit ();
 
 	/* we may need to do some cleanup here... */
-	exit (result);
+	mono_exit (result);
 }
 
 static MonoString*
@@ -6598,7 +6685,10 @@ ves_icall_System_Environment_GetWindowsFolderPath (int folder)
 static MonoArray *
 ves_icall_System_Environment_GetLogicalDrives (void)
 {
-        gunichar2 buf [256], *ptr, *dname;
+#if defined(TARGET_VITA)
+	return NULL;
+#else
+    gunichar2 buf [256], *ptr, *dname;
 	gunichar2 *u16;
 	guint initial_size = 127, size = 128;
 	gint ndrives;
@@ -6647,17 +6737,21 @@ ves_icall_System_Environment_GetLogicalDrives (void)
 		g_free (ptr);
 
 	return result;
+#endif
 }
 
 static MonoString *
 ves_icall_System_IO_DriveInfo_GetDriveFormat (MonoString *path)
 {
+#if defined(TARGET_VITA)
+	return NULL;
+#else
 	gunichar2 volume_name [MAX_PATH + 1];
 	
 	if (GetVolumeInformation (mono_string_chars (path), NULL, 0, NULL, NULL, NULL, volume_name, MAX_PATH + 1) == FALSE)
 		return NULL;
-	/* Not sure using wcslen here is safe */
 	return mono_string_from_utf16 (volume_name);
+#endif
 }
 
 static MonoString *
@@ -7074,6 +7168,22 @@ ves_icall_System_Diagnostics_Debugger_IsAttached_internal (void)
 	return mono_debug_using_mono_debugger () || mono_is_debugger_attached ();
 }
 
+static MonoBoolean
+ves_icall_System_Diagnostics_Debugger_IsLogging (void)
+{
+	if (mono_get_runtime_callbacks ()->debug_log_is_enabled)
+		return mono_get_runtime_callbacks ()->debug_log_is_enabled ();
+	else
+		return FALSE;
+}
+
+static void
+ves_icall_System_Diagnostics_Debugger_Log (int level, MonoString *category, MonoString *message)
+{
+	if (mono_get_runtime_callbacks ()->debug_log)
+		mono_get_runtime_callbacks ()->debug_log (level, category, message);
+}
+
 static void
 ves_icall_System_Diagnostics_DefaultTraceListener_WriteWindowsDebugString (MonoString *message)
 {
@@ -7215,8 +7325,11 @@ mono_ArgIterator_IntGetNextArg (MonoArgIterator *iter)
 
 	res.type = iter->sig->params [i];
 	res.klass = mono_class_from_mono_type (res.type);
-	res.value = iter->args;
 	arg_size = mono_type_stack_size (res.type, &align);
+#if defined(__arm__)
+	iter->args = (guint8*)(((gsize)iter->args + (align) - 1) & ~(align - 1));
+#endif
+	res.value = iter->args;
 #if G_BYTE_ORDER != G_LITTLE_ENDIAN
 	if (arg_size <= sizeof (gpointer)) {
 		int dummy;
@@ -7250,8 +7363,11 @@ mono_ArgIterator_IntGetNextArgT (MonoArgIterator *iter, MonoType *type)
 		res.type = iter->sig->params [i];
 		res.klass = mono_class_from_mono_type (res.type);
 		/* FIXME: endianess issue... */
-		res.value = iter->args;
 		arg_size = mono_type_stack_size (res.type, &align);
+#if defined(__arm__)
+		iter->args = (guint8*)(((gsize)iter->args + (align) - 1) & ~(align - 1));
+#endif
+		res.value = iter->args;
 		iter->args = (char*)iter->args + arg_size;
 		iter->next_arg++;
 		/* g_print ("returning arg %d, type 0x%02x of size %d at %p\n", i, res.type->type, arg_size, res.value); */
@@ -7356,9 +7472,34 @@ ves_icall_System_NumberFormatter_GetFormatterTables (guint64 const **mantissas,
 	*decHexDigits = Formatter_DecHexDigits;
 }
 
+static void
+get_category_data (int version,
+		   guint8 const **category_data,
+		   guint16 const **category_astral_index)
+{
+	*category_astral_index = NULL;
+
+#ifndef DISABLE_NET_4_0
+	if (version == 4) {
+		*category_data = CategoryData_v4;
+#ifndef DISABLE_ASTRAL
+		*category_astral_index = CategoryData_v4_astral_index;
+#endif
+		return;
+	}
+#endif
+
+	*category_data = CategoryData_v2;
+#ifndef DISABLE_ASTRAL
+	*category_astral_index = CategoryData_v2_astral_index;
+#endif
+}
+
 /* These parameters are "readonly" in corlib/System/Char.cs */
 static void
-ves_icall_System_Char_GetDataTablePointers (guint8 const **category_data,
+ves_icall_System_Char_GetDataTablePointers (int category_data_version,
+					    guint8 const **category_data,
+					    guint16 const **category_astral_index,
 					    guint8 const **numeric_data,
 					    gdouble const **numeric_data_values,
 					    guint16 const **to_lower_data_low,
@@ -7366,7 +7507,7 @@ ves_icall_System_Char_GetDataTablePointers (guint8 const **category_data,
 					    guint16 const **to_upper_data_low,
 					    guint16 const **to_upper_data_high)
 {
-	*category_data = CategoryData;
+	get_category_data (category_data_version, category_data, category_astral_index);
 	*numeric_data = NumericData;
 	*numeric_data_values = NumericDataValues;
 	*to_lower_data_low = ToLowerDataLow;
@@ -7707,6 +7848,118 @@ InternalFromBase64CharArray (MonoArray *input, gint offset, gint length)
 		length, FALSE);
 }
 
+typedef struct MonoCertList {
+	void *cert;
+	struct MonoCertList *next;
+} MonoCertList;
+
+#if defined(PLATFORM_ANDROID)
+typedef void* (*get_certs_callback)(MonoCertList **pemList);
+typedef void  (*free_certs_callback)(void *ctx);
+
+static get_certs_callback get_certs_cb;
+static free_certs_callback free_certs_cb;
+
+void
+mono_install_ssl_callbacks (void *get_certs, void *free_certs)
+{
+	get_certs_cb = get_certs;
+	free_certs_cb = free_certs;
+}
+#endif
+
+static void
+ves_icall_Mono_Security_SystemX509Store_FreeSystemCerts(void *certctx)
+{
+#if TARGET_WIN32
+	MonoCertList *pemList = (MonoCertList *) certctx;
+	MonoCertList *curPem;
+
+	do {
+		curPem = pemList;
+		pemList = pemList->next;
+		free (curPem->cert);
+		free (curPem);
+	} while (pemList != NULL);
+#elif TARGET_VITA
+	pss_free_system_certs (certctx);
+#elif defined(PLATFORM_ANDROID)
+	if (free_certs_cb != NULL)
+		return free_certs_cb (certctx);
+
+	return;
+#else
+	g_assert_not_reached ();
+#endif
+}
+
+#if TARGET_WIN32
+static void
+process_store (HANDLE storeHandle, MonoCertList **head, MonoCertList **tail)
+{
+	MonoCertList *node;
+	PCCERT_CONTEXT certContext = NULL;
+
+	while (certContext = CertEnumCertificatesInStore (storeHandle, certContext)) {
+		LPSTR outString = NULL;
+		DWORD size = 0;
+
+		if (CryptBinaryToStringA (certContext->pbCertEncoded, certContext->cbCertEncoded, CRYPT_STRING_BASE64HEADER, NULL, &size)) {
+			node = (MonoCertList *) malloc (sizeof (MonoCertList));
+			memset (node, 0, sizeof (MonoCertList));
+			node->cert = (void *) malloc (size);
+
+			CryptBinaryToStringA (certContext->pbCertEncoded, certContext->cbCertEncoded, CRYPT_STRING_BASE64HEADER, (LPSTR) node->cert, &size);
+			node->next = NULL;
+
+			if (*head == NULL) {
+				*head = node;
+			} else {
+				(*tail)->next = node;
+			}
+
+			*tail = node;
+		}
+	}
+
+}
+#endif
+
+static void*
+ves_icall_Mono_Security_SystemX509Store_LoadSystemCerts(MonoCertList** out_pemList)
+{
+#if TARGET_WIN32
+	MonoCertList *head = NULL, *tail = NULL;
+	HANDLE storeHandle = NULL;
+	
+	storeHandle = CertOpenSystemStoreA (NULL, "ROOT");
+
+	if (storeHandle == NULL)
+		return NULL;
+
+	process_store (storeHandle, &head, &tail);
+	*out_pemList = head;
+
+	storeHandle = CertOpenSystemStoreA (NULL, "CA");
+
+	if (storeHandle == NULL)
+		return head;
+
+	process_store (storeHandle, &head, &tail);
+
+	return head;
+#elif TARGET_VITA
+	return pss_load_system_certs (out_pemList);
+#elif defined(PLATFORM_ANDROID)
+	if (get_certs_cb != NULL)
+		return get_certs_cb (out_pemList);
+
+	return NULL;
+#else
+	g_assert_not_reached ();
+#endif
+}
+
 #define ICALL_TYPE(id,name,first)
 #define ICALL(id,name,func) Icall_ ## id,
 
@@ -7887,7 +8140,7 @@ compare_method_imap (const void *key, const void *elem)
 static gpointer
 find_method_icall (const IcallTypeDesc *imap, const char *name)
 {
-	const guint16 *nameslot = bsearch (name, icall_names_idx + imap->first_icall, icall_desc_num_icalls (imap), sizeof (icall_names_idx [0]), compare_method_imap);
+	const guint16 *nameslot = mono_binary_search (name, icall_names_idx + imap->first_icall, icall_desc_num_icalls (imap), sizeof (icall_names_idx [0]), compare_method_imap);
 	if (!nameslot)
 		return NULL;
 	return (gpointer)icall_functions [(nameslot - &icall_names_idx [0])];
@@ -7903,7 +8156,7 @@ compare_class_imap (const void *key, const void *elem)
 static const IcallTypeDesc*
 find_class_icalls (const char *name)
 {
-	const guint16 *nameslot = bsearch (name, icall_type_names_idx, Icall_type_num, sizeof (icall_type_names_idx [0]), compare_class_imap);
+	const guint16 *nameslot = mono_binary_search (name, icall_type_names_idx, Icall_type_num, sizeof (icall_type_names_idx [0]), compare_class_imap);
 	if (!nameslot)
 		return NULL;
 	return &icall_type_descs [nameslot - &icall_type_names_idx [0]];
@@ -7920,7 +8173,7 @@ compare_method_imap (const void *key, const void *elem)
 static gpointer
 find_method_icall (const IcallTypeDesc *imap, const char *name)
 {
-	const char **nameslot = bsearch (name, icall_names + imap->first_icall, icall_desc_num_icalls (imap), sizeof (icall_names [0]), compare_method_imap);
+	const char **nameslot = mono_binary_search (name, icall_names + imap->first_icall, icall_desc_num_icalls (imap), sizeof (icall_names [0]), compare_method_imap);
 	if (!nameslot)
 		return NULL;
 	return (gpointer)icall_functions [(nameslot - icall_names)];
@@ -7936,7 +8189,7 @@ compare_class_imap (const void *key, const void *elem)
 static const IcallTypeDesc*
 find_class_icalls (const char *name)
 {
-	const char **nameslot = bsearch (name, icall_type_names, Icall_type_num, sizeof (icall_type_names [0]), compare_class_imap);
+	const char **nameslot = mono_binary_search (name, icall_type_names, Icall_type_num, sizeof (icall_type_names [0]), compare_class_imap);
 	if (!nameslot)
 		return NULL;
 	return &icall_type_descs [nameslot - icall_type_names];

@@ -114,7 +114,6 @@ namespace Microsoft.Build.Tasks {
 
 			ResolveAssemblies ();
 			ResolveAssemblyFiles ();
-			resolvedFiles = tempResolvedFiles.ToArray ();
 
 			alreadyScannedAssemblyNames = new Dictionary<string, string> ();
 
@@ -126,6 +125,7 @@ namespace Microsoft.Build.Tasks {
 			foreach (PrimaryReference pref in primaryReferences)
 				ResolveAssemblyFileDependencies (pref.TaskItem, pref.ParentCopyLocal);
 
+			resolvedFiles = tempResolvedFiles.ToArray ();
 			copyLocalFiles = tempCopyLocalFiles.Values.ToArray ();
 			satelliteFiles = tempSatelliteFiles.Values.ToArray ();
 			relatedFiles = tempRelatedFiles.Values.ToArray ();
@@ -337,10 +337,8 @@ namespace Microsoft.Build.Tasks {
 							aname, asm.FullName, parent_copy_local);
 
 					if (resolved_ref != null && !IsFromGacOrTargetFramework (resolved_ref)
-							&& resolved_ref.FoundInSearchPath != SearchPath.PkgConfig) {
-						tempResolvedDepFiles[resolved_ref.AssemblyName.FullName] = resolved_ref.TaskItem;
+							&& resolved_ref.FoundInSearchPath != SearchPath.PkgConfig)
 						dependencies.Enqueue (resolved_ref.TaskItem.ItemSpec);
-					}
 				}
 				alreadyScannedAssemblyNames.Add (asm.FullName, String.Empty);
 			}
@@ -499,9 +497,7 @@ namespace Microsoft.Build.Tasks {
 			assembly_resolver.LogSearchMessage ("Choosing '{0}' as it is a primary reference.",
 					found_ref.AssemblyName.FullName);
 
-			// If we can successfully use the primary reference, don't log a warning. It's too
-			// verbose.
-			//LogConflictWarning (found_ref.AssemblyName.FullName, key_aname.FullName);
+			LogConflictWarning (found_ref.AssemblyName.FullName, key_aname.FullName);
 
 			return true;
 		}

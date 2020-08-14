@@ -7,6 +7,7 @@
 
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[ComImport]
@@ -35,3 +36,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		new int GetTypeInfoCount ();
 	}
 }
+#endif

@@ -79,10 +79,6 @@ namespace System.ServiceModel.MonoInternal
 			get { return contract; }
 		}
 
-		public OperationContext Context {
-			set {  }
-		}
-
 		Action<TimeSpan> session_shutdown_delegate;
 
 		public void CloseOutputSession (TimeSpan timeout)

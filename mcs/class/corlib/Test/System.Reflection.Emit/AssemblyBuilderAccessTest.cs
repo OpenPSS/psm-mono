@@ -14,6 +14,7 @@ namespace MonoTests.System.Reflection.Emit
 	/// A simple class to test the values of the enum AssemblyBuilderAccess.
 	/// </summary>
 	[TestFixture]
+	[Category("NotMobile")] // mobile profile doesn't support S.R.E
 	public class AssemblyBuilderAccessTest
 	{
 		[Test]

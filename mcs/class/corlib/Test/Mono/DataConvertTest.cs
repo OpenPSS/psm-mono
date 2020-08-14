@@ -7,6 +7,7 @@ using Mono;
 namespace MonoTests {
 
 	[TestFixture]
+	[Category("NotCoreCLR")]  // we include trusted code (in the form of DataConverter) directly into the test assembly
 	public class DataConverterTest
 	{
 		const string TEST_STRING = "Alignment test";

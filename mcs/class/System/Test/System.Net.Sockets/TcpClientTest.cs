@@ -27,6 +27,9 @@ namespace MonoTests.System.Net.Sockets
 		/// (from System.Net.Sockets)
 		/// </summary>
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void TcpClient()
 		{
 			// set up a listening Socket
@@ -73,6 +76,9 @@ namespace MonoTests.System.Net.Sockets
 		}
 
 		[Test] // bug #81105
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void CloseTest ()
 		{
 			IPEndPoint localEP = new IPEndPoint (IPAddress.Loopback, 8765);

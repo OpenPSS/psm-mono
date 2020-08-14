@@ -20,18 +20,28 @@ TEST_RESOURCES = \
 	Test/System/test-uri-props-manual.txt \
 	Test/System/test-uri-relative-props.txt
 
+ifeq (mobile, $(PROFILE))
+TEST_MCS_FLAGS = -nowarn:1595 -nowarn:0618 -nowarn:219 -nowarn:67 -nowarn:169 -nowarn:612 \
+	$(foreach f, $(TEST_RESOURCES), -resource:$(f),$(notdir $(f)))
+else
 TEST_MCS_FLAGS = -r:System.Drawing.dll -r:Mono.Security.dll -r:System.Data -nowarn:1595 -nowarn:0618 -nowarn:219 -nowarn:67 -nowarn:169 -nowarn:612 \
 	$(foreach f, $(TEST_RESOURCES), -resource:$(f),$(notdir $(f)))
+endif
 
 ifneq (1, $(FRAMEWORK_VERSION_MAJOR))
 LIB_MCS_FLAGS = -nowarn:618 -d:CONFIGURATION_2_0 -unsafe $(RESOURCE_FILES:%=-resource:%)
+ifneq (mobile, $(PROFILE))
 TEST_MCS_FLAGS += -r:System.Configuration
-PROFILE_2_OR_4 := $(filter net_2_0 net_4_0, $(PROFILE))
-NOT_SL := $(filter net_2_0 net_4_0 monotouch monodroid, $(PROFILE))
+endif
+PROFILE_2_OR_4 := $(filter net_2_0 net_4_0 net_4_5, $(PROFILE))
+NOT_SL := $(filter net_2_0 net_4_0 net_4_5 monotouch monodroid, $(PROFILE))
 endif
 ifeq (2.1, $(FRAMEWORK_VERSION))
 LIB_MCS_FLAGS += -d:INSIDE_SYSTEM
 ifeq (moonlight_raw, $(PROFILE))
+LIB_MCS_FLAGS += -d:SECURITY_DEP
+endif
+ifeq (mobile, $(PROFILE))
 LIB_MCS_FLAGS += -d:SECURITY_DEP
 endif
 endif

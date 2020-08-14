@@ -1,12 +1,20 @@
-AC_INIT(README)
+# Process this file with autoconf to produce a configure script.
+#AC_PREREQ([2.62])
+
+AC_INIT(mono, [2.11],
+        [http://bugzilla.xamarin.com/enter_bug.cgi?classification=Mono])
+
+AC_CONFIG_SRCDIR([README])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
+AC_CANONICAL_HOST
 
 # Gross hack to enable 'make dist' on automake 1.9+tar 1.14.
 # The extra brackets are to foil regex-based scans.
 m4_ifdef([_A][M_PROG_TAR],[_A][M_SET_OPTION([tar-ustar])])
 
-AC_CONFIG_HEADERS(config.h)
-AM_INIT_AUTOMAKE(mono,2.10.13)
+AM_INIT_AUTOMAKE([1.9 dist-bzip2 tar-ustar no-dist-gzip foreign])
+AM_CONFIG_HEADER([config.h])
 AM_MAINTAINER_MODE
 
 API_VER=2.0
@@ -87,11 +95,21 @@ case "$host" in
 		host_win32=yes
 		if test "x$cross_compiling" = "xno"; then
 			target_win32=yes
-			if test "x$host" == "x$build"; then
+			if test "x$host" == "x$build" -a "x$host" == "x$target"; then
 				AC_DEFINE(TARGET_WIN32,1,[Target OS is Win32])
 			fi
-			CC="gcc -mno-cygwin -g"
-			CXX="g++ -mno-cygwin -g"
+			#
+			# gcc-3/g++-3 are from the gcc-core/gcc-g++ cygwin packages.
+			# Other gcc packages will not work:
+			# - the gcc-4 packages no longer support -mno-cygwin
+			# - the mingw-gcc packages produce executables which depends on a libgcc<...>
+			# dll, which means we would have to distribute that file too.
+			#
+			if test "x$CC" != "x"; then
+				AC_ERROR(Don't set CC. mono can only be compiled with gcc-3 from the 'gcc-core' package)
+			fi
+			CC="gcc-3.exe -mno-cygwin -g"
+			CXX="g++-3.exe -mno-cygwin -g"
 			# So libgc configure gets -mno-cygwin
 			export CC
 			export CXX
@@ -173,7 +191,7 @@ case "$host" in
 		with_sigaltstack=no
 		use_sigposix=yes
 		;;
-	*-*-linux-android*)
+	*-linux-android*)
 		host_win32=no
 		platform_android=yes
 		AC_DEFINE(PLATFORM_ANDROID,1,[Targeting the Android platform])
@@ -192,9 +210,7 @@ case "$host" in
 		with_sigaltstack=no
 		with_static_mono=no
 
-		# Android doesn't support boehm, as it's missing <link.h>
-		support_boehm=no
-		with_gc=sgen
+		no_version_script=yes
 
 		# isinf(3) requires -lm; see isinf check below
 		LDFLAGS="$LDFLAGS -lm"
@@ -337,6 +353,7 @@ AC_PROG_CC
 AC_CHECK_TOOL(CXX, g++, g++)
 AC_PROG_CXX
 AM_PROG_AS
+AM_PROG_CC_STDC
 AC_PROG_INSTALL
 AC_PROG_AWK
 dnl We should use AM_PROG_AS, but it's not available on automake/aclocal 1.4
@@ -354,12 +371,6 @@ if test "x$CXX" = "xg++"; then
 		# are inside automake conditionals
 		AC_MSG_ERROR([You need to install g++])
 	fi
-fi
-
-AC_CHECK_PROG(BISON, bison,yes,no)
-if test "x$BISON" = "xno";
-then
-	AC_MSG_ERROR([You need to install bison])
 fi
 
 dnl may require a specific autoconf version
@@ -400,10 +411,16 @@ if test "x$lt_cv_prog_gnu_ld" = "xno"; then
    no_version_script=yes
 fi
 
+AM_ICONV()
+
 AM_CONDITIONAL(NO_VERSION_SCRIPT, test x$no_version_script = xyes)
 
-AC_CHECK_HEADERS(sys/filio.h sys/sockio.h netdb.h utime.h sys/utime.h semaphore.h sys/un.h linux/rtc.h sys/syscall.h sys/mkdev.h sys/uio.h sys/param.h)
+AC_CHECK_HEADERS(sys/filio.h sys/sockio.h netdb.h utime.h sys/utime.h semaphore.h sys/un.h linux/rtc.h sys/syscall.h sys/mkdev.h sys/uio.h sys/param.h fcntl.h memory.h sys/stat.h)
 AC_CHECK_HEADERS(sys/param.h sys/socket.h sys/ipc.h sys/sem.h sys/utsname.h alloca.h ucontext.h pwd.h sys/select.h netinet/tcp.h netinet/in.h unistd.h sys/types.h link.h asm/sigcontext.h)
+AC_CHECK_HEADERS([linux/netlink.h linux/rtnetlink.h],
+                  [], [], [#include <stddef.h>
+		  #include <sys/socket.h>
+		  #include <linux/socket.h>])
 
 AC_CHECK_HEADERS(sys/user.h, [], [],
 [
@@ -458,6 +475,8 @@ AC_TRY_LINK([#include <math.h>], [
 	AC_MSG_RESULT(no)
 ])
 
+# for Linux statfs support
+AC_CHECK_HEADERS(linux/magic.h)
 
 # not 64 bit clean in cross-compile
 AC_CHECK_SIZEOF(void *, 4)
@@ -611,28 +630,15 @@ AC_ARG_WITH(crosspkgdir, [  --with-crosspkgdir=/path/to/pkg-config/dir      Chan
 	fi
 )
 
-AC_ARG_WITH([glib],
-	[  --with-glib=embedded|system    Choose glib API: system or embedded (default to embedded)],
-	[], [with_glib=embedded])
-
 ac_configure_args="$ac_configure_args \"CPPFLAGS_FOR_EGLIB=$EGLIB_CPPFLAGS\" \"CFLAGS_FOR_EGLIB=$CFLAGS_FOR_EGLIB\""
 AC_CONFIG_SUBDIRS(eglib)
 
-case $with_glib in
-embedded) 
-  GLIB_CFLAGS='-I$(top_srcdir)/eglib/src -I$(top_builddir)/eglib/src'
-  GLIB_LIBS='-L$(top_builddir)/eglib/src -leglib -lm'
-  BUILD_GLIB_CFLAGS="$GLIB_CFLAGS"
-  BUILD_GLIB_LIBS="$GLIB_LIBS"
-  GMODULE_CFLAGS="$GLIB_CFLAGS"
-  GMODULE_LIBS="$GLIB_LIBS"
-  ;;
-system)
-  AC_MSG_ERROR([--with-glib=system is no longer supported as of Mono 2.8])
-  ;;
-*)
-  AC_MSG_ERROR([Invalid argument to --with-glib.])
-esac
+GLIB_CFLAGS='-I$(top_srcdir)/eglib/src -I$(top_builddir)/eglib/src'
+GLIB_LIBS='-L$(top_builddir)/eglib/src -leglib -lm'
+BUILD_GLIB_CFLAGS="$GLIB_CFLAGS"
+BUILD_GLIB_LIBS="$GLIB_LIBS"
+GMODULE_CFLAGS="$GLIB_CFLAGS"
+GMODULE_LIBS="$GLIB_LIBS"
   
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
@@ -1098,15 +1104,20 @@ if test x$target_win32 = xno; then
 	AC_DEFUN([LARGE_FILES], [
 		large_CPPFLAGS=$CPPFLAGS
 		CPPFLAGS="$CPPFLAGS $1"
-		AC_TRY_COMPILE([
+		AC_TRY_RUN([
 			#include <sys/types.h>
-			#include <limits.h>
-		], [
-			/* Lifted this compile time assert method from: http://www.jaggersoft.com/pubs/CVu11_3.html */
-			#define COMPILE_TIME_ASSERT(pred) \
-				switch(0){case 0:case pred:;}
 
-			COMPILE_TIME_ASSERT(sizeof(off_t) * CHAR_BIT == 64);
+			#define BIG_OFF_T (((off_t)1<<62)-1+((off_t)1<<62))
+
+			int main(void) {
+				int big_off_t=((BIG_OFF_T%2147483629==721) &&
+					       (BIG_OFF_T%2147483647==1));
+				if(big_off_t) {
+					exit(0);
+				} else {
+					exit(1);
+				}
+			}
 		], [
 			AC_MSG_RESULT(ok)
 			AC_DEFINE(HAVE_LARGE_FILE_SUPPORT, 1, [Have large file support])
@@ -1114,7 +1125,7 @@ if test x$target_win32 = xno; then
 			large_offt=yes
 		], [
 			AC_MSG_RESULT(no)
-		])
+		], "")
 		CPPFLAGS=$large_CPPFLAGS
 	])
 
@@ -1364,6 +1375,7 @@ if test x$target_win32 = xno; then
 	AC_CHECK_HEADERS(pthread.h)
 	AC_CHECK_FUNCS(pthread_mutex_timedlock)
 	AC_CHECK_FUNCS(pthread_getattr_np pthread_attr_get_np)
+	AC_CHECK_FUNCS(pthread_kill)
 	AC_MSG_CHECKING(for PTHREAD_MUTEX_RECURSIVE)
 	AC_TRY_COMPILE([ #include <pthread.h>], [
 		pthread_mutexattr_t attr;
@@ -1464,7 +1476,11 @@ if test x$target_win32 = xno; then
 			child ()
 			{
 				struct sigaction sa;
+			#ifdef __APPLE__
+				stack_t sas;
+			#else
 				struct sigaltstack sas;
+			#endif
 				pthread_t id;
 				pthread_attr_t attr;
 
@@ -1476,6 +1492,11 @@ if test x$target_win32 = xno; then
 					return;
 				}
 
+				/* x86 darwin deliver segfaults using SIGBUS */
+				if (sigaction (SIGBUS, &sa, NULL) == -1) {
+					perror ("sigaction");
+					return;
+				}
 				sas.ss_sp = malloc (SIGSTKSZ);
 				sas.ss_size = SIGSTKSZ;
 				sas.ss_flags = 0;
@@ -1721,6 +1742,7 @@ if test x$target_win32 = xno; then
 	AC_CHECK_FUNCS(gethostid sethostid)
 	AC_CHECK_FUNCS(sethostname)
 	AC_CHECK_FUNCS(statfs)
+	AC_CHECK_FUNCS(fstat)
 	AC_CHECK_FUNCS(fstatfs)
 	AC_CHECK_FUNCS(statvfs)
 	AC_CHECK_FUNCS(fstatvfs)
@@ -2092,7 +2114,7 @@ if test "x$enable_llvm" = "xyes"; then
    # from LLVM classes.
    LLVM_CXXFLAGS="`$LLVM_CONFIG --cxxflags` -fno-rtti"
    LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags`
-   LLVM_LIBS=`$LLVM_CONFIG --libs core bitwriter jit x86codegen`
+   LLVM_LIBS=`$LLVM_CONFIG --libs core bitwriter jit mcjit x86codegen`
    LLVM_LIBS="$LLVM_LDFLAGS $LLVM_LIBS -lstdc++"
 
    # Should be something like '2.6' or '2.7svn'
@@ -2142,7 +2164,7 @@ X11="libX11.so"
 
 sizeof_register="SIZEOF_VOID_P"
 
-jit_wanted=false
+jit_wanted=true
 interp_wanted=false
 sgen_supported=false
 case "$host" in
@@ -2153,9 +2175,9 @@ case "$host" in
 	mips*)
 		TARGET=MIPS;
 		arch_target=mips;
+		sgen_supported=true
 		ACCESS_UNALIGNED="no"
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 
 		AC_MSG_CHECKING(for mips n32)
 		AC_TRY_COMPILE([], [
@@ -2175,7 +2197,6 @@ case "$host" in
 		TARGET=X86;
 		arch_target=x86;
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 		case $host_os in
 		  solaris*)
 			LIBC="libc.so"
@@ -2196,8 +2217,10 @@ case "$host" in
 			# foo.c:6: warning: visibility attribute not supported in this configuration; ignored
 			# ld: fatal: relocation error: R_386_GOTOFF: file /var/tmp//ccxYR96k.o: symbol astruct: relocation must bind locally
 			have_visibility_hidden=no
+			sgen_supported=true
 			;;
 		  cygwin*)
+			sgen_supported=true
 			have_visibility_hidden=no		  
 			;;
 		  haiku*)
@@ -2216,7 +2239,6 @@ case "$host" in
 		TARGET=AMD64;
 		arch_target=amd64;
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 		case $host_os in
 		  linux*)
 			sgen_supported=true
@@ -2238,7 +2260,6 @@ case "$host" in
 		arch_target=ia64
 		ACCESS_UNALIGNED="no"
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 		LIBC="libc.so.6.1"
 		INTL="libc.so.6.1"
 		AC_CHECK_LIB(unwind, _U_dyn_register, [], [AC_MSG_ERROR(library libunwind not found)])
@@ -2259,7 +2280,6 @@ case "$host" in
 			LIBC="libc.so"
 			INTL="libintl.so"
 		esac
-		jit_wanted=true
 		if test x"$GCC" = xyes; then
 			# We don't support v8 cpus
 			CFLAGS="$CFLAGS -Wno-cast-align -mcpu=v9"
@@ -2267,12 +2287,12 @@ case "$host" in
 		if test x"$AR" = xfalse; then
 			AC_MSG_ERROR([The required utility 'ar' is not found in your PATH. Usually it can be found in /usr/ccs/bin.])
 		fi
+		sgen_supported=true
 		;;
        alpha*-*-linux* | alpha*-*-osf*)
 		TARGET=ALPHA;
 		ACCESS_UNALIGNED="no"
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 		arch_target=alpha;
 		CFLAGS="$CFLAGS -mieee -O0"
 		case $host_os in
@@ -2299,7 +2319,6 @@ case "$host" in
 		arch_target=hppa; 
 		ACCESS_UNALIGNED="no"
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 		;;
 	macppc-*-openbsd* | powerpc*-*-linux* | powerpc-*-openbsd* | \
         powerpc-*-sysv* | powerpc-*-darwin* | powerpc-*-netbsd* | powerpc-*-freebsd* )
@@ -2313,7 +2332,6 @@ case "$host" in
 		fi
 		arch_target=ppc;
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 		case $host_os in
 		  linux*|darwin*)
 			sgen_supported=true
@@ -2326,7 +2344,6 @@ case "$host" in
 		ACCESS_UNALIGNED="no"
 		JIT_SUPPORTED=yes
 		CPPFLAGS="$CPPFLAGS -DARM_FPU_VFP=1 -D__ARM_EABI__ -DHAVE_ARMV6=1"
-		jit_wanted=true
 		# libgc's gc_locks.h depends on this
 	    NESTED_LIBGC_FLAGS="$NESTED_LIBGC_FLAGS -DHAVE_ARMV6"
 		sgen_supported=true
@@ -2336,15 +2353,14 @@ case "$host" in
 		arch_target=arm;
 		ACCESS_UNALIGNED="no"
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 		sgen_supported=true
+		AOT_SUPPORTED="yes"
 		;;
 	s390-*-linux*)
 		TARGET=S390;
 		arch_target=s390;
 		ACCESS_UNALIGNED="yes"
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 		sgen_supported=true
 		# Required CFLAGS for s390[x].  USE_STRING_INLINES is automatic with gcc 4.1
 		CFLAGS="$CFLAGS -mbackchain -D__USE_STRING_INLINES"
@@ -2354,7 +2370,6 @@ case "$host" in
 		arch_target=s390x;
 		ACCESS_UNALIGNED="yes"
 		JIT_SUPPORTED=yes
-		jit_wanted=true
 		sgen_supported=true
 		CFLAGS="$CFLAGS -mbackchain -D__USE_STRING_INLINES"
 		;;
@@ -2390,6 +2405,12 @@ if test "x$host" != "x$target"; then
 		AC_DEFINE(TARGET_AMD64, 1, [...])
 		AC_DEFINE(__mono_ilp32__, 1, [64 bit mode with 4 byte longs and pointers])
 		sizeof_register=8
+		;;
+   *-*-nacl)
+		TARGET=X86
+		arch_target=x86
+		AC_DEFINE(TARGET_X86, 1, [...])
+		sizeof_register=4
 		;;
    armv7l-unknown-linux-gnueabi*)
 		# TEGRA
@@ -2452,6 +2473,9 @@ POWERPC64)
 	AC_DEFINE(TARGET_POWERPC, 1, [...])
 	AC_DEFINE(TARGET_POWERPC64, 1, [...])
 	;;
+S390x)
+	AC_DEFINE(TARGET_S390X, 1, [...])
+	;;
 esac
 
 if test "x$sizeof_register" = "x4"; then
@@ -2499,22 +2523,6 @@ if test x$buildsgen = xyes; then
 fi
 AC_SUBST(SGEN_DEFINES)
 AM_CONDITIONAL(SUPPORT_SGEN, test x$buildsgen = xyes)
-
-AC_ARG_WITH(jit, [  --with-jit=yes,no              If you want to build scripts that default to the JIT (defaults to no)],[
-	if test x$withval = xyes; then
-	   jit_wanted=true
-	else
-	   jit_wanted=false
-	fi
-])
-
-AC_ARG_WITH(interp, [  --with-interp=yes,no           If you want to build scripts that default to the interpreter (defaults to no)],[
-	if test x$withval = xyes; then
-	   interp_wanted=true
-	else
-	   interp_wanted=false
-	fi
-])
 
 USEJIT=false
 if test x$JIT_SUPPORTED = xyes; then
@@ -2608,7 +2616,7 @@ fi
 mono_debugger_supported=no
 AC_ARG_ENABLE(mono-debugger, [  --disable-mono-debugger disable support for the mdb debugger], try_mono_debugger=$enableval, try_mono_debugger=yes)
 if test "x$try_mono_debugger" = "xyes"; then
-	if test "x$TARGET" = "xAMD64" -o "x$TARGET" = "xX86" -o "x$TARGET" = "xALPHA"; then
+	if test "x$TARGET" = "xAMD64" -o "x$TARGET" = "xX86" -o "x$TARGET" = "xALPHA" -o "x$TARGET" = "xS390x"; then
 		if test x$use_included_gc = xyes; then
 			case "$host" in
 			*-*-*linux*)
@@ -2626,9 +2634,6 @@ fi
 if test "x$with_moonlight" != "xno"; then
 	mono_debugger_supported=no
 fi
-
-# mdb support for sgen is broken, disable it until further notice.
-mono_debugger_supported=no
 
 AC_MSG_CHECKING(if the Mono Debugger is supported on this platform)
 if test "x$mono_debugger_supported" = "xyes"; then
@@ -2658,9 +2663,18 @@ if test ${TARGET} = ARM && test x$cross_compiling = xno && test x$enable_mcs_bui
 	dnl ******************************************
 	AC_MSG_CHECKING(which FPU to use)
 
-	AC_TRY_COMPILE([], [
-		__asm__ ("ldfd f0, [r0]");
-		], fpu=FPA, fpu=NONE)
+	ORIG_CFLAGS=$CFLAGS
+	CFLAGS="$CFLAGS -mfpu=vfp -mfloat-abi=softfp"
+	AC_TRY_RUN([
+		int main () { __asm__ ("faddd	d7, d6, d7"); return 0; }
+			], fpu=VFP, fpu=NONE)
+	CFLAGS=$ORIG_CFLAGS
+
+	if test x$fpu = xNONE; then
+		AC_TRY_COMPILE([], [
+			__asm__ ("ldfd f0, [r0]");
+			], fpu=FPA, fpu=NONE)
+	fi
 
 	AC_MSG_RESULT($fpu)
 	CPPFLAGS="$CPPFLAGS -DARM_FPU_$fpu=1"
@@ -2711,9 +2725,10 @@ case "x$gc" in
 esac
 
 #AC_ARG_WITH(profile2,  [  --with-profile2=yes,no          If you want to install the 2.0 FX (defaults to yes)],                 [], [with_profile2=yes])
-AC_ARG_WITH(profile4,  [  --with-profile4=yes,no          If you want to install the 4.0 FX (defaults to yes)],                  [], [with_profile4=yes])
+AC_ARG_WITH(profile4,  [  --with-profile4=yes,no          If you want to install the 4.x FX (defaults to yes)],                  [], [with_profile4=yes])
 AC_ARG_WITH(monodroid, [  --with-monodroid=yes,no         If you want to build the MonoDroid 2.1 assemblies (defaults to no)], [], [with_monodroid=no])
 AC_ARG_WITH(monotouch, [  --with-monotouch=yes,no         If you want to build the MonoTouch 2.1 assemblies (defaults to no)], [], [with_monotouch=no])
+AC_ARG_WITH(mobile,    [  --with-mobile=yes,no            If you want to build the Mobile 2.1 assemblies (defaults to no)], [], [with_mobile=no])
 
 OPROFILE=no
 AC_ARG_WITH(oprofile,[  --with-oprofile=no,<oprofile install dir>   Enable oprofile support (defaults to no)],[
@@ -2794,6 +2809,7 @@ AM_CONDITIONAL(MOONLIGHT_SGEN, [test "x$with_moon_gc" = "xsgen"])
 AM_CONDITIONAL(INSTALL_4_0, [test "x$with_profile4" = xyes])
 AM_CONDITIONAL(INSTALL_MONODROID, [test "x$with_monodroid" = xyes])
 AM_CONDITIONAL(INSTALL_MONOTOUCH, [test "x$with_monotouch" = xyes])
+AM_CONDITIONAL(INSTALL_MOBILE, [test "x$with_mobile" = xyes])
 
 AM_CONDITIONAL(MIPS_GCC, test ${TARGET}${ac_cv_prog_gcc} = MIPSyes)
 AM_CONDITIONAL(MIPS_SGI, test ${TARGET}${ac_cv_prog_gcc} = MIPSno)
@@ -2952,9 +2968,23 @@ AC_CONFIG_COMMANDS([runtime/etc/mono/4.0/web.config],
     cd $depth
 ],[LN_S='$LN_S'])
 
+AC_CONFIG_COMMANDS([runtime/etc/mono/4.5/machine.config],
+[   depth=../../../..
+    case $srcdir in
+    [[\\/$]]* | ?:[[\\/]]* ) reldir=$srcdir ;;
+    .) reldir=$depth ;;
+    *) reldir=$depth/$srcdir ;;
+    esac
+    $ac_aux_dir/install-sh -d runtime/etc/mono/4.5
+    cd runtime/etc/mono/4.5
+    rm -f machine.config
+    $LN_S $reldir/data/net_4_5/machine.config machine.config
+    cd $depth
+],[LN_S='$LN_S'])
+
 if test x$enable_quiet_build = xyes; then
    AC_CONFIG_COMMANDS([quiet], [for i in `find mono libgc support -name Makefile.in | sed -e 's/Makefile.in/Makefile/g'`; do if test -f $i; then $srcdir/scripts/patch-quiet.sh $i; fi; done], [shell=$SHELL])
-   AC_CONFIG_COMMANDS([quiet-libtool], [sed -e 's/$echo "copying selected/$show "copying selected/g' < libtool > libtool.tmp && mv libtool.tmp libtool && chmod a+x libtool; sed -e 's/$ECHO "copying selected/# "copying selected/g' < libtool > libtool.tmp && mv libtool.tmp libtool && chmod a+x libtool])
+   AC_CONFIG_COMMANDS([quiet-libtool], [sed -e 's/echo "copying selected/# "copying selected/g' < libtool > libtool.tmp && mv libtool.tmp libtool && chmod a+x libtool; sed -e 's/$ECHO "copying selected/# "copying selected/g' < libtool > libtool.tmp && mv libtool.tmp libtool && chmod a+x libtool])
 fi
 
 AC_OUTPUT([
@@ -2995,6 +3025,7 @@ mono/monograph/Makefile
 mono/io-layer/Makefile
 mono/mini/Makefile
 mono/profiler/Makefile
+m4/Makefile
 ikvm-native/Makefile
 scripts/Makefile
 man/Makefile
@@ -3002,6 +3033,7 @@ docs/Makefile
 data/Makefile
 data/net_2_0/Makefile
 data/net_4_0/Makefile
+data/net_4_5/Makefile
 data/net_2_0/Browsers/Makefile
 data/mint.pc
 data/mono-2.pc
@@ -3109,6 +3141,10 @@ fi
     if test x$with_moonlight != xno; then
       echo "MOONLIGHT = 1" >> $srcdir/$mcsdir/build/config.make
     fi
+    
+    if test x$with_profile4 != xyes; then
+      echo "DEFAULT_PROFILE = net_2_0" >> $srcdir/$mcsdir/build/config.make
+    fi
 
   fi
 
@@ -3138,7 +3174,6 @@ echo "
 
    Engine:
 	GC:	       $gc_msg 
-	GLIB:	       $with_glib
 	TLS:           $with_tls
 	SIGALTSTACK:   $with_sigaltstack
 	Engine:        $jit_status
@@ -3152,6 +3187,7 @@ echo "
 	Moon Profile:  $with_moonlight ($with_moon_gc)
 	MonoDroid:     $with_monodroid
 	MonoTouch:     $with_monotouch
+	Mobile:        $with_mobile
 	JNI support:   $jdk_headers_found
 	libgdiplus:    $libgdiplus_msg
 	zlib:          $zlib_msg

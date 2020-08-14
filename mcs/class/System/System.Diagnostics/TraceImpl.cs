@@ -37,7 +37,6 @@ using System.Threading;
 
 namespace System.Diagnostics {
 
-#if !MOBILE
 	internal class TraceImplSettings {
 		public const string Key = ".__TraceInfoSettingsKey__.";
 
@@ -50,13 +49,10 @@ namespace System.Diagnostics {
 			Listeners.Add (new DefaultTraceListener (), this);
 		}
 	}
-#endif
 
 	internal class TraceImpl {
 
-#if !MOBILE
 		private static object initLock = new object ();
-#endif
 
 		private static bool autoFlush;
 
@@ -94,13 +90,6 @@ namespace System.Diagnostics {
 		private TraceImpl ()
 		{
 		}
-
-#if MOBILE
-		static TraceImpl ()
-		{
-			listeners = new TraceListenerCollection (true);
-		}
-#endif
 
 		public static bool AutoFlush {
 			get {
@@ -162,7 +151,7 @@ namespace System.Diagnostics {
 		}
 
 		static bool use_global_lock;
-#if NET_2_0 && !MOBILE
+#if NET_2_0
 		static CorrelationManager correlation_manager = new CorrelationManager ();
 
 		public static CorrelationManager CorrelationManager {
@@ -204,7 +193,6 @@ namespace System.Diagnostics {
 		// in the IDictionary returned).
 		private static void InitOnce ()
 		{
-#if !MOBILE
 			if (initLock != null) {
 				lock (initLock) {
 					if (listeners == null) {
@@ -221,7 +209,6 @@ namespace System.Diagnostics {
 				}
 				initLock = null;
 			}
-#endif
 		}
 
 		// FIXME: According to MSDN, this method should display a dialog box

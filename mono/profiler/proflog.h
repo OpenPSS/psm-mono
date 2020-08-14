@@ -5,12 +5,13 @@
 #define LOG_HEADER_ID 0x4D505A01
 #define LOG_VERSION_MAJOR 0
 #define LOG_VERSION_MINOR 4
-#define LOG_DATA_VERSION 4
+#define LOG_DATA_VERSION 5
 /*
  * Changes in data versions:
  * version 2: added offsets in heap walk
  * version 3: added GC roots
  * version 4: added sample/statistical profiling
+ * version 5: added jit timings
  */
 
 enum {
@@ -49,6 +50,7 @@ enum {
 	TYPE_ENTER     = 2 << 4,
 	TYPE_EXC_LEAVE = 3 << 4,
 	TYPE_JIT       = 4 << 4,
+	TYPE_JIT_START = 1 << 7,
 	/* extended type for TYPE_EXCEPTION */
 	TYPE_THROW        = 0 << 4,
 	TYPE_CLAUSE       = 1 << 4,

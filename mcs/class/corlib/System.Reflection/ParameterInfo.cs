@@ -44,7 +44,8 @@ namespace System.Reflection
 		protected string NameImpl;
 		protected int PositionImpl;
 		protected ParameterAttributes AttrsImpl;
-		private MarshalAsAttribute marshalAs;
+		private UnmanagedMarshal marshalAs;
+		//ParameterInfo parent;
 
 		protected ParameterInfo () {
 		}
@@ -88,7 +89,7 @@ namespace System.Reflection
 		}
 
 		/* to build a ParameterInfo for the return type of a method */
-		internal ParameterInfo (Type type, MemberInfo member, MarshalAsAttribute marshalAs) {
+		internal ParameterInfo (Type type, MemberInfo member, UnmanagedMarshal marshalAs) {
 			this.ClassImpl = type;
 			this.MemberImpl = member;
 			this.NameImpl = "";
@@ -183,7 +184,11 @@ namespace System.Reflection
 		[MethodImplAttribute (MethodImplOptions.InternalCall)]
 		extern int GetMetadataToken ();
 
-		public int MetadataToken {
+		public
+#if NET_4_0 || MOONLIGHT
+		virtual
+#endif
+		int MetadataToken {
 			get {
 				if (MemberImpl is PropertyInfo) {
 					PropertyInfo prop = (PropertyInfo)MemberImpl;
@@ -238,7 +243,7 @@ namespace System.Reflection
 				attrs [count ++] = new OutAttribute ();
 
 			if (marshalAs != null)
-				attrs [count ++] = marshalAs.Copy ();
+				attrs [count ++] = marshalAs.ToMarshalAsAttribute ();
 
 			return attrs;
 		}			

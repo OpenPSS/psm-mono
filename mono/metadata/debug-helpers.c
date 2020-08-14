@@ -326,10 +326,10 @@ mono_method_desc_new (const char *name, gboolean include_namespace)
 		g_free (class_nspace);
 		return NULL;
 	}
-	/* allow two :: to separate the method name */
-	if (method_name [-1] == ':')
-		method_name [-1] = 0;
 	*method_name++ = 0;
+	/* allow two :: to separate the method name */
+	if (*method_name == ':')
+		method_name++;
 	class_name = strrchr (class_nspace, '.');
 	if (class_name) {
 		*class_name++ = 0;
@@ -774,17 +774,17 @@ mono_method_full_name (MonoMethod *method, gboolean signature)
 	}
 
 	if (method->wrapper_type != MONO_WRAPPER_NONE)
-		sprintf (wrapper, "(wrapper %s) ", wrapper_type_to_str (method->wrapper_type));
+		g_snprintf (wrapper, sizeof(wrapper), "(wrapper %s) ", wrapper_type_to_str (method->wrapper_type));
 	else
-		strcpy (wrapper, "");
+		wrapper[0] = '\0';
 
 	if (signature) {
 		char *tmpsig = mono_signature_get_desc (mono_method_signature (method), TRUE);
 
 		if (method->wrapper_type != MONO_WRAPPER_NONE)
-			sprintf (wrapper, "(wrapper %s) ", wrapper_type_to_str (method->wrapper_type));
+			g_snprintf (wrapper, sizeof(wrapper), "(wrapper %s) ", wrapper_type_to_str (method->wrapper_type));
 		else
-			strcpy (wrapper, "");
+			wrapper[0] = '\0';
 		res = g_strdup_printf ("%s%s:%s%s (%s)", wrapper, klass_desc, 
 							   method->name, inst_desc ? inst_desc : "", tmpsig);
 		g_free (tmpsig);
@@ -1003,7 +1003,7 @@ mono_class_describe_statics (MonoClass* klass)
 
 	if (!vtable)
 		return;
-	if (!(addr = vtable->data))
+	if (!(addr = mono_vtable_get_static_field_data (vtable)))
 		return;
 
 	for (p = klass; p != NULL; p = p->parent) {

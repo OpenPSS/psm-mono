@@ -111,6 +111,7 @@ namespace MonoTests.System.Security.Permissions {
 			Assert.AreEqual (8, GetTokenIndex (p));
 		}
 #if NET_2_0
+#if !NET_2_1
 		[Test]
 		public void HostProtection ()
 		{
@@ -119,6 +120,7 @@ namespace MonoTests.System.Security.Permissions {
 			IPermission p = hpa.CreatePermission ();
 			Assert.AreEqual (9, GetTokenIndex (p));
 		}
+#endif
 #endif
 		[Test]
 		public void PublisherIdentity ()

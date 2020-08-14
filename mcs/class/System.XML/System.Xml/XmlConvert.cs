@@ -928,7 +928,38 @@ namespace System.Xml {
 		}
 
 #endif
+
 #if NET_4_0 || NET_2_1
+		public static bool IsNCNameChar (char ch)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public static bool IsPublicIdChar (char ch)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public static bool IsStartNCNameChar (char ch)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public static bool IsWhitespaceChar (char ch)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public static bool IsXmlChar (char ch)
+		{
+			throw new NotImplementedException ();
+		}
+
+		public static bool IsXmlSurrogatePair (char lowChar, char highChar)
+		{
+			throw new NotImplementedException ();
+		}
+		
 		public static string VerifyPublicId (string publicId)
 		{
 			throw new NotImplementedException ();

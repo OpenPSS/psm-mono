@@ -37,6 +37,9 @@ using System.Security.Policy;
 namespace MonoTests.System.Security.Policy {
 
 	[TestFixture]
+#if MOBILE
+	[Category("NotWorking")]
+#endif
 	public class ZoneTest  {
 
 		[Test]
@@ -188,6 +191,7 @@ namespace MonoTests.System.Security.Policy {
 		};
 
 		[Test]
+		[Category("PssFileIO")]
 		public void CreateFromUrl_MyComputer ()
 		{
 			foreach (string u in myComputerUrls) {

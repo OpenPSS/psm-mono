@@ -30,7 +30,7 @@ using System.Diagnostics.SymbolStore;
 using System.Reflection;
 
 namespace System.Runtime.CompilerServices {
-#if CLR2 || SILVERLIGHT
+#if CLR2 || SILVERLIGHT || MOBILE
     using ILGenerator = OffsetTrackingILGenerator;
 #endif
 

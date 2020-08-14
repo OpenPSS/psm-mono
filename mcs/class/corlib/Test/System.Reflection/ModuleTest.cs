@@ -20,6 +20,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Reflection
 {
 [TestFixture]
+[Category("PssFileIO")]
 public class ModuleTest
 {
 	static string TempFolder = Path.Combine (Path.GetTempPath (), "MonoTests.System.Reflection.ModuleTest");
@@ -94,6 +95,7 @@ public class ModuleTest
 
 	[Test]
 	[Category("NotDotNet")] // path length can cause suprious failures
+	[Category("NotMobile")] // no S.R.E.in mobile profile
 	public void TestGlobalData () {
 
 		string name = "moduletest-assembly";
@@ -329,6 +331,7 @@ public class ModuleTest
 	}
 
 	[Test]
+	[Category("NotMobile")] // no S.R.E.in mobile profile
 	public void GetTypes ()
 	{
 		AssemblyName newName = new AssemblyName ();

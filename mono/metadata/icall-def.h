@@ -47,7 +47,6 @@ ICALL(COMPROX_2, "FindProxy", ves_icall_Mono_Interop_ComInteropProxy_FindProxy)
 
 ICALL_TYPE(RUNTIME, "Mono.Runtime", RUNTIME_1)
 ICALL(RUNTIME_1, "GetDisplayName", ves_icall_Mono_Runtime_GetDisplayName)
-ICALL(RUNTIME_12, "GetNativeStackTrace", ves_icall_Mono_Runtime_GetNativeStackTrace)
 
 #ifndef PLATFORM_RO_FS
 ICALL_TYPE(KPAIR, "Mono.Security.Cryptography.KeyPairPersistence", KPAIR_1)
@@ -57,6 +56,10 @@ ICALL(KPAIR_3, "_IsUserProtected", ves_icall_Mono_Security_Cryptography_KeyPairP
 ICALL(KPAIR_4, "_ProtectMachine", ves_icall_Mono_Security_Cryptography_KeyPairPersistence_ProtectMachine)
 ICALL(KPAIR_5, "_ProtectUser", ves_icall_Mono_Security_Cryptography_KeyPairPersistence_ProtectUser)
 #endif /* !PLATFORM_RO_FS */
+
+ICALL_TYPE(SYSX509, "Mono.Security.X509.SystemX509Store", SYSX509_1)
+ICALL(SYSX509_1, "FreeSystemCerts", ves_icall_Mono_Security_SystemX509Store_FreeSystemCerts)
+ICALL(SYSX509_2, "LoadSystemCerts", ves_icall_Mono_Security_SystemX509Store_LoadSystemCerts)
 
 ICALL_TYPE(ACTIV, "System.Activator", ACTIV_1)
 ICALL(ACTIV_1, "CreateInstanceInternal", ves_icall_System_Activator_CreateInstanceInternal)
@@ -171,6 +174,8 @@ ICALL(DELEGATE_2, "SetMulticastInvoke", ves_icall_System_Delegate_SetMulticastIn
 
 ICALL_TYPE(DEBUGR, "System.Diagnostics.Debugger", DEBUGR_1)
 ICALL(DEBUGR_1, "IsAttached_internal", ves_icall_System_Diagnostics_Debugger_IsAttached_internal)
+ICALL(DEBUGR_2, "IsLogging", ves_icall_System_Diagnostics_Debugger_IsLogging)
+ICALL(DEBUGR_3, "Log", ves_icall_System_Diagnostics_Debugger_Log)
 
 ICALL_TYPE(TRACEL, "System.Diagnostics.DefaultTraceListener", TRACEL_1)
 ICALL(TRACEL_1, "WriteWindowsDebugString", ves_icall_System_Diagnostics_DefaultTraceListener_WriteWindowsDebugString)
@@ -312,13 +317,6 @@ ICALL_TYPE(INOW, "System.IO.InotifyWatcher", INOW_1)
 ICALL(INOW_1, "AddWatch", ves_icall_System_IO_InotifyWatcher_AddWatch)
 ICALL(INOW_2, "GetInotifyInstance", ves_icall_System_IO_InotifyWatcher_GetInotifyInstance)
 ICALL(INOW_3, "RemoveWatch", ves_icall_System_IO_InotifyWatcher_RemoveWatch)
-
-#if (defined (__MACH__) && defined (TARGET_ARM)) || defined (TARGET_ANDROID)
-ICALL_TYPE(MMAPIMPL, "System.IO.MemoryMappedFiles.MemoryMapImpl", MMAPIMPL_1)
-ICALL(MMAPIMPL_1, "mono_filesize_from_fd", mono_filesize_from_fd)
-ICALL(MMAPIMPL_2, "mono_filesize_from_path", mono_filesize_from_path)
-#endif
-
 
 ICALL_TYPE(MONOIO, "System.IO.MonoIO", MONOIO_1)
 ICALL(MONOIO_1, "Close(intptr,System.IO.MonoIOError&)", ves_icall_System_IO_MonoIO_Close)
@@ -465,11 +463,13 @@ ICALL(SOCK_18, "SetSocketOption_internal(intptr,System.Net.Sockets.SocketOptionL
 ICALL(SOCK_19, "Shutdown_internal(intptr,System.Net.Sockets.SocketShutdown,int&)", ves_icall_System_Net_Sockets_Socket_Shutdown_internal)
 ICALL(SOCK_20, "Socket_internal(System.Net.Sockets.AddressFamily,System.Net.Sockets.SocketType,System.Net.Sockets.ProtocolType,int&)", ves_icall_System_Net_Sockets_Socket_Socket_internal)
 ICALL(SOCK_21, "WSAIoctl(intptr,int,byte[],byte[],int&)", ves_icall_System_Net_Sockets_Socket_WSAIoctl)
-ICALL(SOCK_21a, "cancel_blocking_socket_operation", icall_cancel_blocking_socket_operation)
 ICALL(SOCK_22, "socket_pool_queue", icall_append_io_job)
 
 ICALL_TYPE(SOCKEX, "System.Net.Sockets.SocketException", SOCKEX_1)
 ICALL(SOCKEX_1, "WSAGetLastError_internal", ves_icall_System_Net_Sockets_SocketException_WSAGetLastError_internal)
+
+ICALL_TYPE(WEB_REQUEST, "System.Net.WebRequest", WEB_REQUEST_1)
+ICALL(WEB_REQUEST_1, "GetSystemWebProxy_internal", ves_icall_System_GetSystemWebProxy_internal)
 #endif /* !DISABLE_SOCKETS */
 
 ICALL_TYPE(NUMBER_FORMATTER, "System.NumberFormatter", NUMBER_FORMATTER_1)
@@ -570,7 +570,7 @@ ICALL(TYPEB_7, "setup_internal_class", mono_reflection_setup_internal_class)
 
 ICALL_TYPE(FIELDI, "System.Reflection.FieldInfo", FILEDI_1)
 ICALL(FILEDI_1, "GetTypeModifiers", ves_icall_System_Reflection_FieldInfo_GetTypeModifiers)
-ICALL(FILEDI_2, "get_marshal_info", ves_icall_System_Reflection_FieldInfo_get_marshal_info)
+ICALL(FILEDI_2, "GetUnmanagedMarshal", ves_icall_System_Reflection_FieldInfo_GetUnmanagedMarshal)
 ICALL(FILEDI_3, "internal_from_handle_type", ves_icall_System_Reflection_FieldInfo_internal_from_handle_type)
 
 ICALL_TYPE(MEMBERI, "System.Reflection.MemberInfo", MEMBERI_1)
@@ -866,11 +866,13 @@ ICALL(SEMA_3, "ReleaseSemaphore_internal(intptr,int,bool&)", ves_icall_System_Th
 
 ICALL_TYPE(THREAD, "System.Threading.Thread", THREAD_1)
 ICALL(THREAD_1, "Abort_internal(System.Threading.InternalThread,object)", ves_icall_System_Threading_Thread_Abort)
+ICALL(THREAD_1aa, "AllocTlsData", mono_thread_alloc_tls)
 ICALL(THREAD_1a, "ByteArrayToCurrentDomain(byte[])", ves_icall_System_Threading_Thread_ByteArrayToCurrentDomain)
 ICALL(THREAD_1b, "ByteArrayToRootDomain(byte[])", ves_icall_System_Threading_Thread_ByteArrayToRootDomain)
 ICALL(THREAD_2, "ClrState(System.Threading.InternalThread,System.Threading.ThreadState)", ves_icall_System_Threading_Thread_ClrState)
 ICALL(THREAD_2a, "ConstructInternalThread", ves_icall_System_Threading_Thread_ConstructInternalThread)
 ICALL(THREAD_3, "CurrentInternalThread_internal", mono_thread_internal_current)
+ICALL(THREAD_3a, "DestroyTlsData", mono_thread_destroy_tls)
 ICALL(THREAD_4, "FreeLocalSlotValues", mono_thread_free_local_slot_values)
 ICALL(THREAD_55, "GetAbortExceptionState", ves_icall_System_Threading_Thread_GetAbortExceptionState)
 ICALL(THREAD_7, "GetDomainID", ves_icall_System_Threading_Thread_GetDomainID)
@@ -896,7 +898,7 @@ ICALL(THREAD_31, "VolatileRead(long&)", ves_icall_System_Threading_Thread_Volati
 ICALL(THREAD_32, "VolatileRead(object&)", ves_icall_System_Threading_Thread_VolatileReadIntPtr)
 ICALL(THREAD_33, "VolatileRead(sbyte&)", ves_icall_System_Threading_Thread_VolatileRead1)
 ICALL(THREAD_34, "VolatileRead(single&)", ves_icall_System_Threading_Thread_VolatileRead4)
-ICALL(THREAD_35, "VolatileRead(uint&)", ves_icall_System_Threading_Thread_VolatileRead4)
+ICALL(THREAD_35, "VolatileRead(uint&)", ves_icall_System_Threading_Thread_VolatileRead2)
 ICALL(THREAD_36, "VolatileRead(uint16&)", ves_icall_System_Threading_Thread_VolatileRead2)
 ICALL(THREAD_37, "VolatileRead(uintptr&)", ves_icall_System_Threading_Thread_VolatileReadIntPtr)
 ICALL(THREAD_38, "VolatileRead(ulong&)", ves_icall_System_Threading_Thread_VolatileRead8)
@@ -909,7 +911,7 @@ ICALL(THREAD_44, "VolatileWrite(long&,long)", ves_icall_System_Threading_Thread_
 ICALL(THREAD_45, "VolatileWrite(object&,object)", ves_icall_System_Threading_Thread_VolatileWriteObject)
 ICALL(THREAD_46, "VolatileWrite(sbyte&,sbyte)", ves_icall_System_Threading_Thread_VolatileWrite1)
 ICALL(THREAD_47, "VolatileWrite(single&,single)", ves_icall_System_Threading_Thread_VolatileWrite4)
-ICALL(THREAD_48, "VolatileWrite(uint&,uint)", ves_icall_System_Threading_Thread_VolatileWrite4)
+ICALL(THREAD_48, "VolatileWrite(uint&,uint)", ves_icall_System_Threading_Thread_VolatileWrite2)
 ICALL(THREAD_49, "VolatileWrite(uint16&,uint16)", ves_icall_System_Threading_Thread_VolatileWrite2)
 ICALL(THREAD_50, "VolatileWrite(uintptr&,uintptr)", ves_icall_System_Threading_Thread_VolatileWriteIntPtr)
 ICALL(THREAD_51, "VolatileWrite(ulong&,ulong)", ves_icall_System_Threading_Thread_VolatileWrite8)

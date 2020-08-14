@@ -142,11 +142,6 @@ typedef struct
 	MonoTryBlockHoleJitInfo holes [MONO_ZERO_LEN_ARRAY];
 } MonoTryBlockHoleTableJitInfo;
 
-typedef struct
-{
-	guint32 stack_size;
-} MonoArchEHJitInfo;
-
 struct _MonoJitInfo {
 	/* NOTE: These first two elements (method and
 	   next_jit_code_hash) must be in the same order and at the
@@ -170,7 +165,6 @@ struct _MonoJitInfo {
 	gboolean    cas_method_permitonly:1;
 	gboolean    has_generic_jit_info:1;
 	gboolean    has_try_block_holes:1;
-	gboolean    has_arch_eh_info:1;
 	gboolean    from_aot:1;
 	gboolean    from_llvm:1;
 
@@ -180,7 +174,6 @@ struct _MonoJitInfo {
 	MonoJitExceptionInfo clauses [MONO_ZERO_LEN_ARRAY];
 	/* There is an optional MonoGenericJitInfo after the clauses */
 	/* There is an optional MonoTryBlockHoleTableJitInfo after MonoGenericJitInfo clauses*/
-	/* There is an optional MonoArchEHJitInfo after MonoTryBlockHoleTableJitInfo */
 };
 
 #define MONO_SIZEOF_JIT_INFO (offsetof (struct _MonoJitInfo, clauses))
@@ -213,6 +206,13 @@ typedef struct _MonoThunkFreeList {
 } MonoThunkFreeList;
 
 typedef struct _MonoJitCodeHash MonoJitCodeHash;
+
+typedef struct _MonoTlsDataRecord MonoTlsDataRecord;
+struct _MonoTlsDataRecord {
+	MonoTlsDataRecord *next;
+	guint32 tls_offset;
+	guint32 size;
+};
 
 struct _MonoDomain {
 	/*
@@ -284,11 +284,18 @@ struct _MonoDomain {
 	MonoMethod         *private_invoke_method;
 	/* Used to store offsets of thread and context static fields */
 	GHashTable         *special_static_fields;
+	MonoTlsDataRecord  *tlsrec_list;
 	/* 
 	 * This must be a GHashTable, since these objects can't be finalized
 	 * if the hashtable contains a GC visible reference to them.
 	 */
 	GHashTable         *finalizable_objects_hash;
+
+	/* These two are boehm only */
+	/* Maps MonoObjects to a GSList of WeakTrackResurrection GCHandles pointing to them */
+	GHashTable         *track_resurrection_objects_hash;
+	/* Maps WeakTrackResurrection GCHandles to the MonoObjects they point to */
+	GHashTable         *track_resurrection_handles_hash;
 
 	/* Protects the three hashes above */
 	CRITICAL_SECTION   finalizable_objects_hash_lock;
@@ -335,6 +342,10 @@ struct _MonoDomain {
 	MonoClass *socket_class;
 	MonoClass *ad_unloaded_ex_class;
 	MonoClass *process_class;
+
+	/* Cache function pointers for architectures  */
+	/* that require wrappers */
+	GHashTable *ftnptrs_hash;
 };
 
 typedef struct  {
@@ -441,9 +452,6 @@ mono_domain_set_internal_with_options (MonoDomain *domain, gboolean migrate_exce
 
 MonoTryBlockHoleTableJitInfo*
 mono_jit_info_get_try_block_hole_table_info (MonoJitInfo *ji) MONO_INTERNAL;
-
-MonoArchEHJitInfo*
-mono_jit_info_get_arch_eh_info (MonoJitInfo *ji) MONO_INTERNAL;
 
 /* 
  * Installs a new function which is used to return a MonoJitInfo for a method inside

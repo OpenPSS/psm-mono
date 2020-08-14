@@ -30,6 +30,7 @@
 //
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[Flags, Serializable]
@@ -41,3 +42,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		IMPLTYPEFLAG_FDEFAULTVTABLE = 8
 	}
 }
+#endif

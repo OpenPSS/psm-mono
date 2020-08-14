@@ -66,9 +66,11 @@ library_CLEAN_FILES += $(build_lib) $(build_lib).so $(build_lib).mdb $(build_lib
 ifdef NO_SIGN_ASSEMBLY
 SN = :
 else
-sn = $(topdir)/class/lib/basic/sn.exe
-SN = $(Q) MONO_PATH="$(topdir)/class/lib/basic$(PLATFORM_PATH_SEPARATOR)$$MONO_PATH" $(RUNTIME) $(RUNTIME_FLAGS) $(sn)
+ifeq ("$(SN)","")
+sn = $(topdir)/class/lib/$(BUILD_TOOLS_PROFILE)/sn.exe
+SN = $(Q) MONO_PATH="$(topdir)/class/lib/$(BUILD_TOOLS_PROFILE)$(PLATFORM_PATH_SEPARATOR)$$MONO_PATH" $(RUNTIME) $(RUNTIME_FLAGS) $(sn)
 SNFLAGS = -q
+endif
 endif
 
 ifeq ($(PLATFORM), win32)
@@ -92,14 +94,14 @@ endif
 
 csproj-local: 
 	config_file=`basename $(LIBRARY) .dll`-$(PROFILE).input; \
-	echo $(thisdir):$$config_file >> $(topdir)/../mono/msvc/scripts/order; \
+	echo $(thisdir):$$config_file >> $(topdir)/../msvc/scripts/order; \
 	(echo $(is_boot); \
 	echo $(MCS);	\
 	echo $(USE_MCS_FLAGS) $(LIBRARY_FLAGS) $(LIB_MCS_FLAGS); \
 	echo $(LIBRARY_NAME); \
 	echo $(BUILT_SOURCES_cmdline); \
 	echo $(build_lib); \
-	echo $(response)) > $(topdir)/../mono/msvc/scripts/inputs/$$config_file
+	echo $(response)) > $(topdir)/../msvc/scripts/inputs/$$config_file
 
 
 install-local: all-local
@@ -155,10 +157,10 @@ package_flag = /package $(LIBRARY_PACKAGE)
 endif
 
 install-local: $(gacutil)
-	$(GACUTIL) /i $(the_lib) /f $(gacdir_flag) /root $(GACROOT) $(package_flag)
+#	$(GACUTIL) /i $(the_lib) /f $(gacdir_flag) /root $(GACROOT) $(package_flag)
 
 uninstall-local: $(gacutil)
-	-$(GACUTIL) /u $(LIBRARY_NAME:.dll=) $(gacdir_flag) /root $(GACROOT) $(package_flag)
+#	-$(GACUTIL) /u $(LIBRARY_NAME:.dll=) $(gacdir_flag) /root $(GACROOT) $(package_flag)
 
 endif # LIBRARY_INSTALL_DIR
 endif # NO_INSTALL
@@ -223,12 +225,12 @@ $(the_lib): $(the_libdir)/.stamp
 
 $(build_lib): $(response) $(sn) $(BUILT_SOURCES) $(build_libdir:=/.stamp)
 	$(LIBRARY_COMPILE) $(LIBRARY_FLAGS) $(LIB_MCS_FLAGS) -target:library -out:$@ $(BUILT_SOURCES_cmdline) @$(response)
-	$(SN) $(SNFLAGS) -R $@ $(LIBRARY_SNK)
+#	$(SN) $(SNFLAGS) -R $@ $(LIBRARY_SNK)
 
 ifdef LIBRARY_USE_INTERMEDIATE_FILE
 $(the_lib): $(build_lib)
 	$(Q) cp $(build_lib) $@
-	$(SN) $(SNFLAGS) -v $@
+#	$(SN) $(SNFLAGS) -v $@
 	$(Q) test ! -f $(build_lib).mdb || mv $(build_lib).mdb $@.mdb
 	$(Q) test ! -f $(build_lib:.dll=.pdb) || mv $(build_lib:.dll=.pdb) $(the_lib:.dll=.pdb)
 endif

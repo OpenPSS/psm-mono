@@ -29,6 +29,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 namespace Mono.CSharp
 {
 	using System;
@@ -183,14 +184,12 @@ namespace Mono.CSharp
 			GenerateCompileUnitEnd (compileUnit);
 		}
 
-#if NET_2_0
 		protected override void GenerateDefaultValueExpression (CodeDefaultValueExpression e)
 		{
 			Output.Write ("default(");
 			OutputType (e.Type);
 			Output.Write (')');
 		}
-#endif
 
 		protected override void GenerateDelegateCreateExpression (CodeDelegateCreateExpression expression)
 		{
@@ -1092,6 +1091,9 @@ namespace Mono.CSharp
 					break;
 			}
 
+			if ((declaration.Attributes & MemberAttributes.New) != 0)
+				output.Write ("new ");
+
 			if (declaration.IsStruct) {
 				if (declaration.IsPartial) {
 					output.Write ("partial ");
@@ -1330,7 +1332,7 @@ namespace Mono.CSharp
 					break;
 				default:
 					StringBuilder sb = new StringBuilder (baseType.Length);
-					if (type.Options == CodeTypeReferenceOptions.GlobalReference) {
+					if ((type.Options & CodeTypeReferenceOptions.GlobalReference) != 0) {
 						sb.Append ("global::");
 					}
 
@@ -1600,3 +1602,4 @@ namespace Mono.CSharp
 		};
 	}
 }
+#endif

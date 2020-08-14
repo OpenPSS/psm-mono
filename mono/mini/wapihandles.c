@@ -74,13 +74,13 @@ int mini_wapi_hps (int argc, char **argv)
 	_wapi_shared_layout = _wapi_shm_attach(WAPI_SHM_DATA);
 	if (_wapi_shared_layout == NULL) {
 		g_error ("Failed to attach shared memory!");
-		exit (-1);
+		mono_exit (-1);
 	}
 
 	_wapi_fileshare_layout = _wapi_shm_attach(WAPI_SHM_FILESHARE);
 	if (_wapi_fileshare_layout == NULL) {
 		g_error ("Failed to attach fileshare shared memory!");
-		exit (-1);
+		mono_exit (-1);
 	}
 	
 	if (argc > 1) {
@@ -119,7 +119,7 @@ int mini_wapi_hps (int argc, char **argv)
 		}
 	}
 	
-	exit (0);
+	mono_exit (0);
 }
 
 static const gchar *unused_details (struct _WapiHandleShared *handle)
@@ -213,7 +213,7 @@ int mini_wapi_semdel (int argc, char **argv)
 	_wapi_shared_layout = _wapi_shm_attach(WAPI_SHM_DATA);
 	if (_wapi_shared_layout == FALSE ||
 	    _wapi_shared_layout->sem_key == 0) {
-		exit (0);
+		mono_exit (0);
 	}
 
 	sem_id = semget (_wapi_shared_layout->sem_key, _WAPI_SHARED_SEM_COUNT, 0600);
@@ -225,7 +225,7 @@ int mini_wapi_semdel (int argc, char **argv)
 		}
 	}
 	
-	exit (0);
+	mono_exit (0);
 }
 
 static void sem_explain (int sem_id, ushort *vals, int which)
@@ -257,7 +257,7 @@ int mini_wapi_seminfo (int argc, char **argv)
 	_wapi_shared_layout = _wapi_shm_attach (WAPI_SHM_DATA);
 	if (_wapi_shared_layout == FALSE ||
 	    _wapi_shared_layout->sem_key == 0) {
-		exit (0);
+		mono_exit (0);
 	}
 	
 	sem_id = semget (_wapi_shared_layout->sem_key, _WAPI_SHARED_SEM_COUNT, 0600);
@@ -282,7 +282,7 @@ int mini_wapi_seminfo (int argc, char **argv)
 		}
 	}
 	
-	exit (0);
+	mono_exit (0);
 }
 
 #endif

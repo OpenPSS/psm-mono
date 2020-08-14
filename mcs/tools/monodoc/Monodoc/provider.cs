@@ -57,7 +57,7 @@ public class Tree : Node {
 		Encoding utf8 = new UTF8Encoding (false, true);
 
 		if (!File.Exists (filename)){
-			throw new FileNotFoundException (null, filename);
+			throw new FileNotFoundException ();
 		}
 		
 		InputStream = File.OpenRead (filename);
@@ -501,12 +501,6 @@ public class HelpSource {
 		get { return trace_level; }
 		set { trace_level = value; }
 	}
-
-	public string BaseDir {
-		get {
-			return base_dir;
-		}
-	}
 	
 	ZipFile zip_file;
 	
@@ -881,6 +875,7 @@ public class RootTree : Tree {
 			}
 			// Temporary workaround for developers distributing a monodoc.dll themselves on Mac
 			if (Directory.Exists (MacMonoDocDir)){
+				Console.WriteLine ("MacDir exists");
 				if (!File.Exists (Path.Combine (basedir, "monodoc.xml"))){
 					basedir = MacMonoDocDir;
 				}
@@ -946,11 +941,7 @@ public class RootTree : Tree {
 		// Load the sources
 		//
 		foreach (var sourceFile in sourceFiles){
-			try {
-				root.AddSourceFile (sourceFile);
-			} catch (Exception ex) {
-				Console.Error.WriteLine ("Error: failed to load help source {0}:\n{1}", sourceFile, ex);
-			}
+			root.AddSourceFile (sourceFile);
 		}
 		
 		foreach (string path in UncompiledHelpSources) {
@@ -1127,8 +1118,8 @@ public class RootTree : Tree {
 			}
 			return null;
 		}
-		catch (FileNotFoundException ex) {
-			Console.Error.WriteLine ("Error: did not find help source {0}", ex.FileName);
+		catch (FileNotFoundException) {
+			Console.Error.WriteLine ("Error: did not find one of the files in sources/"+basefilepath);
 			return null;
 		}
 	}
@@ -1242,6 +1233,7 @@ public class RootTree : Tree {
 		}
 
 		if (nsidx == -1) {
+			Console.Error.WriteLine ("Did not find dot in: " + url);
 			ns = null;
 			type = null;
 			return false;

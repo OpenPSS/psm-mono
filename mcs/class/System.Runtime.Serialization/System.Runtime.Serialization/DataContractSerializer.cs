@@ -13,10 +13,10 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-//
+// 
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-//
+// 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -51,7 +51,6 @@ namespace System.Runtime.Serialization
 		StreamingContext context;
 		ReadOnlyCollection<Type> returned_known_types;
 		KnownTypeCollection known_types;
-		List<Type> specified_known_types;
 		IDataContractSurrogate surrogate;
 		DataContractResolver resolver, default_resolver;
 
@@ -77,7 +76,7 @@ namespace System.Runtime.Serialization
 			QName qname = known_types.GetQName (type);
 
 			FillDictionaryString (qname.Name, qname.Namespace);
-
+			
 		}
 
 		public DataContractSerializer (Type type, string rootName,
@@ -217,16 +216,11 @@ namespace System.Runtime.Serialization
 		void PopulateTypes (IEnumerable<Type> knownTypes)
 		{
 			if (known_types == null)
-				known_types = new KnownTypeCollection ();
-
-			if (specified_known_types == null)
-				specified_known_types = new List<Type> ();
+				known_types= new KnownTypeCollection ();
 
 			if (knownTypes != null) {
-				foreach (Type t in knownTypes) {
+				foreach (Type t in knownTypes)
 					known_types.Add (t);
-					specified_known_types.Add (t);
-				}
 			}
 
 			RegisterTypeAsKnown (type);
@@ -294,7 +288,7 @@ namespace System.Runtime.Serialization
 		public ReadOnlyCollection<Type> KnownTypes {
 			get {
 				if (returned_known_types == null)
-					returned_known_types = new ReadOnlyCollection<Type> (specified_known_types);
+					returned_known_types = new ReadOnlyCollection<Type> (known_types);
 				return returned_known_types;
 			}
 		}
@@ -371,6 +365,18 @@ namespace System.Runtime.Serialization
 		}
 #endif
 
+		private void ReadRootStartElement (XmlReader reader, Type type)
+ 		{
+			SerializationMap map =
+				known_types.FindUserMap (type);
+			QName name = map != null ? map.XmlName :
+				KnownTypeCollection.GetPredefinedTypeName (type);
+			reader.MoveToContent ();
+			reader.ReadStartElement (name.Name, name.Namespace);
+			// FIXME: could there be any attributes to handle here?
+			reader.Read ();
+		}
+
 		// SP1
 		public override void WriteObject (XmlWriter writer, object graph)
 		{
@@ -438,7 +444,7 @@ namespace System.Runtime.Serialization
 			XmlDictionaryWriter writer, object graph)
 		{
 			Type rootType = type;
-
+			
 			if (root_name.Value == "")
 				throw new InvalidDataContractException ("Type '" + type.ToString () +
 					"' cannot have a DataContract attribute Name set to null or empty string.");
@@ -455,24 +461,21 @@ namespace System.Runtime.Serialization
 
 			QName rootQName = null;
 			XmlDictionaryString name, ns;
-			var graphType = graph.GetType ();
-			if (DataContractResolver != null && DataContractResolver.TryResolveType (graphType, type, default_resolver, out name, out ns))
+			if (DataContractResolver != null && DataContractResolver.TryResolveType (graph.GetType (), type, default_resolver, out name, out ns))
 				rootQName = new QName (name.Value, ns.Value);
 
 			// It is error unless 1) TypeResolver resolved the type name, 2) the object is the exact type, 3) the object is known or 4) the type is primitive.
 
-			QName collectionQName;
-			if (KnownTypeCollection.IsInterchangeableCollectionType (type, graphType, out collectionQName)) {
-				graphType = type;
-				rootQName = collectionQName;
-			} else if (graphType != type && rootQName == null && IsUnknownType (type, graphType))
-				throw new SerializationException (String.Format ("Type '{0}' is unexpected. The type should either be registered as a known type, or DataContractResolver should be used.", graphType));
+			if (rootQName == null &&
+			    graph.GetType () != type &&
+			    IsUnknownType (graph.GetType ()))
+				throw new SerializationException (String.Format ("Type '{0}' is unexpected. The type should either be registered as a known type, or DataContractResolver should be used.", graph.GetType ()));
 
 			QName instName = rootQName;
 			rootQName = rootQName ?? known_types.GetQName (rootType);
-			QName graph_qname = known_types.GetQName (graphType);
+			QName graph_qname = known_types.GetQName (graph.GetType ());
 
-			known_types.Add (graphType);
+			known_types.Add (graph.GetType ());
 
 			if (names_filled)
 				writer.WriteStartElement (root_name.Value, root_ns.Value);
@@ -493,8 +496,8 @@ namespace System.Runtime.Serialization
 
 			/* Different names */
 			known_types.Add (rootType);
-
-			instName = instName ?? KnownTypeCollection.GetPredefinedTypeName (graphType);
+			
+			instName = instName ?? KnownTypeCollection.GetPredefinedTypeName (graph.GetType ());
 			if (instName == QName.Empty)
 				/* Not a primitive type */
 				instName = graph_qname;
@@ -509,17 +512,7 @@ namespace System.Runtime.Serialization
 			writer.WriteEndAttribute ();
 */
 		}
-
-		bool IsUnknownType (Type contractType, Type type)
-		{
-			if (type.IsArray) {
-				if (KnownTypeCollection.GetAttribute<CollectionDataContractAttribute> (contractType) != null ||
-				    KnownTypeCollection.GetAttribute<DataContractAttribute> (contractType) != null)
-					return true;
-			}
-			return IsUnknownType (type);
-		}
-
+		
 		bool IsUnknownType (Type type)
 		{
 			if (known_types.Contains (type) ||

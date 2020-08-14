@@ -224,9 +224,8 @@ namespace Mono.Security.X509 {
 			return data;
 		}
 
-		private X509Certificate LoadCertificate (string filename) 
+		internal X509Certificate CertificateFromData (byte[] data)
 		{
-			byte[] data = Load (filename);
 			X509Certificate cert = new X509Certificate (data);
 #if !NET_2_1
 			// If privateKey it's available, load it too..
@@ -245,6 +244,12 @@ namespace Mono.Security.X509 {
 				cert.DSA = new DSACryptoServiceProvider (cspParams);
 #endif
 			return cert;
+		}
+
+		private X509Certificate LoadCertificate (string filename) 
+		{
+			byte[] data = Load (filename);
+			return CertificateFromData(data);
 		}
 
 		private X509Crl LoadCrl (string filename) 
@@ -269,7 +274,7 @@ namespace Mono.Security.X509 {
 			}
 		}
 
-		private X509CertificateCollection BuildCertificatesCollection (string storeName) 
+		protected virtual X509CertificateCollection BuildCertificatesCollection (string storeName) 
 		{
 			X509CertificateCollection coll = new X509CertificateCollection ();
 			string path = Path.Combine (_storePath, storeName);

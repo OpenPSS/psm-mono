@@ -497,10 +497,6 @@ namespace MonoTests.System.Numerics
 			} catch (ArgumentNullException) {}
 
 			Assert.AreEqual (0, (int)new BigInteger (new byte [0]), "#2");
-
-			Assert.AreEqual (0, (int)new BigInteger (new byte [1]), "#3");
-
-			Assert.AreEqual (0, (int)new BigInteger (new byte [2]), "#4");
 		}
 
 		[Test]
@@ -914,6 +910,16 @@ namespace MonoTests.System.Numerics
 			} finally {
 				Thread.CurrentThread.CurrentCulture = old;
 			}
+		}
+
+		[Test]
+		public void CompareToLongToWithBigNumber () {
+			var a = BigInteger.Parse ("123456789123456789"); 
+			var b = BigInteger.Parse ("-123456789123456789");
+			Assert.AreEqual (1, a.CompareTo (2000));
+			Assert.AreEqual (1, a.CompareTo (-2000));
+			Assert.AreEqual (-1, b.CompareTo (2000));
+			Assert.AreEqual (-1, b.CompareTo (-2000));
 		}
 	}
 }

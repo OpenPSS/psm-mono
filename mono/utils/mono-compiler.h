@@ -8,6 +8,13 @@
 #include <config.h>
 
 #ifdef HAVE_KW_THREAD
+
+#define MONO_HAVE_FAST_TLS
+#define MONO_FAST_TLS_SET(x,y) x = y
+#define MONO_FAST_TLS_GET(x) x
+#define MONO_FAST_TLS_INIT(x)
+#define MONO_FAST_TLS_DECLARE(x) static __thread gpointer x MONO_TLS_FAST;
+
 #if HAVE_TLS_MODEL_ATTR
 
 #if defined(__PIC__) && !defined(PIC)
@@ -136,6 +143,7 @@
 							: "=r" (foo) : : "1");			\
 						offset = foo; } while (0)
 # endif
+
 #else
 #define MONO_THREAD_VAR_OFFSET(var,offset) (offset) = -1
 #endif
@@ -149,10 +157,36 @@
 #define MONO_THREAD_VAR_OFFSET(var,offset) (offset) = -1
 #endif
 
+#elif defined(TARGET_VITA)
+
+#define MONO_HAVE_FAST_TLS
+#define MONO_FAST_TLS_SET(x,y) pthread_vita_tls_set_np(x, y)
+#define MONO_FAST_TLS_GET(x) pthread_vita_tls_get_np(x)
+#define MONO_FAST_TLS_INIT(x)  x = pthread_vita_tls_create_np(NULL)
+#define MONO_FAST_TLS_DECLARE(x) static int x;
+#undef MONO_THREAD_VAR_OFFSET
+#define MONO_THREAD_VAR_OFFSET(var,offset) (offset) = var
+
+#elif defined(__APPLE__) && defined(__i386__) 
+
+#define MONO_HAVE_FAST_TLS
+#define MONO_FAST_TLS_SET(x,y) pthread_setspecific(x, y)
+#define MONO_FAST_TLS_GET(x) pthread_getspecific(x)
+#define MONO_FAST_TLS_INIT(x) pthread_key_create(&x, NULL)
+#define MONO_FAST_TLS_DECLARE(x) static pthread_key_t x;
+
+#define MONO_THREAD_VAR_OFFSET(x,y) ({	\
+	typeof(x) _x = (x);			\
+	pthread_key_t _y;	\
+	(void) (&_x == &_y);		\
+	y = (gint32) x; })
 #else /* no HAVE_KW_THREAD */
 
 #define MONO_THREAD_VAR_OFFSET(var,offset) (offset) = -1
 
+/*Macros to facilitate user code*/
+#define MONO_FAST_TLS_INIT(x)
+#define MONO_FAST_TLS_DECLARE(x)
 #endif
 
 /* Deal with Microsoft C compiler differences */
@@ -177,7 +211,7 @@
 
 #endif /* _MSC_VER */
 
-#if !defined(_MSC_VER) && !defined(PLATFORM_SOLARIS) && !defined(_WIN32) && !defined(__CYGWIN__) && HAVE_VISIBILITY_HIDDEN
+#if !defined(_MSC_VER) && !defined(PLATFORM_SOLARIS) && !defined(_WIN32) && !defined(__CYGWIN__) && HAVE_VISIBILITY_HIDDEN && !defined(__ANDROID__)
 #define MONO_INTERNAL __attribute__ ((visibility ("hidden")))
 #if MONO_LLVM_LOADED
 #define MONO_LLVM_INTERNAL 
@@ -193,6 +227,18 @@
 #define MONO_DEPRECATED __attribute__ ((deprecated))
 #else
 #define MONO_DEPRECATED 
+#endif
+
+#ifdef _MSC_VER
+#define MONO_NOINLINE __declspec (noinline)
+#else
+#define MONO_NOINLINE __attribute__((noinline))
+#endif
+
+#ifdef _MSC_VER
+#define MONO_UNUSED
+#else
+#define MONO_UNUSED __attribute__((unused))
 #endif
 
 #endif /* __UTILS_MONO_COMPILER_H__*/

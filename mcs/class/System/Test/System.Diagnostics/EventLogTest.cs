@@ -54,6 +54,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Diagnostics
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class EventLogTest
 	{
 #if NET_2_0
@@ -2960,6 +2961,7 @@ namespace MonoTests.System.Diagnostics
 			}
 		}
 
+#if !MOBILE
 		[Test]
 		public void Exists1_Win32 ()
 		{
@@ -3015,6 +3017,7 @@ namespace MonoTests.System.Diagnostics
 				}
 			}
 		}
+#endif
 
 		[Test]
 		public void Exists1_Log_Empty ()
@@ -3028,6 +3031,7 @@ namespace MonoTests.System.Diagnostics
 			Assert.IsFalse (EventLog.Exists (null));
 		}
 
+#if !MOBILE
 		[Test]
 		public void Exists2_Win32 ()
 		{
@@ -3081,6 +3085,7 @@ namespace MonoTests.System.Diagnostics
 				}
 			}
 		}
+#endif
 
 		[Test]
 		public void Exists2_Log_Empty ()
@@ -8121,6 +8126,7 @@ namespace MonoTests.System.Diagnostics
 		}
 #endif
 
+#if !MOBILE
 		private static RegistryKey EventLogKey {
 			get {
 				return Registry.LocalMachine.OpenSubKey (@"SYSTEM\CurrentControlSet\Services\EventLog", true);
@@ -8168,6 +8174,7 @@ namespace MonoTests.System.Diagnostics
 					eventLogKey.Close ();
 			}
 		}
+#endif
 
 		private static bool Win32EventLogEnabled {
 			get {

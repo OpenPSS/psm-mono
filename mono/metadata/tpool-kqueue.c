@@ -36,7 +36,7 @@ static void
 kevent_change (int kfd, struct kevent *evt, const char *error_str)
 {
 	if (kevent (kfd, evt, 1, NULL, 0, NULL) == -1) {
-		int err = errno;	
+		int err = errno;
 		g_message ("kqueue(%s): %d %s", error_str, err, g_strerror (err));
 	}
 }
@@ -47,7 +47,6 @@ tp_kqueue_modify (gpointer event_data, int fd, int operation, int events, gboole
 	tp_kqueue_data *data = event_data;
 	struct kevent evt;
 
-	memset (&evt, 0, sizeof (evt));
 	if ((events & MONO_POLLIN) != 0) {
 		EV_SET (&evt, fd, EVFILT_READ, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, 0);
 		kevent_change (data->fd, &evt, "ADD read");
@@ -88,7 +87,7 @@ tp_kqueue_wait (gpointer p)
 	events = g_new0 (struct kevent, KQUEUE_NEVENTS);
 
 	while (1) {
-	
+
 		mono_gc_set_skip_thread (TRUE);
 
 		do {

@@ -4,7 +4,8 @@
  * Author:
  *	Dick Porter (dick@ximian.com)
  *
- * (C) 2002-2006 Novell, Inc.
+ * (C) 2002-2011 Novell, Inc.
+ * Copyright 2011 Xamarin Inc
  */
 
 #include <config.h>
@@ -26,7 +27,9 @@
 #ifdef HAVE_DIRENT_H
 #  include <dirent.h>
 #endif
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
 
 #include <mono/io-layer/wapi.h>
 #include <mono/io-layer/wapi-private.h>
@@ -174,8 +177,6 @@ static void handle_cleanup (void)
 {
 	int i, j, k;
 	
-	_wapi_process_signal_self ();
-
 	/* Every shared handle we were using ought really to be closed
 	 * by now, but to make sure just blow them all away.  The
 	 * exiting finalizer thread in particular races us to the
@@ -296,7 +297,12 @@ static void shared_init (void)
 	 * calls exit (eg if an X client loses the connection to its
 	 * server.)
 	 */
+#if !defined(TARGET_VITA)
+	/* Vita atexit runs on a new thread which is not pthread registered, luckily we
+	 * do not use shm, so the handle can be cleaned up by the kernel
+	 */
 	g_atexit (handle_cleanup);
+#endif
 }
 
 static void _wapi_handle_init_shared (struct _WapiHandleShared *handle,
@@ -505,7 +511,6 @@ static gpointer _wapi_handle_real_new (WapiHandleType type, gpointer handle_spec
 		ref = _wapi_handle_new_shared (type, handle_specific);
 		if (ref == 0) {
 			_wapi_handle_collect ();
-			_wapi_process_reap ();
 			ref = _wapi_handle_new_shared (type, handle_specific);
 			if (ref == 0) {
 				/* FIXME: grow the arrays */
@@ -541,7 +546,6 @@ gpointer _wapi_handle_new_from_offset (WapiHandleType type, guint32 offset,
 	gpointer handle = INVALID_HANDLE_VALUE;
 	int thr_ret, i, k;
 	struct _WapiHandleShared *shared;
-	guint32 now = (guint32)(time (NULL) & 0xFFFFFFFF);
 	
 	g_assert (_wapi_has_shut_down == FALSE);
 	
@@ -558,6 +562,7 @@ gpointer _wapi_handle_new_from_offset (WapiHandleType type, guint32 offset,
 
 	shared = &_wapi_shared_layout->handles[offset];
 	if (timestamp) {
+		guint32 now = (guint32)(time (NULL) & 0xFFFFFFFF);
 		/* Bump up the timestamp for this offset */
 		InterlockedExchange ((gint32 *)&shared->timestamp, now);
 	}
@@ -819,7 +824,6 @@ _wapi_handle_foreach (WapiHandleType type,
  * unreffed if the check function returns FALSE, so callers must not
  * rely on the handle persisting (unless the check function returns
  * TRUE)
- * The caller owns the returned handle.
  */
 gpointer _wapi_search_handle (WapiHandleType type,
 			      gboolean (*check)(gpointer test, gpointer user),
@@ -1032,7 +1036,6 @@ done:
 void _wapi_handle_ref (gpointer handle)
 {
 	guint32 idx = GPOINTER_TO_UINT(handle);
-	guint32 now = (guint32)(time (NULL) & 0xFFFFFFFF);
 	struct _WapiHandleUnshared *handle_data;
 
 	if (!_WAPI_PRIVATE_VALID_SLOT (idx)) {
@@ -1056,7 +1059,7 @@ void _wapi_handle_ref (gpointer handle)
 	 */
 	if (_WAPI_SHARED_HANDLE(handle_data->type)) {
 		struct _WapiHandleShared *shared_data = &_wapi_shared_layout->handles[handle_data->u.shared.offset];
-		
+		guint32 now = (guint32)(time (NULL) & 0xFFFFFFFF);
 		InterlockedExchange ((gint32 *)&shared_data->timestamp, now);
 	}
 	
@@ -1307,7 +1310,7 @@ gboolean _wapi_handle_ops_isowned (gpointer handle)
 	}
 }
 
-guint32 _wapi_handle_ops_special_wait (gpointer handle, guint32 timeout)
+guint32 _wapi_handle_ops_special_wait (gpointer handle, guint32 timeout, gboolean alertable)
 {
 	guint32 idx = GPOINTER_TO_UINT(handle);
 	WapiHandleType type;
@@ -1320,7 +1323,7 @@ guint32 _wapi_handle_ops_special_wait (gpointer handle, guint32 timeout)
 	
 	if (handle_ops[type] != NULL &&
 	    handle_ops[type]->special_wait != NULL) {
-		return(handle_ops[type]->special_wait (handle, timeout));
+		return(handle_ops[type]->special_wait (handle, timeout, alertable));
 	} else {
 		return(WAIT_FAILED);
 	}
@@ -1669,7 +1672,6 @@ _wapi_free_share_info (_WapiFileShare *share_info)
 		file_share_hash_lock ();
 		g_hash_table_remove (file_share_hash, share_info);
 		file_share_hash_unlock ();
-		/* The hashtable dtor frees share_info */
 	} else {
 		memset (share_info, '\0', sizeof(struct _WapiFileShare));
 	}
@@ -1842,7 +1844,7 @@ static void _wapi_handle_check_share_by_pid (struct _WapiFileShare *share_info)
 		g_message ("%s: Didn't find it, destroying entry", __func__);
 #endif
 
-		_wapi_free_share_info (share_info);
+		memset (share_info, '\0', sizeof(struct _WapiFileShare));
 	}
 }
 
@@ -1972,7 +1974,7 @@ void _wapi_handle_check_share (struct _WapiFileShare *share_info, int fd)
 		g_message ("%s: Didn't find it, destroying entry", __func__);
 #endif
 
-		_wapi_free_share_info (share_info);
+		memset (share_info, '\0', sizeof(struct _WapiFileShare));
 	}
 
 done:

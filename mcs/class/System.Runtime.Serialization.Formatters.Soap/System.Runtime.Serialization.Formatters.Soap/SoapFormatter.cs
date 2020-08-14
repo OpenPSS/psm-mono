@@ -71,10 +71,21 @@ namespace System.Runtime.Serialization.Formatters.Soap {
 		}
 		
 		public object Deserialize(Stream serializationStream, HeaderHandler handler) {
+			object objReturn = null;
 			SoapReader soapReader = new SoapReader(_binder, _selector, _context);
-			return soapReader.Deserialize(serializationStream, _topObject);
+			CultureInfo savedCi = CultureInfo.CurrentCulture;
+			try {
+				Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
+				objReturn = soapReader.Deserialize(serializationStream, _topObject);
+			}
+			finally {
+				Thread.CurrentThread.CurrentCulture = savedCi;
+			}
+			return objReturn;
 		}
-
+		
+		
+		
 		public void Serialize(Stream serializationStream, object graph) {
 			Serialize(serializationStream, graph, null);
 		}
@@ -87,7 +98,15 @@ namespace System.Runtime.Serialization.Formatters.Soap {
 			if(graph == null)
 				throw new ArgumentNullException("graph");
 			SoapWriter soapWriter = new SoapWriter(serializationStream, _selector, _context, _topObject);
-			soapWriter.Serialize (graph, headers, _typeFormat, _assemblyFormat);
+			CultureInfo savedCi = CultureInfo.CurrentCulture;
+			try {
+				Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
+				soapWriter.Serialize (graph, headers, _typeFormat, _assemblyFormat);
+			}
+			finally {
+				Thread.CurrentThread.CurrentCulture = savedCi;
+			}
+			
 		}
 		
 		public ISurrogateSelector SurrogateSelector {

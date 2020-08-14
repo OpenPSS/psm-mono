@@ -148,9 +148,8 @@ namespace System.Threading {
 				try {}
 				finally {
 					Interlocked.Add (ref rwlock, RwRead);
-					ctstate.LockState |= LockState.Read;
+					ctstate.LockState ^= LockState.Read;
 					++ctstate.ReaderRecursiveCount;
-					success = true;
 				}
 
 				return true;
@@ -259,9 +258,8 @@ namespace System.Threading {
 					}
 				}
 
-				int stateCheck = isUpgradable ? RwWaitUpgrade + RwWait : RwWait;
+				int stateCheck = isUpgradable ? RwWaitUpgrade : RwWait;
 				long start = millisecondsTimeout == -1 ? 0 : sw.ElapsedMilliseconds;
-				int registration = isUpgradable ? RwWaitUpgrade : RwWait;
 
 				do {
 					int state = rwlock;
@@ -269,8 +267,7 @@ namespace System.Threading {
 					if (state <= stateCheck) {
 						try {}
 						finally {
-							var toWrite = state + RwWrite - (registered ? registration : 0);
-							if (Interlocked.CompareExchange (ref rwlock, toWrite, state) == state) {
+							if (Interlocked.CompareExchange (ref rwlock, RwWrite, state) == state) {
 								writerDoneEvent.Reset ();
 								ctstate.LockState ^= LockState.Write;
 								++ctstate.WriterRecursiveCount;
@@ -397,8 +394,7 @@ namespace System.Threading {
 					TryEnterReadLock (ComputeTimeout (millisecondsTimeout, start), ref success);
 				} finally {
 					if (success) {
-						ctstate.LockState |= LockState.Upgradable;
-						ctstate.LockState &= ~LockState.Read;
+						ctstate.LockState = LockState.Upgradable;
 						--ctstate.ReaderRecursiveCount;
 						++ctstate.UpgradeableRecursiveCount;
 					} else {
@@ -436,12 +432,11 @@ namespace System.Threading {
 					upgradableTaken.Value = false;
 					upgradableEvent.Set ();
 
-					ctstate.LockState &= ~LockState.Upgradable;
+					ctstate.LockState ^= LockState.Upgradable;
 					if (Interlocked.Add (ref rwlock, -RwRead) >> RwReadBit == 0)
 						readerDoneEvent.Set ();
 				}
 			}
-
 		}
 
 		public void Dispose ()
@@ -454,7 +449,7 @@ namespace System.Threading {
 				return rwlock >= RwRead && CurrentThreadState.LockState.Has (LockState.Read);
 			}
 		}
-
+		
 		public bool IsWriteLockHeld {
 			get {
 				return (rwlock & RwWrite) > 0 && CurrentThreadState.LockState.Has (LockState.Write);
@@ -544,7 +539,7 @@ namespace System.Threading {
 			// Detect and prevent recursion
 			LockState ctstate = state.LockState;
 
-			if (ctstate != LockState.None && noRecursion && (!ctstate.Has (LockState.Upgradable) || validState == LockState.Upgradable))
+			if (ctstate != LockState.None && noRecursion && (ctstate != LockState.Upgradable || validState == LockState.Upgradable))
 				throw new LockRecursionException ("The current thread has already a lock and recursion isn't supported");
 
 			if (noRecursion)

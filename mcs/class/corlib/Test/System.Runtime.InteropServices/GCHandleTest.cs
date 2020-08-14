@@ -127,9 +127,12 @@ namespace MonoTests.System.Runtime.InteropServices
 		}
 
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void WeakHandleWorksOnNonRootDomain ()
 		{
-			Console.WriteLine("current app domain: " + AppDomain.CurrentDomain.Id);
+			//Console.WriteLine("current app domain: " + AppDomain.CurrentDomain.Id);
 			AppDomain domain = AppDomain.CreateDomain("testdomain");
 
 			Assembly ea = Assembly.GetExecutingAssembly ();

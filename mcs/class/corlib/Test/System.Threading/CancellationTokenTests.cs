@@ -1,11 +1,12 @@
-#if NET_4_0
 // 
 // CancellationTokenTests.cs
 //  
-// Author:
+// Authors:
 //       Jérémie "Garuma" Laval <jeremie.laval@gmail.com>
+//       Marek Safar (marek.safar@gmail.com)
 // 
 // Copyright (c) 2009 Jérémie "Garuma" Laval
+// Copyright 2011 Xamarin, Inc (http://www.xamarin.com)
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if NET_4_0
+
 using System;
 using System.Threading;
 
@@ -32,7 +35,7 @@ using NUnit.Framework;
 
 namespace MonoTests.System.Threading
 {
-	[TestFixtureAttribute]
+	[TestFixture]
 	public class CancellationTokenTests
 	{
 		[Test]
@@ -68,8 +71,8 @@ namespace MonoTests.System.Threading
 			var tk = src.Token;
 			src.Cancel ();
 
-			Assert.IsTrue (tk.CanBeCanceled);
-			Assert.IsTrue (tk.IsCancellationRequested);
+			Assert.IsTrue (tk.CanBeCanceled, "#1");
+			Assert.IsTrue (tk.IsCancellationRequested, "#2");
 		}
 
 		[Test]
@@ -90,15 +93,6 @@ namespace MonoTests.System.Threading
 
 			n.ThrowIfCancellationRequested ();
 			n.GetHashCode ();
-		}
-
-		[Test]
-		public void DefaultCancellationTokenRegistration ()
-		{
-			var registration = new CancellationTokenRegistration ();
-
-			// shouldn't throw
-			registration.Dispose ();
 		}
 	}
 }

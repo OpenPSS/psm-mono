@@ -32,7 +32,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents a block that contains a sequence of expressions where variables can be defined.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.BlockExpressionProxy))]
 #endif
     public class BlockExpression : Expression {

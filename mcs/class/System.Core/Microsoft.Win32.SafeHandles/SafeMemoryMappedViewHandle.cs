@@ -43,8 +43,10 @@ namespace Microsoft.Win32.SafeHandles
 		}
 
 		protected override bool ReleaseHandle () {
-			if (this.handle != (IntPtr) (-1))
-				return MemoryMapImpl.Unmap (this.handle, ByteLength);
+			if (this.handle != (IntPtr) (-1)){
+				if (MonoUtil.IsUnix)
+					return MemoryMappedFile.UnmapPosix (this.handle, ByteLength);
+			}
 			throw new NotImplementedException ();
 		}
 	}

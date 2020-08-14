@@ -45,6 +45,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "config.h"
+
 #ifdef HAVE_SGEN_GC
 
 #include "metadata/sgen-gc.h"
@@ -244,6 +246,9 @@ get_los_section_memory (size_t size)
 
 	section = mono_sgen_alloc_os_memory_aligned (LOS_SECTION_SIZE, LOS_SECTION_SIZE, TRUE);
 
+	if (!section)
+		return NULL;
+
 	free_chunks = (LOSFreeChunks*)((char*)section + LOS_CHUNK_SIZE);
 	free_chunks->size = LOS_SECTION_SIZE - LOS_CHUNK_SIZE;
 	free_chunks->next_size = los_fast_free_lists [0];
@@ -354,7 +359,7 @@ mono_sgen_los_alloc_large_inner (MonoVTable *vtable, size_t size)
 	g_assert (los_segment_index <= LOS_SEGMENT_SIZE);
 #else
 	if (mono_sgen_need_major_collection (size)) {
-		DEBUG (4, fprintf (gc_debug_file, "Should trigger major collection: req size %zd (los already: %lu, limit: %lu)\n", size, (unsigned long)los_memory_usage, (unsigned long)next_los_collection));
+		DEBUG (4, fprintf (gc_debug_file, "Should trigger major collection: req size SGEN_SIZE_T_SPECIFIER (los already: %lu, limit: %lu)\n", size, (unsigned long)los_memory_usage, (unsigned long)next_los_collection));
 		sgen_collect_major_no_lock ("LOS overflow");
 	}
 
@@ -371,7 +376,8 @@ mono_sgen_los_alloc_large_inner (MonoVTable *vtable, size_t size)
 		alloc_size &= ~(pagesize - 1);
 		if (mono_sgen_try_alloc_space (alloc_size, SPACE_LOS)) {
 			obj = mono_sgen_alloc_os_memory (alloc_size, TRUE);
-			obj->huge_object = TRUE;
+			if (obj)
+				obj->huge_object = TRUE;
 		}
 	} else {
 		obj = get_los_section_memory (size + sizeof (LOSObject));
@@ -391,7 +397,7 @@ mono_sgen_los_alloc_large_inner (MonoVTable *vtable, size_t size)
 	los_object_list = obj;
 	los_memory_usage += size;
 	los_num_objects++;
-	DEBUG (4, fprintf (gc_debug_file, "Allocated large object %p, vtable: %p (%s), size: %zd\n", obj->data, vtable, vtable->klass->name, size));
+	DEBUG (4, fprintf (gc_debug_file, "Allocated large object %p, vtable: %p (%s), size: SGEN_SIZE_T_SPECIFIER\n", obj->data, vtable, vtable->klass->name, size));
 	binary_protocol_alloc (obj->data, vtable, size);
 
 #ifdef LOS_CONSISTENCY_CHECK
@@ -485,48 +491,6 @@ mono_sgen_los_iterate_objects (IterateObjectCallbackFunc cb, void *user_data)
 
 	for (obj = los_object_list; obj; obj = obj->next)
 		cb (obj->data, obj->size, user_data);
-}
-
-gboolean
-mono_sgen_los_is_valid_object (char *object)
-{
-	LOSObject *obj;
-
-	for (obj = los_object_list; obj; obj = obj->next) {
-		if (obj->data == object)
-			return TRUE;
-	}
-	return FALSE;
-}
-
-gboolean
-mono_sgen_los_describe_pointer (char *ptr)
-{
-	LOSObject *obj;
-
-	for (obj = los_object_list; obj; obj = obj->next) {
-		MonoVTable *vtable;
-		if (obj->data > ptr || obj->data + obj->size <= ptr)
-			continue;
-
-		if (obj->size > LOS_SECTION_OBJECT_LIMIT)
-			fprintf (gc_debug_file, "huge-los-ptr ");
-		else
-			fprintf (gc_debug_file, "los-ptr ");
-
-		vtable = (MonoVTable*)SGEN_LOAD_VTABLE (obj->data);
-
-		if (obj->data == ptr)
-			fprintf (gc_debug_file, "(object %s.%s size %d)", 
-				vtable->klass->name_space, vtable->klass->name, obj->size);
-		else
-			fprintf (gc_debug_file, "(interior-ptr offset %td of %p (%s.%s) size %d)",
-				ptr - obj->data, obj->data,
-				vtable->klass->name_space, vtable->klass->name, obj->size);
-
-		return TRUE;
-	}
-	return FALSE;
 }
 
 void

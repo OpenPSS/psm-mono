@@ -136,6 +136,9 @@ namespace MonoTests.System.Security.Principal {
 		}
 #endif
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void Anonymous () 
 		{
 			WindowsIdentity id = WindowsIdentity.GetAnonymous ();

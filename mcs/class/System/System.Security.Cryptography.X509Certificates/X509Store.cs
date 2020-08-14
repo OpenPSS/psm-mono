@@ -225,9 +225,7 @@ namespace System.Security.Cryptography.X509Certificates {
 			_flags = flags;
 
 			foreach (MX.X509Certificate x in store.Certificates) {
-				var cert2 = new X509Certificate2 (x.RawData);
-				cert2.PrivateKey = x.RSA;
-				Certificates.Add (cert2);
+				Certificates.Add (new X509Certificate2 (x.RawData));
 			}
 		}
 

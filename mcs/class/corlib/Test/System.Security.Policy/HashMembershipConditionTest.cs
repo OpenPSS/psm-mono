@@ -37,6 +37,7 @@ using System.Security.Policy;
 namespace MonoTests.System.Security.Policy {
 
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class HashMembershipConditionTest {
 
 		static Hash hashEvidence;

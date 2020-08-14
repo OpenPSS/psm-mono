@@ -45,7 +45,7 @@ namespace System.ServiceModel
 		XmlDictionaryReaderQuotas reader_quotas;
 		bool transaction_flow;
 		TransactionProtocol transaction_protocol;
-		TcpTransportBindingElement transport;
+		TcpTransportBindingElement transport = new TcpTransportBindingElement ();
 
 		public NetTcpBinding ()
 			: this (SecurityMode.Transport)
@@ -61,15 +61,6 @@ namespace System.ServiceModel
 			bool reliableSessionEnabled)
 		{
 			security = new NetTcpSecurity (securityMode);
-			transport = new TcpTransportBindingElement ();
-		}
-
-		internal NetTcpBinding (TcpTransportBindingElement transport,
-		                        NetTcpSecurity security,
-		                        bool reliableSessionEnabled)
-		{
-			this.transport = transport;
-			this.security = security;
 		}
 
 		public HostNameComparisonMode HostNameComparisonMode {
@@ -232,14 +223,8 @@ namespace System.ServiceModel
 		BindingElement CreateTransportSecurity ()
 		{
 			switch (Security.Mode) {
-			case SecurityMode.Transport:
-				return new WindowsStreamSecurityBindingElement () {
-					ProtectionLevel = Security.Transport.ProtectionLevel };
-
-			case SecurityMode.TransportWithMessageCredential:
-				return new SslStreamSecurityBindingElement ();
-
-			default:
+			case SecurityMode.None:
+			case SecurityMode.Message:
 				return null;
 			}
 

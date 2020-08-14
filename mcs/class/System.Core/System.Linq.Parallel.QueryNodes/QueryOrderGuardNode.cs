@@ -29,11 +29,7 @@ using System.Collections.Generic;
 
 namespace System.Linq.Parallel.QueryNodes
 {
-	internal interface QueryOrderGuardNode : IVisitableNode {
-		bool EnsureOrder { get; }
-	}
-
-	internal abstract class QueryOrderGuardNode<T> : QueryStreamNode<T, T>, QueryOrderGuardNode
+	internal abstract class QueryOrderGuardNode<T> : QueryStreamNode<T, T>
 	{
 		bool ensureOrder;
 
@@ -56,7 +52,7 @@ namespace System.Linq.Parallel.QueryNodes
 
 		public override void Visit (INodeVisitor visitor)
 		{
-			visitor.Visit ((QueryOrderGuardNode)this);
+			visitor.Visit<T> (this);
 		}
 	}
 

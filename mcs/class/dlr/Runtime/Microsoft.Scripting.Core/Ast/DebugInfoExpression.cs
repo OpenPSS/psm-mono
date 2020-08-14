@@ -32,7 +32,7 @@ namespace System.Linq.Expressions {
     /// This allows the debugger to highlight the correct source code when
     /// debugging.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.DebugInfoExpressionProxy))]
 #endif
     public class DebugInfoExpression : Expression {

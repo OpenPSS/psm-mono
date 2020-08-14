@@ -32,14 +32,12 @@ using System.ServiceModel.Channels;
 using System.ServiceModel.Description;
 using System.ServiceModel.Security;
 using System.ServiceModel.Security.Tokens;
-using System.Xml;
 
 namespace System.ServiceModel.Channels
 {
 	[MonoTODO]
 	public class WindowsStreamSecurityBindingElement
-		: BindingElement, ISecurityCapabilities, IPolicyExportExtension,
-		ITransportTokenAssertionProvider
+		: BindingElement, ISecurityCapabilities, IPolicyExportExtension
 	{
 		public WindowsStreamSecurityBindingElement ()
 		{
@@ -123,23 +121,9 @@ namespace System.ServiceModel.Channels
 		[MonoTODO]
 		void IPolicyExportExtension.ExportPolicy (
 			MetadataExporter exporter,
-			PolicyConversionContext context)
+			PolicyConversionContext policyContext)
 		{
-			var token = GetTransportTokenAssertion ();
-			var transportBinding = TransportBindingElement.CreateTransportBinding (token);
-			context.GetBindingAssertions ().Add (transportBinding);
-		}
-
-		public XmlElement GetTransportTokenAssertion ()
-		{
-			var doc = new XmlDocument ();
-			var element = doc.CreateElement (
-				"msf", "WindowsTransportSecurity", PolicyImportHelper.FramingPolicyNS);
-			var protectionLevel = doc.CreateElement (
-				"msf", "ProtectionLevel", PolicyImportHelper.FramingPolicyNS);
-			protectionLevel.InnerText = ProtectionLevel.ToString ();
-			element.AppendChild (protectionLevel);
-			return element;
+			throw new NotImplementedException ();
 		}
 		#endregion
 	}

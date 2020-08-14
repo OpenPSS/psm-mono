@@ -68,18 +68,40 @@ monoutils_sources = \
 	mono-counters.h	\
 	mono-digest.h	\
 	mono-error.h	\
+	mono-machine.h	\
 	mono-math.h	\
 	mono-membar.h	\
 	mono-path.h	\
 	mono-poll.h	\
-	mono-tls.h  	\
 	mono-uri.h	\
 	mono-stdlib.h	\
 	valgrind.h	\
 	mach-support.c	\
 	mach-support.h  \
 	memcheck.h	\
-	mono-memory-model.h
+	mono-context.c	\
+	mono-context.h	\
+	mono-stack-unwinding.h	\
+	hazard-pointer.c	\
+	hazard-pointer.h	\
+	lock-free-queue.c	\
+	lock-free-queue.h	\
+	lock-free-alloc.c	\
+	lock-free-alloc.h	\
+	lock-free-array-queue.c	\
+	lock-free-array-queue.h	\
+	mono-linked-list-set.c	\
+	mono-linked-list-set.h	\
+	mono-threads.c	\
+	mono-threads-posix.c	\
+	mono-threads-mach.c	\
+	mono-threads-windows.c	\
+	mono-threads.h	\
+	mono-tls.h	\
+	linux_magic.h	\
+	mono-memory-model.h	\
+	bsearch.h	\
+	bsearch.c
 
 arch_sources = 
 

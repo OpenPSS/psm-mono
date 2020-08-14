@@ -45,7 +45,7 @@ using System.IO;
 using System.Net.Configuration;
 using System.Text;
 using System.Timers;
-#if !MOONLIGHT
+#if !MOONLIGHT && SCE_DISABLED
 using System.Net.NetworkInformation;
 #endif
 
@@ -55,7 +55,6 @@ namespace System.Net.Sockets
 	{
 		private bool islistening;
 		private bool useoverlappedIO;
-		private const int SOCKET_CLOSED = 10004;
 
 		static void AddSockets (List<Socket> sockets, IList list, string name)
 		{
@@ -524,13 +523,7 @@ namespace System.Net.Sockets
 			e.curSocket = this;
 			Worker w = e.Worker;
 			w.Init (this, e, SocketOperation.Accept);
-			int count;
-			lock (readQ) {
-				readQ.Enqueue (e.Worker);
-				count = readQ.Count;
-			}
-			if (count == 1)
-				socket_pool_queue (Worker.Dispatcher, w.result);
+			socket_pool_queue (Worker.Dispatcher, w.result);
 			return true;
 		}
 #endif
@@ -544,19 +537,21 @@ namespace System.Net.Sockets
 
 			int error = 0;
 			IntPtr sock = (IntPtr) (-1);
+			blocking_thread = Thread.CurrentThread;
 			try {
-				RegisterForBlockingSyscall ();
 				sock = Accept_internal(socket, out error, blocking);
+			} catch (ThreadAbortException) {
+				if (disposed) {
+					Thread.ResetAbort ();
+					error = (int) SocketError.Interrupted;
+				}
 			} finally {
-				UnRegisterForBlockingSyscall ();
+				blocking_thread = null;
 			}
 
-			if (error != 0) {
-				if (closed)
-					error = SOCKET_CLOSED;
-				throw new SocketException(error);
-			}
-
+			if (error != 0)
+				throw new SocketException (error);
+			
 			Socket accepted = new Socket(this.AddressFamily, this.SocketType,
 				this.ProtocolType, sock);
 
@@ -572,19 +567,21 @@ namespace System.Net.Sockets
 			
 			int error = 0;
 			IntPtr sock = (IntPtr)(-1);
+			blocking_thread = Thread.CurrentThread;
 			
 			try {
-				RegisterForBlockingSyscall ();
 				sock = Accept_internal (socket, out error, blocking);
+			} catch (ThreadAbortException) {
+				if (disposed) {
+					Thread.ResetAbort ();
+					error = (int)SocketError.Interrupted;
+				}
 			} finally {
-				UnRegisterForBlockingSyscall ();
+				blocking_thread = null;
 			}
 			
-			if (error != 0) {
-				if (closed)
-					error = SOCKET_CLOSED;
+			if (error != 0)
 				throw new SocketException (error);
-			}
 			
 			acceptSocket.address_family = this.AddressFamily;
 			acceptSocket.socket_type = this.SocketType;
@@ -608,13 +605,7 @@ namespace System.Net.Sockets
 				throw new InvalidOperationException ();
 
 			SocketAsyncResult req = new SocketAsyncResult (this, state, callback, SocketOperation.Accept);
-			int count;
-			lock (readQ) {
-				readQ.Enqueue (req.Worker);
-				count = readQ.Count;
-			}
-			if (count == 1)
-				socket_pool_queue (Worker.Dispatcher, req);
+			socket_pool_queue (Worker.Dispatcher, req);
 			return req;
 		}
 
@@ -633,13 +624,7 @@ namespace System.Net.Sockets
 			req.Offset = 0;
 			req.Size = receiveSize;
 			req.SockFlags = SocketFlags.None;
-			int count;
-			lock (readQ) {
-				readQ.Enqueue (req.Worker);
-				count = readQ.Count;
-			}
-			if (count == 1)
-				socket_pool_queue (Worker.Dispatcher, req);
+			socket_pool_queue (Worker.Dispatcher, req);
 			return req;
 		}
 
@@ -676,13 +661,7 @@ namespace System.Net.Sockets
 			req.Size = receiveSize;
 			req.SockFlags = SocketFlags.None;
 			req.AcceptSocket = acceptSocket;
-			int count;
-			lock (readQ) {
-				readQ.Enqueue (req.Worker);
-				count = readQ.Count;
-			}
-			if (count == 1)
-				socket_pool_queue (Worker.Dispatcher, req);
+			socket_pool_queue (Worker.Dispatcher, req);
 			return(req);
 		}
 
@@ -1435,7 +1414,8 @@ namespace System.Net.Sockets
 		// See Socket.IOControl, WSAIoctl documentation in MSDN. The
 		// common options between UNIX and Winsock are FIONREAD,
 		// FIONBIO and SIOCATMARK. Anything else will depend on the
-		// system.
+		// system except SIO_KEEPALIVE_VALS which is properly handled
+		// on both windows and linux.
 		[MethodImplAttribute(MethodImplOptions.InternalCall)]
 		extern static int WSAIoctl (IntPtr sock, int ioctl_code, byte [] input,
 			byte [] output, out int error);
@@ -1458,13 +1438,9 @@ namespace System.Net.Sockets
 			return result;
 		}
 
-		[MonoTODO]
 		public int IOControl (IOControlCode ioControlCode, byte[] optionInValue, byte[] optionOutValue)
 		{
-			/* Probably just needs to mirror the int
-			 * overload, but more investigation needed.
-			 */
-			throw new NotImplementedException ();
+			return IOControl ((int) ioControlCode, optionInValue, optionOutValue);
 		}
 
 		[MethodImplAttribute(MethodImplOptions.InternalCall)]
@@ -1643,9 +1619,10 @@ namespace System.Net.Sockets
 			res.Size = e.Count;
 			res.EndPoint = e.RemoteEndPoint;
 			res.SockFlags = e.SocketFlags;
+			Worker worker = new Worker (e);
 			int count;
 			lock (readQ) {
-				readQ.Enqueue (e.Worker);
+				readQ.Enqueue (worker);
 				count = readQ.Count;
 			}
 			if (count == 1)
@@ -1980,9 +1957,10 @@ namespace System.Net.Sockets
 			res.Size = e.Count;
 			res.SockFlags = e.SocketFlags;
 			res.EndPoint = e.RemoteEndPoint;
+			Worker worker = new Worker (e);
 			int count;
 			lock (writeQ) {
-				writeQ.Enqueue (e.Worker);
+				writeQ.Enqueue (worker);
 				count = writeQ.Count;
 			}
 			if (count == 1)

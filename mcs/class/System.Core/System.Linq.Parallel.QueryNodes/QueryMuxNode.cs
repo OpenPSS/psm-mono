@@ -32,10 +32,7 @@ using System.Collections.Concurrent;
 
 namespace System.Linq.Parallel.QueryNodes
 {
-	internal interface QueryMuxNode : IVisitableNode {
-		
-	}
-	internal abstract class QueryMuxNode<TFirst, TSecond, TResult> : QueryChildNode<TResult, TFirst>, QueryMuxNode
+	internal abstract class QueryMuxNode<TFirst, TSecond, TResult> : QueryChildNode<TResult, TFirst>
 	{
 		QueryBaseNode<TSecond> second;
 
@@ -53,7 +50,7 @@ namespace System.Linq.Parallel.QueryNodes
 
 		public override void Visit (INodeVisitor visitor)
 		{
-			visitor.Visit ((QueryMuxNode)this);
+			visitor.Visit (this);
 		}
 	}
 }

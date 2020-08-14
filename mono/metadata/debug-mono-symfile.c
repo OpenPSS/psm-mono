@@ -15,7 +15,9 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
+#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#endif
 #include <mono/metadata/metadata.h>
 #include <mono/metadata/tabledefs.h>
 #include <mono/metadata/tokentype.h>
@@ -29,8 +31,11 @@
 #include <mono/metadata/metadata-internals.h>
 #include <mono/metadata/class-internals.h>
 #include <mono/utils/mono-mmap.h>
+#include <mono/utils/bsearch.h>
 
+#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -39,6 +44,28 @@
 #define CLASS_TABLE_CHUNK_SIZE		256
 #define TYPE_TABLE_PTR_CHUNK_SIZE	256
 #define TYPE_TABLE_CHUNK_SIZE		65536
+
+#if defined(PLATFORM_ANDROID)
+#include "android-bridge.h"
+//#define PSS_USE_CRYPTO
+#endif
+
+#if defined(TARGET_VITA)
+//#define PSS_USE_CRYPTO
+#include "bridge.h"
+#endif
+
+//--- debug -------------------------------------------------------------------
+#if 0
+#define PRINTF(...)			printf( "[symfile] " __VA_ARGS__ )
+#define ERR_PRINTF(...)		printf( "[symfile:ERROR] " __VA_ARGS__ )
+#define TRACE				printf( "[symfile:TRACE] %s %d %s\n", __FILE__, __LINE__, __FUNCTION__ )
+#else
+#define PRINTF(...)
+#define ERR_PRINTF(...)
+#define TRACE
+#endif
+//-----------------------------------------------------------------------------
 
 struct _MonoSymbolFile {
 	const uint8_t *raw_contents;
@@ -140,6 +167,16 @@ mono_debug_open_mono_symbols (MonoDebugHandle *handle, const uint8_t *raw_conten
 		MonoFileMap *f;
 		symfile->filename = g_strdup_printf ("%s.mdb", mono_image_get_filename (handle->image));
 		symfile->was_loaded_from_memory = FALSE;
+		TRACE;
+#ifdef PSS_USE_CRYPTO
+		PssCryptoContext context;
+		pss_crypto_open(&context, symfile->filename);
+
+		symfile->raw_contents_size = context.size;
+		symfile->raw_contents = pss_crypto_read(&context);
+
+		pss_crypto_close(&context);
+#else
 		if ((f = mono_file_map_open (symfile->filename))) {
 			symfile->raw_contents_size = mono_file_map_size (f);
 			if (symfile->raw_contents_size == 0) {
@@ -147,13 +184,16 @@ mono_debug_open_mono_symbols (MonoDebugHandle *handle, const uint8_t *raw_conten
 					g_warning ("stat of %s failed: %s",
 						   symfile->filename,  g_strerror (errno));
 			} else {
+				TRACE;
 				symfile->raw_contents = mono_file_map (symfile->raw_contents_size, MONO_MMAP_READ|MONO_MMAP_PRIVATE, mono_file_map_fd (f), 0, &symfile->raw_contents_handle);
 			}
 
 			mono_file_map_close (f);
 		}
+#endif
+
 	}
-	
+
 	if (load_symfile (handle, symfile, in_the_debugger)) {
 		mono_debugger_unlock ();
 		return symfile;
@@ -595,7 +635,7 @@ mono_debug_symfile_lookup_method (MonoDebugHandle *handle, MonoMethod *method)
 	first_ie = (MonoSymbolFileMethodEntry *)
 		(symfile->raw_contents + read32(&(symfile->offset_table->_method_table_offset)));
 
-	ie = bsearch (GUINT_TO_POINTER (mono_method_get_token (method)), first_ie,
+	ie = mono_binary_search (GUINT_TO_POINTER (mono_method_get_token (method)), first_ie,
 				   read32(&(symfile->offset_table->_method_count)),
 				   sizeof (MonoSymbolFileMethodEntry), compare_method);
 

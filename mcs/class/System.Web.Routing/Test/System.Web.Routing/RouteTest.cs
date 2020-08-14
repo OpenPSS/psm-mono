@@ -979,21 +979,7 @@ namespace MonoTests.System.Web.Routing
 
 			Assert.IsNull (rd, "#1");
 		}
-
-		[Test]
-		public void GetRouteData48 ()
-		{
-			var r = new Route ("{first}/{*rest}", null);
-			var hc = new HttpContextStub ("~/a/", String.Empty);
-			var rd = r.GetRouteData (hc);
-			Assert.IsNotNull (rd, "#1");
-			Assert.AreEqual (r, rd.Route, "#2");
-			Assert.AreEqual (0, rd.DataTokens.Count, "#3");
-			Assert.AreEqual (2, rd.Values.Count, "#4");
-			Assert.AreEqual ("a", rd.Values ["first"], "#4-1");
-			Assert.AreEqual (String.Empty, rd.Values ["rest"], "#4-2");
-		}
-
+		
 		[Test]
 		[ExpectedException (typeof (ArgumentNullException))]
 		public void GetVirtualPathNullContext ()
@@ -1285,6 +1271,7 @@ namespace MonoTests.System.Web.Routing
 			Assert.AreEqual ("x/y.aspx?nonEmptyValue=Some%20Value%20%2B%20encoding%20%26", vp.VirtualPath, "#B1-1");
 
 		}
+		
 #if NET_4_0
 		[Test (Description="Bug #671753")]
 		public void GetVirtualPath15 ()
@@ -1307,6 +1294,7 @@ namespace MonoTests.System.Web.Routing
 			Assert.IsNotNull (RouteTable.Routes.GetVirtualPath (rc, "TestRoute", null), "#A4");
 		}
 #endif
+
 		// Bug #500739
 		[Test]
 		public void RouteGetRequiredStringWithDefaults ()

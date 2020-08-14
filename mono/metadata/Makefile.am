@@ -60,7 +60,7 @@ endif
 endif
 noinst_LTLIBRARIES =  $(shared_libraries) libmonoruntime-static.la $(sgen_libraries) $(moonlight_libraries)
 
-INCLUDES = -I$(top_srcdir) -I$(top_srcdir)/mono $(LIBGC_CFLAGS) $(GLIB_CFLAGS) -DMONO_BINDIR=\"$(bindir)/\" -DMONO_ASSEMBLIES=\"$(assembliesdir)\" -DMONO_CFG_DIR=\"$(confdir)\"
+INCLUDES = -I$(PSS_PLATFORM_HOME)/include -I$(top_srcdir) -I$(top_srcdir)/android -I$(top_srcdir)/mono $(LIBGC_CFLAGS) $(GLIB_CFLAGS) -DMONO_BINDIR=\"$(bindir)/\" -DMONO_ASSEMBLIES=\"$(assembliesdir)\" -DMONO_CFG_DIR=\"$(confdir)\"
 
 #
 # Make sure any prefix changes are updated in the binaries too.
@@ -85,7 +85,8 @@ sgen_sources = \
 	sgen-gray.c		\
 	sgen-pinning.c		\
 	sgen-pinning-stats.c	\
-	sgen-workers.c
+	sgen-workers.c		\
+	sgen-fin-weak-hash.c
 
 libmonoruntime_la_SOURCES = \
 	$(platform_sources)	\
@@ -118,6 +119,12 @@ libmonoruntime_la_SOURCES = \
 	exception.h		\
 	file-io.c		\
 	file-io.h		\
+	file-io-native.c		\
+	file-io-native.h		\
+	file-io-pss.c		\
+	file-io-pss.h		\
+	file-io-pss-glob.c		\
+	file-io-pss-glob.h		\
 	filewatcher.c		\
 	filewatcher.h		\
 	gc.c			\
@@ -125,6 +132,8 @@ libmonoruntime_la_SOURCES = \
 	icall.c			\
 	icall-def.h		\
 	image.c			\
+	io.c			\
+	io.h			\
 	loader.c		\
 	locales.c		\
 	locales.h		\
@@ -188,8 +197,10 @@ libmonoruntime_la_SOURCES = \
 	security-manager.h	\
 	sgen-os-posix.c		\
 	sgen-os-mach.c		\
+	sgen-os-win32.c		\
 	sgen-gc.c		\
 	sgen-internal.c		\
+	sgen-pinned-allocator.c	\
 	sgen-marksweep.c	\
 	sgen-marksweep-fixed.c	\
 	sgen-marksweep-par.c	\
@@ -208,6 +219,8 @@ libmonoruntime_la_SOURCES = \
 	sgen-major-scan-object.h \
 	sgen-protocol.h		\
 	sgen-scan-object.h	\
+	sgen-nursery-allocator.c	\
+	sgen-hash-table.c	\
 	string-icalls.c 	\
 	string-icalls.h 	\
 	sysmath.h		\
@@ -290,10 +303,13 @@ pedump_SOURCES =		\
 	pedump.c
 
 pedump_LDADD = libmonoruntime.la ../io-layer/libwapi.la ../utils/libmonoutils.la \
-	$(LIBGC_LIBS) $(GLIB_LIBS) -lm $(PEDUMP_DTRACE_OBJECT)
+	$(LIBGC_LIBS) $(GLIB_LIBS) -lm $(LIBICONV) $(PEDUMP_DTRACE_OBJECT)
 
 if PLATFORM_DARWIN
 pedump_LDFLAGS=-framework CoreFoundation
+endif
+if PLATFORM_ANDROID
+pedump_LDFLAGS=-lstdc++ -landroid-bridge -L$(top_srcdir)/android
 endif
 endif
 endif

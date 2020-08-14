@@ -15,6 +15,7 @@ using NUnit.Framework;
 namespace MonoTests.System.IO
 {
 [TestFixture]
+[Category("PssFileIO")]
 public class StreamReaderTest
 {
 	static string TempFolder = Path.Combine (Path.GetTempPath (), "MonoTests.System.IO.Tests");

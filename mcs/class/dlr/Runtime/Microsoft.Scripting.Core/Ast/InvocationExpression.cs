@@ -32,7 +32,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents an expression that applies a delegate or lambda expression to a list of argument expressions.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.InvocationExpressionProxy))]
 #endif
     public sealed class InvocationExpression : Expression, IArgumentProvider {

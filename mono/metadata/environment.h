@@ -14,6 +14,11 @@
 
 MONO_BEGIN_DECLS
 
+typedef int (*MonoExitCallback) (int);
+
+void mono_exit (int code);
+void mono_set_exit_callback (MonoExitCallback cb);
+
 extern int32_t mono_environment_exitcode_get (void);
 extern void mono_environment_exitcode_set (int32_t value);
 

@@ -74,10 +74,9 @@ namespace System.Xml.Linq
 			{
 				if (!OnAddingObject (o, false, last, false))
 				{
-					var node = XUtil.ToNode (o);
-					OnAddingObject (node);
-					AddNode (node);
-					OnAddedObject (node);
+					OnAddingObject ();
+					AddNode (XUtil.ToNode (o));
+					OnAddedObject ();
 				}
 			}
 		}

@@ -58,13 +58,13 @@ namespace System.Xml.Linq
 			get { return xmlns; }
 		}
 
-		public static XNamespace Get (string namespaceName)
+		public static XNamespace Get (string uri)
 		{
 			lock (nstable) {
 				XNamespace ret;
-				if (!nstable.TryGetValue (namespaceName, out ret)) {
-					ret = new XNamespace (namespaceName);
-					nstable [namespaceName] = ret;
+				if (!nstable.TryGetValue (uri, out ret)) {
+					ret = new XNamespace (uri);
+					nstable [uri] = ret;
 				}
 				return ret;
 			}
@@ -98,33 +98,33 @@ namespace System.Xml.Linq
 			get { return uri; }
 		}
 
-		public override bool Equals (object obj)
+		public override bool Equals (object other)
 		{
-			if (Object.ReferenceEquals (this, obj))
+			if (Object.ReferenceEquals (this, other))
 				return true;
-			XNamespace ns = obj as XNamespace;
+			XNamespace ns = other as XNamespace;
 			return ns != null && uri == ns.uri;
 		}
 
-		public static bool operator == (XNamespace left, XNamespace right)
+		public static bool operator == (XNamespace o1, XNamespace o2)
 		{
-			return (object) left != null ? left.Equals (right) : (object) right == null;
+			return (object) o1 != null ? o1.Equals (o2) : (object) o2 == null;
 		}
 
-		public static bool operator != (XNamespace left, XNamespace right)
+		public static bool operator != (XNamespace o1, XNamespace o2)
 		{
-			return ! (left == right);
+			return ! (o1 == o2);
 		}
 		
-		public static XName operator + (XNamespace ns, string localName)
+		public static XName operator +(XNamespace ns, string localName)
 		{
-			return new XName (localName, ns);
+			return new XName (localName, ns.NamespaceName);
 		}
 
 		[CLSCompliant (false)]
-		public static implicit operator XNamespace (string namespaceName)
+		public static implicit operator XNamespace (string s)
 		{
-			return namespaceName != null ? XNamespace.Get (namespaceName) : null;
+			return s != null ? XNamespace.Get (s) : null;
 		}
 
 		public override int GetHashCode ()

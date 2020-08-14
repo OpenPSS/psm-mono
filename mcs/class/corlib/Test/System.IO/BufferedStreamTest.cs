@@ -37,6 +37,7 @@ public class BufferedStreamTest {
 
 
 	[Test]
+	[Category("PssFileIO")]
 	public void Ctor ()
 	{
 		MemoryStream str = new MemoryStream ();

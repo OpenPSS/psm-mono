@@ -5,6 +5,7 @@ HAS_NUNIT_TEST = yes
 
 BUILD_FRAMEWORK = Microsoft.Build.Framework.dll
 BUILD_ENGINE = Microsoft.Build.Engine.dll
+INSTALL_FRAMEWORK_VERSION = $(FRAMEWORK_VERSION)
 
 ifeq (3.5, $(FRAMEWORK_VERSION))
 NAME_SUFFIX = .v3.5
@@ -12,9 +13,10 @@ ASSEMBLY_VERSION = 3.5.0.0
 BUILD_FRAMEWORK := $(topdir)/class/lib/$(PROFILE)/$(BUILD_FRAMEWORK)
 BUILD_ENGINE := $(topdir)/class/lib/$(PROFILE)/$(BUILD_ENGINE)
 else
-ifeq (4.0, $(FRAMEWORK_VERSION))
+ifeq (4, $(FRAMEWORK_VERSION_MAJOR))
 NAME_SUFFIX = .v4.0
 ASSEMBLY_VERSION = 4.0.0.0
+INSTALL_FRAMEWORK_VERSION = 4.0
 endif
 endif
 
@@ -34,12 +36,10 @@ install-local:	install-extras
 
 WEBAPP_DIR = Microsoft/VisualStudio/v9.0/WebApplications
 SILVERLIGHT_DIR = $(mono_libdir)/mono/xbuild/Microsoft/Silverlight
-PORTABLE_DIR = $(mono_libdir)/mono/xbuild/Microsoft/Portable
-EXTRAS_DIR = $(mono_libdir)/mono/$(FRAMEWORK_VERSION)
-
+EXTRAS_DIR = $(mono_libdir)/mono/$(INSTALL_FRAMEWORK_VERSION)
 install-extras: 
 	$(MKINSTALLDIRS) $(DESTDIR)$(EXTRAS_DIR) $(DESTDIR)$(REDISTLIST_DIR) $(DESTDIR)$(XBUILD_FRAMEWORKS_DIR)/v3.0/RedistList
-	$(INSTALL_DATA) xbuild/xbuild.rsp $(DESTDIR)$(EXTRAS_DIR)
+	$(INSTALL_DATA) xbuild/xbuild.rsp $(DESTDIR)$(mono_libdir)/mono/$(FRAMEWORK_VERSION)
 	$(INSTALL_DATA) xbuild/$(FRAMEWORK_VERSION)/Microsoft.Common.tasks $(DESTDIR)$(EXTRAS_DIR)
 	$(INSTALL_DATA) xbuild/Microsoft.Build.xsd $(DESTDIR)$(EXTRAS_DIR)
 	$(INSTALL_DATA) xbuild/$(FRAMEWORK_VERSION)/Microsoft.Common.targets $(DESTDIR)$(EXTRAS_DIR)
@@ -61,8 +61,6 @@ install-extras:
 	$(INSTALL_DATA) xbuild/Microsoft.Silverlight.VisualBasic.targets $(DESTDIR)$(SILVERLIGHT_DIR)/v3.0
 	sed -e 's/@SILVERLIGHT_VERSION@/2.0/g' xbuild/Microsoft.Silverlight.Common.targets > $(DESTDIR)$(SILVERLIGHT_DIR)/v2.0/Microsoft.Silverlight.Common.targets
 	sed -e 's/@SILVERLIGHT_VERSION@/3.0/g' xbuild/Microsoft.Silverlight.Common.targets > $(DESTDIR)$(SILVERLIGHT_DIR)/v3.0/Microsoft.Silverlight.Common.targets
-	$(MKINSTALLDIRS) $(DESTDIR)$(PORTABLE_DIR)/v4.0
-	$(INSTALL_DATA) xbuild/Microsoft.Portable.CSharp.targets $(DESTDIR)$(PORTABLE_DIR)/v4.0
 
 EXTRA_DISTFILES = \
 	xbuild/xbuild.rsp \
@@ -85,5 +83,4 @@ EXTRA_DISTFILES = \
 	xbuild/Microsoft.Silverlight.Common.targets \
 	xbuild/Microsoft.Silverlight.CSharp.targets \
 	xbuild/Microsoft.Silverlight.VisualBasic.targets \
-	xbuild/Microsoft.Portable.CSharp.targets \
 	xbuild_targets.make

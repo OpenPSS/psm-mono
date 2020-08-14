@@ -39,11 +39,11 @@ struct _MonoType {
 
 #define MONO_PUBLIC_KEY_TOKEN_LENGTH	17
 
-#define PROCESSOR_ARCHITECTURE_NONE 0
-#define PROCESSOR_ARCHITECTURE_MSIL 1
-#define PROCESSOR_ARCHITECTURE_X86 2
-#define PROCESSOR_ARCHITECTURE_IA64 3
-#define PROCESSOR_ARCHITECTURE_AMD64 4
+#define MONO_PROCESSOR_ARCHITECTURE_NONE 0
+#define MONO_PROCESSOR_ARCHITECTURE_MSIL 1
+#define MONO_PROCESSOR_ARCHITECTURE_X86 2
+#define MONO_PROCESSOR_ARCHITECTURE_IA64 3
+#define MONO_PROCESSOR_ARCHITECTURE_AMD64 4
 
 struct _MonoAssemblyName {
 	const char *name;
@@ -278,6 +278,7 @@ struct _MonoImage {
 	GHashTable *cominterop_invoke_cache;
 	GHashTable *cominterop_wrapper_cache; /* LOCKING: marshal lock */
 	GHashTable *thunk_invoke_cache;
+	GHashTable *wrapper_param_names;
 
 	/*
 	 * indexed by MonoClass pointers
@@ -415,10 +416,6 @@ struct _MonoDynamicImage {
 	GHashTable *vararg_aux_hash;
 	MonoGHashTable *generic_def_objects;
 	MonoGHashTable *methodspec;
-	/*
-	 * Maps final token values to the object they describe.
-	 */
-	MonoGHashTable *remapped_tokens;
 	gboolean run;
 	gboolean save;
 	gboolean initial_image;
@@ -734,6 +731,8 @@ MonoException *mono_get_exception_field_access_msg (const char *msg) MONO_INTERN
 MonoException *mono_get_exception_method_access_msg (const char *msg) MONO_INTERNAL;
 
 MonoMethod* method_from_method_def_or_ref (MonoImage *m, guint32 tok, MonoGenericContext *context) MONO_INTERNAL;
+
+MonoMethod *mono_get_method_constrained_with_method (MonoImage *image, MonoMethod *method, MonoClass *constrained_class, MonoGenericContext *context) MONO_INTERNAL;
 
 #endif /* __MONO_METADATA_INTERNALS_H__ */
 

@@ -152,6 +152,9 @@ namespace MonoTests.System.Diagnostics
 		}
 
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void TestGetFileName2 ()
 		{
 			Assert.IsNotNull (frame2.GetFileName (), "File name not null");
@@ -164,6 +167,9 @@ namespace MonoTests.System.Diagnostics
 		/// Tests whether getting file line number works.
 		/// </summary>
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void TestGetFileLineNumber ()
 		{
 			Assert.AreEqual (0,
@@ -280,6 +286,9 @@ namespace MonoTests.System.Diagnostics
 		/// Tests whether getting file name works.
 		/// </summary>
 		[Test]
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void TestGetFileName ()
 		{
 			Assert.IsNull (frame1.GetFileName (),
@@ -298,6 +307,9 @@ namespace MonoTests.System.Diagnostics
 		[Test]
 #if ONLY_1_1
 		[Category ("NotDotNet")] // .NET 1.1 is off by one
+#endif
+#if MOBILE
+		[Category("NotWorking")]
 #endif
 		public void TestGetFileLineNumber ()
 		{

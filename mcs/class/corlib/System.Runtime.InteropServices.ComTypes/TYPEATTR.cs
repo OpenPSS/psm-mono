@@ -29,6 +29,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[StructLayout (LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -57,3 +58,4 @@ namespace System.Runtime.InteropServices.ComTypes
 	}
 }
 
+#endif

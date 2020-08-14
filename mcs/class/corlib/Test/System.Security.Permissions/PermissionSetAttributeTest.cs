@@ -51,11 +51,13 @@ namespace MonoTests.System.Security.Permissions {
 			Assert.AreEqual (a.ToString (), a.TypeId.ToString (), "TypeId");
 			Assert.IsFalse (a.Unrestricted, "Unrestricted");
 
+#if !NET_2_1
 			IPermission perm = a.CreatePermission ();
 			Assert.IsNull (perm, "CreatePermission");
 
 			PermissionSet ps = a.CreatePermissionSet ();
 			Assert.AreEqual (0, ps.Count, "CreatePermissionSet");
+#endif
 		}
 
 		[Test]
@@ -122,6 +124,9 @@ namespace MonoTests.System.Security.Permissions {
 
 		[Test]
 		[ExpectedException (typeof (ArgumentException))]
+#if NET_2_1
+		[Category("NotWorking")] // PermissionSetAttribute.CreatePermissionSet returns null in 2.1
+#endif
 		public void Hex_Bad ()
 		{
 			PermissionSetAttribute a = new PermissionSetAttribute (SecurityAction.Assert);
@@ -131,6 +136,9 @@ namespace MonoTests.System.Security.Permissions {
 		}
 
 		[Test]
+#if NET_2_1
+		[Category("NotWorking")] // PermissionSetAttribute.CreatePermissionSet returns null in 2.1
+#endif
 		public void Hex_ASCII_Permission ()
 		{
 			SecurityPermission sp = new SecurityPermission (SecurityPermissionFlag.Assertion);
@@ -145,6 +153,9 @@ namespace MonoTests.System.Security.Permissions {
 
 		[Test]
 		[ExpectedException (typeof (XmlSyntaxException))]
+#if NET_2_1
+		[Category("NotWorking")] // PermissionSetAttribute.CreatePermissionSet returns null in 2.1
+#endif
 		public void Hex_Unicode_Permission ()
 		{
 			SecurityPermission sp = new SecurityPermission (SecurityPermissionFlag.Assertion);
@@ -161,6 +172,9 @@ namespace MonoTests.System.Security.Permissions {
 
 		[Test]
 		[ExpectedException (typeof (ArgumentException))]
+#if NET_2_1
+		[Category("NotWorking")] // PermissionSetAttribute.CreatePermissionSet returns null in 2.1
+#endif
 		public void Hex_BigEndianUnicode_Permission ()
 		{
 			SecurityPermission sp = new SecurityPermission (SecurityPermissionFlag.Assertion);
@@ -237,8 +251,10 @@ namespace MonoTests.System.Security.Permissions {
 			Assert.IsNull (a.Name, "Name");
 			Assert.IsNull (a.XML, "XML");
 
+#if !NET_2_1
 			PermissionSet ps = a.CreatePermissionSet ();
 			Assert.IsTrue (ps.IsUnrestricted (), "CreatePermissionSet.IsUnrestricted");
+#endif
 		}
 
 		[Test]

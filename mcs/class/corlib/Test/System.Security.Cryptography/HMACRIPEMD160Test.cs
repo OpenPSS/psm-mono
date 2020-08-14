@@ -52,7 +52,7 @@ namespace MonoTests.System.Security.Cryptography {
 		protected HMACRIPEMD160 hmac;
 
 		[SetUp]
-		public override void SetUp () 
+		protected override void SetUp () 
 		{
 			hmac = new HMACRIPEMD160 ();
 			hmac.Key = new byte [8];

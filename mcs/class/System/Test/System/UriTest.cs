@@ -29,6 +29,9 @@ namespace MonoTests.System
 		}
 
 		[Test]
+#if MOBILE
+		[Category("NotWorking")] // #rel31 fails
+#endif
 		public void Constructors ()
 		{
 			Uri uri = null;
@@ -228,6 +231,9 @@ namespace MonoTests.System
 
 		// regression for bug #47573
 		[Test]
+#if MOBILE
+		[Category("NotWorking")] // #3 fails
+#endif
 		public void RelativeCtor ()
 		{
 			Uri b = new Uri ("http://a/b/c/d;p?q");

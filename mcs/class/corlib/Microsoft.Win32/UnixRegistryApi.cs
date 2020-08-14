@@ -621,30 +621,17 @@ namespace Microsoft.Win32 {
 				break;
 				
 			case RegistryValueKind.DWord:
-				if (value is byte)
-					value = (int)((byte)value);
-				else if (value is sbyte)
-					value = (int)((sbyte)value);
-				else if (value is short)
-					value = (int)((short)value);
-				else if (value is ushort)
-					value = (int)((ushort)value);
-				else if (value is uint)
-					value = (int)((uint)value);
-				else if (value is long){
-					var l = (long) value;
-					if (l <= Int32.MaxValue || l >= Int32.MinValue)
-						value = (int) l;
-				} else if (value is ulong){
-					var l = (ulong) value;
-					if (l <= Int32.MaxValue)
-						value = (int) l;
+				if (value is long &&
+				    (((long) value) < Int32.MaxValue) &&
+				    (((long) value) > Int32.MinValue)){
+					values [name] = (int) ((long)value);
+					return;
 				}
-				
-				if (!(value is int))
-					break;
-				values [name] = value;
-				return;
+				if (value is int){
+					values [name] = value;
+					return;
+				}
+				break;
 				
 			case RegistryValueKind.MultiString:
 				if (value is string []){
@@ -654,24 +641,15 @@ namespace Microsoft.Win32 {
 				break;
 				
 			case RegistryValueKind.QWord:
-				if (value is byte)
-					value = (long)((byte)value);
-				else if (value is sbyte)
-					value = (long)((sbyte)value);
-				else if (value is short)
-					value = (long)((short)value);
-				else if (value is ushort)
-					value = (long)((ushort)value);
-				else if (value is uint)
-					value = (long)((uint)value);
-				else if (value is int)
-					value = (long)((int)value);
-				else if (value is ulong)
-					value = (long)((ulong)value);
-				if (!(value is long))
-					break;
-				values [name] = value;
-				return;
+				if (value is int){
+					values [name] = (long) ((int) value);
+					return;
+				}
+				if (value is long){
+					values [name] = value;
+					return;
+				}
+				break;
 			default:
 				throw new ArgumentException ("unknown value", "valueKind");
 			}

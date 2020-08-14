@@ -63,8 +63,10 @@ namespace MonoTests.System.Security.Permissions {
 			Assert.AreEqual (a.ToString (), a.TypeId.ToString (), "TypeId");
 			Assert.IsFalse (a.Unrestricted, "Unrestricted");
 
+#if !NET_2_1
 			SecurityPermission perm = (SecurityPermission) a.CreatePermission ();
 			Assert.AreEqual (SecurityPermissionFlag.NoFlags, perm.Flags, "CreatePermission.Flags");
+#endif
 		}
 
 		[Test]
@@ -267,8 +269,10 @@ namespace MonoTests.System.Security.Permissions {
 			a.Unrestricted = true;
 			Assert.AreEqual (SecurityPermissionFlag.NoFlags, a.Flags, "Unrestricted");
 
+#if !NET_2_1
 			SecurityPermission perm = (SecurityPermission) a.CreatePermission ();
 			Assert.AreEqual (SecurityPermissionFlag.AllFlags, perm.Flags, "CreatePermission.Flags");
+#endif
 		}
 
 		[Test]

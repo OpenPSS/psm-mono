@@ -30,7 +30,7 @@
 #include <glib.h>
 
 #define GROW_IF_NECESSARY(s,l) { \
-	if(s->len + l >= s->allocated_len) { \
+	if(s->len + (gssize) l >= s->allocated_len) { \
 		s->allocated_len = (s->allocated_len + l + 16) * 2; \
 		s->str = g_realloc(s->str, s->allocated_len); \
 	} \
@@ -47,7 +47,7 @@ g_string_new_len (const gchar *init, gssize len)
 		ret->len = len < 0 ? strlen(init) : len;
 	ret->allocated_len = MAX(ret->len + 1, 16);
 	ret->str = g_malloc(ret->allocated_len);
-	if (init)
+	if (init && ret->len > 0)
 		memcpy(ret->str, init, ret->len);
 	ret->str[ret->len] = 0;
 
@@ -101,6 +101,10 @@ g_string_append_len (GString *string, const gchar *val, gssize len)
 		len = strlen(val);
 	}
 
+	if (len == 0) {
+		return string;
+	}
+
 	GROW_IF_NECESSARY(string, len);
 	memcpy(string->str + string->len, val, len);
 	string->len += len;
@@ -133,6 +137,20 @@ g_string_append_c (GString *string, gchar c)
 }
 
 GString *
+g_string_append_unichar (GString *string, gunichar c)
+{
+	gchar utf8[6];
+	gint len;
+	
+	g_return_val_if_fail (string != NULL, NULL);
+	
+	if ((len = g_unichar_to_utf8 (c, utf8)) <= 0)
+		return string;
+	
+	return g_string_append_len (string, utf8, len);
+}
+
+GString *
 g_string_prepend (GString *string, const gchar *val)
 {
 	gssize len;
@@ -145,6 +163,24 @@ g_string_prepend (GString *string, const gchar *val)
 	GROW_IF_NECESSARY(string, len);	
 	memmove(string->str + len, string->str, string->len + 1);
 	memcpy(string->str, val, len);
+
+	return string;
+}
+
+GString *
+g_string_insert (GString *string, gssize pos, const gchar *val)
+{
+	gssize len;
+	
+	g_return_val_if_fail (string != NULL, string);
+	g_return_val_if_fail (val != NULL, string);
+	g_return_val_if_fail (pos <= string->len, string);
+
+	len = strlen (val);
+	
+	GROW_IF_NECESSARY(string, len);	
+	memmove(string->str + pos + len, string->str + pos, string->len - pos - len + 1);
+	memcpy(string->str + pos, val, len);
 
 	return string;
 }
@@ -163,6 +199,19 @@ g_string_append_printf (GString *string, const gchar *format, ...)
 	va_end (args);
 	g_string_append (string, ret);
 
+	g_free (ret);
+}
+
+void
+g_string_append_vprintf (GString *string, const gchar *format, va_list args)
+{
+	char *ret;
+
+	g_return_if_fail (string != NULL);
+	g_return_if_fail (format != NULL);
+
+	ret = g_strdup_vprintf (format, args);
+	g_string_append (string, ret);
 	g_free (ret);
 }
 
@@ -190,7 +239,7 @@ g_string_truncate (GString *string, gsize len)
 	g_return_val_if_fail (string != NULL, string);
 
 	/* Silent return */
-	if (len < 0 || len >= string->len) {
+	if (len < 0 || (gssize) len >= string->len) {
 		return string;
 	}
 	
@@ -199,3 +248,37 @@ g_string_truncate (GString *string, gsize len)
 	return string;
 }
 
+GString *
+g_string_set_size (GString *string, gsize len)
+{
+	g_return_val_if_fail (string != NULL, string);
+
+	if (len < 0)
+		len = 0;
+
+	GROW_IF_NECESSARY(string, len);
+	
+	string->len = len;
+	string->str[len] = 0;
+	return string;
+}
+
+GString *
+g_string_erase (GString *string, gssize pos, gssize len)
+{
+	g_return_val_if_fail (string != NULL, string);
+
+	/* Silent return */
+	if (pos >= string->len)
+		return string;
+
+	if (len == -1 || (pos + len) >= string->len) {
+		string->str[pos] = 0;
+	}
+	else {
+		memmove (string->str + pos, string->str + pos + len, string->len - (pos + len) + 1);
+		string->len -= len;
+	}
+
+	return string;
+}

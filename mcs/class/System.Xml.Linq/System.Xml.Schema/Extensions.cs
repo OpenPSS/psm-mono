@@ -34,62 +34,62 @@ namespace System.Xml.Schema
 {
 	public static class Extensions
 	{
-		public static IXmlSchemaInfo GetSchemaInfo (this XAttribute source)
+		public static IXmlSchemaInfo GetSchemaInfo (this XAttribute attribute)
 		{
-			return source.Annotation<IXmlSchemaInfo> ();
+			return attribute.Annotation<IXmlSchemaInfo> ();
 		}
 
-		public static IXmlSchemaInfo GetSchemaInfo (this XElement source)
+		public static IXmlSchemaInfo GetSchemaInfo (this XElement element)
 		{
-			return source.Annotation<IXmlSchemaInfo> ();
+			return element.Annotation<IXmlSchemaInfo> ();
 		}
 
-		public static void Validate (this XAttribute source, XmlSchemaObject partialValidationType, XmlSchemaSet schemas, ValidationEventHandler validationEventHandler)
+		public static void Validate (this XAttribute attribute, XmlSchemaObject partialValidationType, XmlSchemaSet schemas, ValidationEventHandler handler)
 		{
-			Validate (source, partialValidationType, schemas, validationEventHandler, false);
+			Validate (attribute, partialValidationType, schemas, handler, false);
 		}
 
-		public static void Validate (this XAttribute source, XmlSchemaObject partialValidationType, XmlSchemaSet schemas, ValidationEventHandler validationEventHandler, bool addSchemaInfo)
+		public static void Validate (this XAttribute attribute, XmlSchemaObject partialValidationType, XmlSchemaSet schemas, ValidationEventHandler handler, bool addSchemaInfo)
 		{
-			if (source == null)
-				throw new ArgumentNullException ("source");
+			if (attribute == null)
+				throw new ArgumentNullException ("attribute");
 			if (schemas == null)
 				throw new ArgumentNullException ("schemas");
 			var nsmgr = new XmlNamespaceManager (new NameTable ());
 			var v = new XmlSchemaValidator (nsmgr.NameTable, schemas, nsmgr, XmlSchemaValidationFlags.None);
-			if (validationEventHandler != null)
-				v.ValidationEventHandler += validationEventHandler;
+			if (handler != null)
+				v.ValidationEventHandler += handler;
 			if (partialValidationType != null)
 				v.Initialize (partialValidationType);
 			else
 				v.Initialize ();
 			var xi = addSchemaInfo ? new XmlSchemaInfo () : null;
-			v.ValidateAttribute (source.Name.LocalName, source.Name.NamespaceName, source.Value, xi);
+			v.ValidateAttribute (attribute.Name.LocalName, attribute.Name.NamespaceName, attribute.Value, xi);
 		}
 
-		public static void Validate (this XDocument source, XmlSchemaSet schemas, ValidationEventHandler validationEventHandler)
+		public static void Validate (this XDocument document, XmlSchemaSet schemas, ValidationEventHandler handler)
 		{
-			Validate (source, schemas, validationEventHandler, false);
+			Validate (document, schemas, handler, false);
 		}
 
-		public static void Validate (this XDocument source, XmlSchemaSet schemas, ValidationEventHandler validationEventHandler, bool addSchemaInfo)
+		public static void Validate (this XDocument document, XmlSchemaSet schemas, ValidationEventHandler handler, bool addSchemaInfo)
 		{
-			if (source == null)
-				throw new ArgumentNullException ("source");
+			if (document == null)
+				throw new ArgumentNullException ("document");
 			if (schemas == null)
 				throw new ArgumentNullException ("schemas");
 			var xrs = new XmlReaderSettings () { ValidationType = ValidationType.Schema };
 			xrs.Schemas = schemas;
-			xrs.ValidationEventHandler += validationEventHandler;
-			var xsource = new XNodeReader (source);
-			var xr = XmlReader.Create (xsource, xrs);
+			xrs.ValidationEventHandler += handler;
+			var source = new XNodeReader (document);
+			var xr = XmlReader.Create (source, xrs);
 			while (xr.Read ()) {
 				if (addSchemaInfo) {
 					if (xr.NodeType == XmlNodeType.Element) {
-						xsource.CurrentNode.AddAnnotation (xr.SchemaInfo);
+						source.CurrentNode.AddAnnotation (xr.SchemaInfo);
 						while (xr.MoveToNextAttribute ())
 							if (xr.NamespaceURI != XUtil.XmlnsNamespace)
-								xsource.GetCurrentAttribute ().AddAnnotation (xr.SchemaInfo);
+								source.GetCurrentAttribute ().AddAnnotation (xr.SchemaInfo);
 						xr.MoveToElement ();
 					}
 				}
@@ -97,13 +97,13 @@ namespace System.Xml.Schema
 		}
 
 		[MonoTODO]
-		public static void Validate (this XElement source, XmlSchemaObject partialValidationType, XmlSchemaSet schemas, ValidationEventHandler validationEventHandler)
+		public static void Validate (this XElement element, XmlSchemaObject partialValidationType, XmlSchemaSet schemas, ValidationEventHandler handler)
 		{
 			throw new NotImplementedException ();
 		}
 
 		[MonoTODO]
-		public static void Validate (this XElement source, XmlSchemaObject partialValidationType, XmlSchemaSet schemas, ValidationEventHandler validationEventHandler, bool addSchemaInfo)
+		public static void Validate (this XElement element, XmlSchemaObject partialValidationType, XmlSchemaSet schemas, ValidationEventHandler handler, bool addSchemaInfo)
 		{
 			throw new NotImplementedException ();
 		}

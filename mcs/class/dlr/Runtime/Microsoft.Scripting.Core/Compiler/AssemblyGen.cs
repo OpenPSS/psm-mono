@@ -133,7 +133,7 @@ namespace System.Linq.Expressions.Compiler {
         //The file location is used by PE verification in Microsoft.Scripting.
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         internal string SaveAssembly() {
-#if !SILVERLIGHT // AssemblyBuilder.Save
+#if !SILVERLIGHT && !MOBILE // AssemblyBuilder.Save
             _myAssembly.Save(_outFileName, PortableExecutableKinds.ILOnly, ImageFileMachine.I386);
             return Path.Combine(_outDir, _outFileName);
 #else

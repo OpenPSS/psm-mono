@@ -1,10 +1,9 @@
 //
 // MessageEncodingBindingElementImporter.cs
 //
-// Author:
-//       Martin Baulig <martin.baulig@xamarin.com>
+// Author: Atsushi Enomoto (atsushi@ximian.com)
 //
-// Copyright (c) 2012 Xamarin Inc. (http://www.xamarin.com)
+// Copyright (C) 2005 Novell, Inc (http://www.novell.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -40,6 +39,7 @@ namespace System.ServiceModel.Channels
 	public class MessageEncodingBindingElementImporter
 		: IWsdlImportExtension, IPolicyImportExtension
 	{
+		[MonoTODO]
 		void IWsdlImportExtension.BeforeImport (
 			ServiceDescriptionCollection wsdlDocuments,
 			XmlSchemaSet xmlSchemas,
@@ -47,35 +47,22 @@ namespace System.ServiceModel.Channels
 		{
 		}
 
+		[MonoTODO]
 		void IWsdlImportExtension.ImportContract (WsdlImporter importer,
 			WsdlContractConversionContext context)
 		{
 		}
 
+		[MonoTODO]
 		void IWsdlImportExtension.ImportEndpoint (WsdlImporter importer,
 			WsdlEndpointConversionContext context)
 		{
 		}
 
+		[MonoTODO]
 		void IPolicyImportExtension.ImportPolicy (MetadataImporter importer,
 			PolicyConversionContext context)
 		{
-			var assertions = context.GetBindingAssertions ();
-
-			var mtom = PolicyImportHelper.GetMtomMessageEncodingPolicy (assertions);
-			if (mtom != null) {
-				// http://www.w3.org/Submission/WS-MTOMPolicy/
-				context.BindingElements.Add (new MtomMessageEncodingBindingElement ());
-				return;
-			}
-
-			var binary = PolicyImportHelper.GetBinaryMessageEncodingPolicy (assertions);
-			if (binary != null) {
-				context.BindingElements.Add (new BinaryMessageEncodingBindingElement ());
-				return;
-			}
-
-			context.BindingElements.Add (new TextMessageEncodingBindingElement ());
 		}
 	}
 }

@@ -15,6 +15,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Reflection.Emit
 {
 	[TestFixture]
+	[Category("NotMobile")] // mobile profile doesn't support S.R.E
 	public class MethodRentalTest : Assertion
 	{	
 		private TypeBuilder genClass;

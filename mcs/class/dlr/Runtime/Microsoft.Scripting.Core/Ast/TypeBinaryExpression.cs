@@ -29,7 +29,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents an operation between an expression and a type. 
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.TypeBinaryExpressionProxy))]
 #endif
     public sealed class TypeBinaryExpression : Expression {

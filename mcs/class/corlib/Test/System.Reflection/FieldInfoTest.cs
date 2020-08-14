@@ -366,6 +366,7 @@ namespace MonoTests.System.Reflection
 #if NET_2_0
 #if !TARGET_JVM // ReflectionOnlyLoad not supported for TARGET_JVM
 		[Test]
+		[Category("NotWorking")]
 		[ExpectedException (typeof (InvalidOperationException))]
 		public void GetValueOnRefOnlyAssembly ()
 		{
@@ -376,6 +377,7 @@ namespace MonoTests.System.Reflection
 		}
 	
 		[Test]
+		[Category ("NotWorking")]
 		[ExpectedException (typeof (InvalidOperationException))]
 		public void SetValueOnRefOnlyAssembly ()
 		{
@@ -422,6 +424,7 @@ namespace MonoTests.System.Reflection
 	
 #if !TARGET_JVM // TypeBuilder not supported for TARGET_JVM
 		[Test]
+		[Category ("NotWorking")]
 		public void NonPublicTests ()
 		{
 			Assembly assembly = Assembly.ReflectionOnlyLoad (typeof (FieldInfoTest).Assembly.FullName);

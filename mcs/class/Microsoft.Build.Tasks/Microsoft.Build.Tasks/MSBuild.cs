@@ -60,7 +60,6 @@ namespace Microsoft.Build.Tasks {
 
 			string filename;
 			bool result = true;
-			bool all_result = true;
 			stopOnFirstFailure = false;
 			List <ITaskItem > outputItems = new List <ITaskItem> ();
 			string currentDirectory = Environment.CurrentDirectory;
@@ -103,9 +102,6 @@ namespace Microsoft.Build.Tasks {
 					result = false;
 				}
 
-				if (!result)
-					all_result = false;
-
 				if (result) {
 					foreach (DictionaryEntry de in outputs) {
 						ITaskItem [] array = (ITaskItem []) de.Value;
@@ -133,11 +129,11 @@ namespace Microsoft.Build.Tasks {
 				Directory.SetCurrentDirectory (currentDirectory);
 			}
 
-			if (all_result)
+			if (result)
 				targetOutputs = outputItems.ToArray ();
 
 			Directory.SetCurrentDirectory (currentDirectory);
-			return all_result;
+			return result;
 		}
 
 		void ThrowIfInvalidToolsVersion (string toolsVersion)

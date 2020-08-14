@@ -31,7 +31,7 @@ LIB_MCS_FLAGS +=	\
 	-r:J2SE.Helpers.dll			\
 	$(OTHER_LIB_MCS_FLAGS)
 else 
-MOBILE := $(filter monotouch monodroid, $(PROFILE))
+MOBILE := $(filter monotouch monodroid mobile, $(PROFILE))
 ifdef MOBILE
 LIB_MCS_FLAGS += \
 	-r:Mono.Data.Tds.dll \
@@ -64,6 +64,7 @@ BUILT_SOURCES = Mono.Data.SqlExpressions/Parser.cs
 
 Mono.Data.SqlExpressions/Parser.cs: Mono.Data.SqlExpressions/Parser.jay $(topdir)/jay/skeleton.cs
 	$(topdir)/jay/jay -vct < $(topdir)/jay/skeleton.cs $(CURDIR)/$< >$@
+	rm -f y.output
 
 include ../../build/library.make
 

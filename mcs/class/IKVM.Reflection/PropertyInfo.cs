@@ -27,6 +27,11 @@ namespace IKVM.Reflection
 {
 	public abstract class PropertyInfo : MemberInfo
 	{
+		// prevent external subclasses
+		internal PropertyInfo()
+		{
+		}
+
 		public sealed override MemberTypes MemberType
 		{
 			get { return MemberTypes.Property; }
@@ -150,9 +155,19 @@ namespace IKVM.Reflection
 			return GetAccessors(false);
 		}
 
+		public CallingConventions __CallingConvention
+		{
+			get { return this.PropertySignature.CallingConvention; }
+		}
+
 		internal virtual PropertyInfo BindTypeParameters(Type type)
 		{
 			return new GenericPropertyInfo(this.DeclaringType.BindTypeParameters(type), this);
+		}
+
+		public override string ToString()
+		{
+			return this.DeclaringType.ToString() + " " + Name;
 		}
 	}
 }

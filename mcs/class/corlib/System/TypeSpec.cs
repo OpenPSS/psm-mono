@@ -152,8 +152,6 @@ namespace System {
 			Type type = null;
 			if (typeResolver != null)
 				type = typeResolver (asm, name, ignoreCase);
-			else
-				type = asm.GetType (name, false, ignoreCase);
 			if (type == null) {
 				if (throwOnError)
 					throw new TypeLoadException ("Could not resolve type '" + name + "'");

@@ -30,6 +30,7 @@
 //
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[Flags, Serializable]
@@ -45,3 +46,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		PARAMFLAG_FHASCUSTDATA = 64
 	}
 }
+#endif

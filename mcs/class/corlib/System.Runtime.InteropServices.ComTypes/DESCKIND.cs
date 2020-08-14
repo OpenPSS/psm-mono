@@ -30,6 +30,7 @@
 // (C) 2002 Ximian, Inc.
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 
@@ -43,3 +44,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		DESCKIND_MAX = 5
 	}
 }
+#endif

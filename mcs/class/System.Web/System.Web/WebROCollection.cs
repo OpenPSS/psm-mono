@@ -5,7 +5,6 @@
 //   	Gonzalo Paniagua Javier (gonzalo@novell.com)
 //
 // (c) 2005-2009 Novell, Inc. (http://www.novell.com)
-// Copyright 2012 Xamarin, Inc (http://xamarin.com)
 //
 //
 // Permission is hereby granted, free of charge, to any person obtaining
@@ -27,10 +26,8 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-using System.Collections;
 using System.Collections.Specialized;
 using System.Text;
-using System.Web.Util;
 
 namespace System.Web
 {
@@ -39,7 +36,7 @@ namespace System.Web
 		bool got_id;
 		int id;
 
-		public WebROCollection () : base (SecureHashCodeProvider.DefaultInvariant, CaseInsensitiveComparer.DefaultInvariant) { }
+		public WebROCollection () : base (StringComparer.OrdinalIgnoreCase) { }
 		public bool GotID {
 			get { return got_id; }
 		}

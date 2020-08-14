@@ -13,6 +13,7 @@
 
 #include "mono-codeman.h"
 #include "mono-mmap.h"
+#include "mono-counters.h"
 #include "dlmalloc.h"
 #include <mono/metadata/class-internals.h>
 #include <mono/metadata/profiler-private.h>
@@ -20,10 +21,16 @@
 #include <valgrind/memcheck.h>
 #endif
 
+#if defined(TARGET_VITA)
+#include "bridge.h"
+#endif
+
 #if defined(__native_client_codegen__) && defined(__native_client__)
 #include <malloc.h>
-#include <sys/nacl_syscalls.h>
+#include <nacl/nacl_dyncode.h>
 #endif
+
+static uintptr_t code_memory_used = 0;
 
 /*
  * AMD64 processors maintain icache coherency only for pages which are 
@@ -33,7 +40,11 @@
  * http://g.oswego.edu/dl/html/malloc.html
  */
 
+#if defined(TARGET_VITA)
+#define MIN_PAGES 256
+#else
 #define MIN_PAGES 16
+#endif
 
 #if defined(__ia64__) || defined(__x86_64__)
 /*
@@ -200,6 +211,9 @@ nacl_inverse_modify_patch_target (unsigned char *target)
 
 #endif /* __native_client_codegen && __native_client__ */
 
+static void unlock_mem (void *addr);
+static void lock_mem (void *addr);
+
 /**
  * mono_code_manager_new:
  *
@@ -242,6 +256,10 @@ mono_code_manager_new (void)
 	return cman;
 }
 
+#if defined(TARGET_VITA)
+static MonoCodeManager *dyncman = NULL;
+#endif
+
 /**
  * mono_code_manager_new_dynamic:
  *
@@ -254,9 +272,18 @@ mono_code_manager_new (void)
 MonoCodeManager* 
 mono_code_manager_new_dynamic (void)
 {
+#if defined(TARGET_VITA)
+	if (!dyncman) {
+		dyncman = mono_code_manager_new ();
+		dyncman->dynamic = 1;
+	}
+
+	return dyncman;
+#else
 	MonoCodeManager *cman = mono_code_manager_new ();
 	cman->dynamic = 1;
 	return cman;
+#endif
 }
 
 
@@ -279,11 +306,16 @@ free_chunklist (CodeChunk *chunk)
 		mono_profiler_code_chunk_destroy ((gpointer) dead->data);
 		chunk = chunk->next;
 		if (dead->flags == CODE_FLAG_MMAP) {
+#if defined(TARGET_VITA)
+			pss_code_mem_free (dead->data);
+#else
 			mono_vfree (dead->data, dead->size);
+#endif
 			/* valgrind_unregister(dead->data); */
 		} else if (dead->flags == CODE_FLAG_MALLOC) {
 			dlfree (dead->data);
 		}
+		code_memory_used -= dead->size;
 		free (dead);
 	}
 }
@@ -371,7 +403,11 @@ mono_code_manager_foreach (MonoCodeManager *cman, MonoCodeManagerFunc func, void
 #define BIND_ROOM 4
 #endif
 #if defined(__arm__)
+#if defined(TARGET_VITA)
 #define BIND_ROOM 8
+#else
+#define BIND_ROOM 4
+#endif
 #endif
 
 static CodeChunk*
@@ -389,10 +425,12 @@ new_codechunk (int dynamic, int size)
 
 	pagesize = mono_pagesize ();
 
+#if !defined(TARGET_VITA)
 	if (dynamic) {
 		chunk_size = size;
 		flags = CODE_FLAG_MALLOC;
 	} else {
+#endif
 		minsize = pagesize * MIN_PAGES;
 		if (size < minsize)
 			chunk_size = minsize;
@@ -401,7 +439,10 @@ new_codechunk (int dynamic, int size)
 			chunk_size += pagesize - 1;
 			chunk_size &= ~ (pagesize - 1);
 		}
+#if !defined(TARGET_VITA)
 	}
+#endif
+
 #ifdef BIND_ROOM
 	bsize = chunk_size / BIND_ROOM;
 	if (bsize < MIN_BSIZE)
@@ -423,7 +464,11 @@ new_codechunk (int dynamic, int size)
 		/* Allocate MIN_ALIGN-1 more than we need so we can still */
 		/* guarantee MIN_ALIGN alignment for individual allocs    */
 		/* from mono_code_manager_reserve_align.                  */
+#if defined(TARGET_VITA)
+		ptr = pss_code_mem_alloc (&chunk_size);
+#else
 		ptr = mono_valloc (NULL, chunk_size + MIN_ALIGN - 1, MONO_PROT_RWX | ARCH_MAP_FLAGS);
+#endif
 		if (!ptr)
 			return NULL;
 	}
@@ -431,7 +476,9 @@ new_codechunk (int dynamic, int size)
 	if (flags == CODE_FLAG_MALLOC) {
 #ifdef BIND_ROOM
 		/* Make sure the thunks area is zeroed */
+		unlock_mem (ptr);
 		memset (ptr, 0, bsize);
+		lock_mem (ptr);
 #endif
 	}
 
@@ -451,6 +498,8 @@ new_codechunk (int dynamic, int size)
 	chunk->bsize = bsize;
 	mono_profiler_code_chunk_new((gpointer) chunk->data, chunk->size);
 
+	code_memory_used += chunk_size;
+	mono_runtime_resource_check_limit (MONO_RESOURCE_JIT_CODE, code_memory_used);
 	/*printf ("code chunk at: %p\n", ptr);*/
 	return chunk;
 }
@@ -651,3 +700,30 @@ mono_code_manager_size (MonoCodeManager *cman, int *used_size)
 	return size;
 }
 
+#if defined(TARGET_VITA)
+
+/* Make 'ADDR' writable */
+static void
+unlock_mem (void *addr)
+{
+	pss_code_mem_unlock ();
+}
+
+/* Make 'ADDR' read-only again */
+static void
+lock_mem (void *addr)
+{
+	pss_code_mem_lock ();
+}
+
+#else
+
+static void
+unlock_mem (void *addr) {
+}
+
+static void
+lock_mem (void *addr) {
+}
+
+#endif

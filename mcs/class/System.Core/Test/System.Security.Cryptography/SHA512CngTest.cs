@@ -26,7 +26,7 @@ namespace MonoTests.System.Security.Cryptography {
 	public class SHA512CngTest : SHA512Test {
 
 		[SetUp]
-		public override void SetUp ()
+		protected override void SetUp ()
 		{
 			hash = new SHA512Cng ();
 		}

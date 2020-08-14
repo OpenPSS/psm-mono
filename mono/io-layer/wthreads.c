@@ -13,10 +13,9 @@
 #include <stdio.h>
 #include <glib.h>
 #include <string.h>
-#include <mono/utils/gc_wrapper.h>
 #include <pthread.h>
 #include <signal.h>
-#include <sched.h>
+//#include <sched.h>
 #include <sys/time.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -31,12 +30,14 @@
 #include <mono/io-layer/mutex-private.h>
 #include <mono/io-layer/atomic.h>
 
+#include <mono/utils/mono-threads.h>
+#include <mono/utils/gc_wrapper.h>
+
 #ifdef HAVE_VALGRIND_MEMCHECK_H
 #include <valgrind/memcheck.h>
 #endif
 
 #undef DEBUG
-#undef TLS_DEBUG
 
 #if 0
 #define WAIT_DEBUG(code) do { code } while (0)
@@ -206,7 +207,7 @@ static void thread_exit (guint32 exitstatus, gpointer handle)
 	/* Call pthread_exit() to call destructors and really exit the
 	 * thread
 	 */
-	pthread_exit (NULL);
+	mono_gc_pthread_exit (NULL);
 }
 
 static void thread_attached_exit (gpointer handle)
@@ -248,11 +249,9 @@ static void *thread_start_routine (gpointer args)
 {
 	struct _WapiHandle_thread *thread = (struct _WapiHandle_thread *)args;
 	int thr_ret;
-
-	if (!(thread->create_flags & CREATE_NO_DETACH)) {
-		thr_ret = mono_gc_pthread_detach (pthread_self ());
-		g_assert (thr_ret == 0);
-	}
+	
+	thr_ret = mono_gc_pthread_detach (pthread_self ());
+	g_assert (thr_ret == 0);
 
 	thr_ret = pthread_setspecific (thread_hash_key,
 				       (void *)thread->handle);
@@ -273,14 +272,16 @@ static void *thread_start_routine (gpointer args)
 		   shutting down we still end up here, and at this
 		   point the thread_hash_key might already be
 		   destroyed. */
-		pthread_exit (NULL);
+		mono_gc_pthread_exit (NULL);
 	}
-
-	thread->id = pthread_self();
 
 #ifdef DEBUG
 	g_message ("%s: started thread id %ld", __func__, thread->id);
 #endif
+
+	/* We set it again here since passing &thread->id to pthread_create is racy
+	   as the thread can start running before the value is set.*/
+	thread->id = pthread_self ();
 
 	if (thread->create_flags & CREATE_SUSPENDED) {
 		_wapi_thread_suspend (thread);
@@ -408,13 +409,14 @@ gpointer CreateThread(WapiSecurityAttributes *security G_GNUC_UNUSED, guint32 st
 	thread_handle_p->handle = handle;
 	
 
-	ret = mono_gc_pthread_create (&thread_handle_p->id, &attr,
-								  thread_start_routine, (void *)thread_handle_p);
+	ret = mono_threads_pthread_create (&thread_handle_p->id, &attr,
+									   thread_start_routine, (void *)thread_handle_p);
 
 	if (ret != 0) {
-		g_warning ("%s: Error creating native thread handle %s (%d)", __func__,
-			   strerror (ret), ret);
-		SetLastError (ERROR_GEN_FAILURE);
+#ifdef DEBUG
+		g_message ("%s: Thread create error: %s", __func__,
+			   strerror(ret));
+#endif
 
 		/* Two, because of the reference we took above */
 		unrefs = 2;
@@ -573,7 +575,7 @@ void ExitThread(guint32 exitcode)
 		thread_exit(exitcode, thread);
 	} else {
 		/* Just blow this thread away */
-		pthread_exit (NULL);
+		mono_gc_pthread_exit (NULL);
 	}
 }
 
@@ -813,172 +815,6 @@ guint32 SuspendThread(gpointer handle)
 	return(0xFFFFFFFF);
 }
 
-/*
- * We assume here that TLS_MINIMUM_AVAILABLE is less than
- * PTHREAD_KEYS_MAX, allowing enough overhead for a few TLS keys for
- * library usage.
- *
- * Currently TLS_MINIMUM_AVAILABLE is 64 and _POSIX_THREAD_KEYS_MAX
- * (the minimum value for PTHREAD_KEYS_MAX) is 128, so we should be
- * fine.
- */
-
-static pthread_key_t TLS_keys[TLS_MINIMUM_AVAILABLE];
-static gboolean TLS_used[TLS_MINIMUM_AVAILABLE]={FALSE};
-static pthread_mutex_t TLS_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-guint32
-mono_pthread_key_for_tls (guint32 idx)
-{
-	return (guint32)TLS_keys [idx];
-}
-
-/**
- * TlsAlloc:
- *
- * Allocates a Thread Local Storage (TLS) index.  Any thread in the
- * same process can use this index to store and retrieve values that
- * are local to that thread.
- *
- * Return value: The index value, or %TLS_OUT_OF_INDEXES if no index
- * is available.
- */
-guint32 TlsAlloc(void)
-{
-	guint32 i;
-	int thr_ret;
-	
-	pthread_mutex_lock (&TLS_mutex);
-	
-	for(i=0; i<TLS_MINIMUM_AVAILABLE; i++) {
-		if(TLS_used[i]==FALSE) {
-			TLS_used[i]=TRUE;
-			thr_ret = pthread_key_create(&TLS_keys[i], NULL);
-			g_assert (thr_ret == 0);
-
-			pthread_mutex_unlock (&TLS_mutex);
-	
-#ifdef TLS_DEBUG
-			g_message ("%s: returning key %d", __func__, i);
-#endif
-			
-			return(i);
-		}
-	}
-
-	pthread_mutex_unlock (&TLS_mutex);
-	
-#ifdef TLS_DEBUG
-	g_message ("%s: out of indices", __func__);
-#endif
-			
-	
-	return(TLS_OUT_OF_INDEXES);
-}
-
-#define MAKE_GC_ID(idx) (GUINT_TO_POINTER((idx)|(GetCurrentThreadId()<<8)))
-
-/**
- * TlsFree:
- * @idx: The TLS index to free
- *
- * Releases a TLS index, making it available for reuse.  This call
- * will delete any TLS data stored under index @idx in all threads.
- *
- * Return value: %TRUE on success, %FALSE otherwise.
- */
-gboolean TlsFree(guint32 idx)
-{
-	int thr_ret;
-	
-#ifdef TLS_DEBUG
-	g_message ("%s: freeing key %d", __func__, idx);
-#endif
-
-	if (idx >= TLS_MINIMUM_AVAILABLE) {
-		SetLastError (ERROR_INVALID_PARAMETER);
-		return FALSE;
-	}
-
-	pthread_mutex_lock (&TLS_mutex);
-	
-	if(TLS_used[idx]==FALSE) {
-		pthread_mutex_unlock (&TLS_mutex);
-		SetLastError (ERROR_INVALID_PARAMETER);
-		return(FALSE);
-	}
-	
-	TLS_used[idx]=FALSE;
-	thr_ret = pthread_key_delete(TLS_keys[idx]);
-	g_assert (thr_ret == 0);
-	
-	pthread_mutex_unlock (&TLS_mutex);
-	
-	return(TRUE);
-}
-
-/**
- * TlsGetValue:
- * @idx: The TLS index to retrieve
- *
- * Retrieves the TLS data stored under index @idx.
- *
- * Return value: The value stored in the TLS index @idx in the current
- * thread, or %NULL on error.  As %NULL can be a valid return value,
- * in this case GetLastError() returns %ERROR_SUCCESS.
- */
-gpointer TlsGetValue(guint32 idx)
-{
-	gpointer ret;
-	
-#ifdef TLS_DEBUG
-	g_message ("%s: looking up key %d", __func__, idx);
-#endif
-	if (idx >= TLS_MINIMUM_AVAILABLE) {
-		SetLastError (ERROR_INVALID_PARAMETER);
-		return NULL;
-	}
-	ret=pthread_getspecific(TLS_keys[idx]);
-
-#ifdef TLS_DEBUG
-	g_message ("%s: returning %p", __func__, ret);
-#endif
-
-	SetLastError (ERROR_SUCCESS);
-	return(ret);
-}
-
-/**
- * TlsSetValue:
- * @idx: The TLS index to store
- * @value: The value to store under index @idx
- *
- * Stores @value at TLS index @idx.
- *
- * Return value: %TRUE on success, %FALSE otherwise.
- */
-gboolean TlsSetValue(guint32 idx, gpointer value)
-{
-	int ret;
-
-#ifdef TLS_DEBUG
-	g_message ("%s: setting key %d to %p", __func__, idx, value);
-#endif
-	if (idx >= TLS_MINIMUM_AVAILABLE) {
-		SetLastError (ERROR_INVALID_PARAMETER);
-		return FALSE;
-	}
-	
-	ret=pthread_setspecific(TLS_keys[idx], value);
-#ifdef TLS_DEBUG
-	if(ret!=0)
-		g_message ("%s: pthread_setspecific error: %s", __func__,
-			   strerror (ret));
-#endif
-	
-	return(ret == 0);
-}
-
 /**
  * SleepEx:
  * @ms: The time in milliseconds to suspend for
@@ -1025,6 +861,7 @@ guint32 SleepEx(guint32 ms, gboolean alertable)
 	req.tv_nsec=ms_rem*1000000;
 	
 again:
+	memset (&rem, 0, sizeof (rem));
 	ret=nanosleep(&req, &rem);
 
 	if (alertable && _wapi_thread_apc_pending (current_thread)) {

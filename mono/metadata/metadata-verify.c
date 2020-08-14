@@ -24,6 +24,7 @@
 #include <mono/metadata/attrdefs.h>
 #include <mono/utils/strenc.h>
 #include <mono/utils/mono-error-internals.h>
+#include <mono/utils/bsearch.h>
 #include <string.h>
 //#include <signal.h>
 #include <ctype.h>
@@ -1068,8 +1069,12 @@ search_sorted_table (VerifyContext *ctx, int table, int column, guint32 coded_to
 
 	base = tinfo->base;
 
+	if (tinfo->rows == 0 || tinfo->row_size == 0)
+		return -1;
+
 	VERIFIER_DEBUG ( printf ("looking token %x table %d col %d rsize %d roff %d\n", coded_token, table, column, locator.col_size, locator.col_offset) );
-	res = bsearch (&locator, base, tinfo->rows, tinfo->row_size, token_locator);
+
+	res = mono_binary_search (&locator, base, tinfo->rows, tinfo->row_size, token_locator);
 	if (!res)
 		return -1;
 
@@ -2685,8 +2690,8 @@ verify_method_table (VerifyContext *ctx)
 		//TODO check signature contents
 
 		if (rva) {
-			if (flags & METHOD_ATTRIBUTE_ABSTRACT)
-				ADD_ERROR (ctx, g_strdup_printf ("Invalid method row %d has RVA != 0 but is Abstract", i));
+			if ((flags & (METHOD_ATTRIBUTE_ABSTRACT | METHOD_ATTRIBUTE_PINVOKE_IMPL)) || (implflags & METHOD_IMPL_ATTRIBUTE_INTERNAL_CALL))
+				ADD_ERROR (ctx, g_strdup_printf ("Invalid method row %d has RVA != 0 but is either Abstract, InternalCall or PinvokeImpl", i));
 			if (code_type == METHOD_IMPL_ATTRIBUTE_OPTIL)
 				ADD_ERROR (ctx, g_strdup_printf ("Invalid method row %d has RVA != 0 but is CodeTypeMask is neither Native, CIL or Runtime", i));
 		} else {
@@ -4197,11 +4202,18 @@ mono_verifier_verify_cattr_content (MonoImage *image, MonoMethod *ctor, const gu
 gboolean
 mono_verifier_is_sig_compatible (MonoImage *image, MonoMethod *method, MonoMethodSignature *signature)
 {
+	MonoError error;
 	MonoMethodSignature *original_sig;
 	if (!mono_verifier_is_enabled_for_image (image))
 		return TRUE;
 
-	original_sig = mono_method_signature (method);
+	original_sig = mono_method_signature_checked (method, &error);
+	if (!mono_error_ok (&error)) {
+		// FIXME: How do we propogate the verification error from here
+		mono_error_cleanup (&error);
+		return FALSE;
+	}
+
 	if (original_sig->call_convention == MONO_CALL_VARARG) {
 		if (original_sig->hasthis != signature->hasthis)
 			return FALSE;
@@ -4284,14 +4296,14 @@ mono_verifier_verify_methodimpl_row (MonoImage *image, guint32 row, MonoError *e
 	mono_metadata_decode_row (table, row, data, MONO_METHODIMPL_SIZE);
 
 	body = method_from_method_def_or_ref (image, data [MONO_METHODIMPL_BODY], NULL);
-	if (mono_loader_get_last_error ()) {
+	if (!body || mono_loader_get_last_error ()) {
 		mono_loader_clear_error ();
 		mono_error_set_bad_image (error, image, "Invalid methodimpl body for row %x", row);
 		return FALSE;
 	}
 
 	declaration = method_from_method_def_or_ref (image, data [MONO_METHODIMPL_DECLARATION], NULL);
-	if (mono_loader_get_last_error ()) {
+	if (!declaration || mono_loader_get_last_error ()) {
 		mono_loader_clear_error ();
 		mono_error_set_bad_image (error, image, "Invalid methodimpl declaration for row %x", row);
 		return FALSE;

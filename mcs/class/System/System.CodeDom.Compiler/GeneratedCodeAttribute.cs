@@ -26,8 +26,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if NET_2_0
-
+#if !MOBILE
 namespace System.CodeDom.Compiler {
 
 	[AttributeUsage (AttributeTargets.All, Inherited = false, AllowMultiple = false)]
@@ -53,5 +52,4 @@ namespace System.CodeDom.Compiler {
 		}
 	}
 }
-
 #endif

@@ -350,8 +350,8 @@ emit_fde (MonoDwarfWriter *w, int fde_index, char *start_symbol, char *end_symbo
 
 	emit_section_change (w, ".debug_frame", 0);
 
-	sprintf (symbol1, ".Lfde%d_start", fde_index);
-	sprintf (symbol2, ".Lfde%d_end", fde_index);
+	g_snprintf (symbol1, sizeof(symbol1), ".Lfde%d_start", fde_index);
+	g_snprintf (symbol2, sizeof(symbol2), ".Lfde%d_end", fde_index);
 	emit_symbol_diff (w, symbol2, symbol1, 0); /* length */
 	emit_label (w, symbol1);
 	emit_int32 (w, 0); /* CIE_pointer */
@@ -1181,7 +1181,7 @@ emit_loclist (MonoDwarfWriter *w, MonoInst *ins,
 	char label [128];
 
 	emit_push_section (w, ".debug_loc", 0);
-	sprintf (label, ".Lloclist_%d", w->loclist_index ++ );
+	g_snprintf (label, sizeof(label), ".Lloclist_%d", w->loclist_index ++ );
 	emit_label (w, label);
 
 	emit_pointer_value (w, loclist_begin_addr);
@@ -1726,7 +1726,7 @@ mono_dwarf_writer_emit_method (MonoDwarfWriter *w, MonoCompile *cfg, MonoMethod 
 		emit_uleb128 (w, need_loclist ? ABBREV_PARAM_LOCLIST : ABBREV_PARAM);
 		/* name */
 		if (pname[0] == '\0') {
-			sprintf (pname_buf, "param%d", i - sig->hasthis);
+			g_snprintf (pname_buf, sizeof(pname_buf), "param%d", i - sig->hasthis);
 			pname = pname_buf;
 		}
 		emit_string (w, pname);
@@ -1784,7 +1784,7 @@ mono_dwarf_writer_emit_method (MonoDwarfWriter *w, MonoCompile *cfg, MonoMethod 
 		if (lname) {
 			emit_string (w, lname);
 		} else {
-			sprintf (name_buf, "V_%d", i);
+			g_snprintf (name_buf, sizeof(name_buf), "V_%d", i);
 			emit_string (w, name_buf);
 		}
 		/* type */

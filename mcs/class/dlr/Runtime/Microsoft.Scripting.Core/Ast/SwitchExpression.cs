@@ -32,7 +32,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents a control expression that handles multiple selections by passing control to a <see cref="SwitchCase"/>.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.SwitchExpressionProxy))]
 #endif
     public sealed class SwitchExpression : Expression {

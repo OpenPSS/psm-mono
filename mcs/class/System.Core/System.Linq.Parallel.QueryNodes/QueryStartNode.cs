@@ -34,11 +34,7 @@ using System.Threading.Tasks;
 
 namespace System.Linq.Parallel.QueryNodes
 {
-	internal interface QueryStartNode : IVisitableNode {
-		int Count { get; }
-	}
-
-	internal class QueryStartNode<T> : QueryBaseNode<T>, QueryStartNode
+	internal class QueryStartNode<T> : QueryBaseNode<T>
 	{
 		readonly IEnumerable<T> source;
 		readonly Partitioner<T> customPartitioner;
@@ -62,7 +58,7 @@ namespace System.Linq.Parallel.QueryNodes
 		// If possible, this property will return the number of element the query
 		// is going to process. If that number if pretty low, executing the query
 		// sequentially is better
-		public int Count {
+		internal int Count {
 			get {
 				if (source == null)
 					return -1;
@@ -74,7 +70,7 @@ namespace System.Linq.Parallel.QueryNodes
 
 		public override void Visit (INodeVisitor visitor)
 		{
-			visitor.Visit ((QueryStartNode)this);
+			visitor.Visit<T> (this);
 		}
 
 		internal override IEnumerable<T> GetSequential ()

@@ -26,6 +26,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 namespace System.CodeDom {
 	internal interface ICodeDomVisitor {
 		// CodeExpression
@@ -35,9 +36,7 @@ namespace System.CodeDom {
 		void Visit (CodeBaseReferenceExpression o);
 		void Visit (CodeBinaryOperatorExpression o);
 		void Visit (CodeCastExpression o);
-#if NET_2_0
 		void Visit (CodeDefaultValueExpression o);
-#endif
 		void Visit (CodeDelegateCreateExpression o);
 		void Visit (CodeDelegateInvokeExpression o);
 		void Visit (CodeDirectionExpression o);
@@ -83,3 +82,4 @@ namespace System.CodeDom {
 		void Visit (CodeTypeConstructor o);
 	}
 }
+#endif

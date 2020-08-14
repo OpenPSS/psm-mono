@@ -27,7 +27,9 @@
 //
 #if NET_2_0
 using System;
+#if !NET_2_1
 using System.CodeDom;
+#endif
 using System.Collections.ObjectModel;
 using System.Reflection;
 

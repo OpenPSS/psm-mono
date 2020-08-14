@@ -15,6 +15,7 @@ using System;
 namespace MonoTests.System.IO {
 
 [TestFixture]
+[Category("PssFileIO")]
 public class BinaryWriterTest {
 	
 	

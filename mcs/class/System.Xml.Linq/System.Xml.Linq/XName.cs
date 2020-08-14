@@ -130,25 +130,25 @@ namespace System.Xml.Linq
 			return local.GetHashCode () ^ ns.GetHashCode ();
 		}
 
-		public static bool operator == (XName left, XName right)
+		public static bool operator == (XName n1, XName n2)
 		{
-			if ((object) left == null)
-				return (object) right == null;
-			else if ((object) right == null)
+			if ((object) n1 == null)
+				return (object) n2 == null;
+			else if ((object) n2 == null)
 				return false;
-			return object.ReferenceEquals (left, right) ||
-				left.local == right.local && left.ns == right.ns;
+			return object.ReferenceEquals (n1, n2) ||
+				n1.local == n2.local && n1.ns == n2.ns;
 		}
 
 		[CLSCompliant (false)]
-		public static implicit operator XName (string expandedName)
+		public static implicit operator XName (string s)
 		{
-			return expandedName == null ? null : Get (expandedName);
+			return s == null ? null : Get (s);
 		}
 
-		public static bool operator != (XName left, XName right)
+		public static bool operator != (XName n1, XName n2)
 		{
-			return ! (left == right);
+			return ! (n1 == n2);
 		}
 
 		public override string ToString ()

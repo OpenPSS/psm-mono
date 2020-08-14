@@ -34,7 +34,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents a constructor call.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.NewExpressionProxy))]
 #endif
     public class NewExpression : Expression, IArgumentProvider {

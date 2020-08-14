@@ -43,12 +43,6 @@ namespace System.Linq.Parallel.QueryNodes
 			this.resultSelector = resultSelector;
 		}
 
-		// If strict is set to `true', the zip'ing process will throw if sequences length mistmatches
-		public bool Strict {
-			get;
-			set;
-		}
-
 		internal override IEnumerable<TResult> GetSequential ()
 		{
 			IEnumerable<TFirst> first = Parent.GetSequential ();
@@ -77,17 +71,11 @@ namespace System.Linq.Parallel.QueryNodes
 
 			try {
 				while (eFirst.MoveNext ()) {
-					if (!eSecond.MoveNext ()) {
-						if (Strict)
-							throw new QueryZipException ();
-						else
-							yield break;
-					}
+					if (!eSecond.MoveNext ())
+						yield break;
 
 					yield return resultSelector (eFirst.Current, eSecond.Current);
 				}
-				if (Strict && eSecond.MoveNext ())
-					throw new QueryZipException ();
 			} finally {
 				eFirst.Dispose ();
 				eSecond.Dispose ();
@@ -127,12 +115,8 @@ namespace System.Linq.Parallel.QueryNodes
 
 			try {
 				while (eFirst.MoveNext ()) {
-					if (!eSecond.MoveNext ()) {
-						if (Strict)
-							throw new QueryZipException ();
-						else
-							break;
-					}
+					if (!eSecond.MoveNext ())
+						break;
 
 					store1[index] = eFirst.Current;
 					store2[index] = eSecond.Current;
@@ -142,18 +126,12 @@ namespace System.Linq.Parallel.QueryNodes
 					yield return new KeyValuePair<long, TResult> (store1[index].Key,
 					                                              resultSelector (store1[index].Value, store2[index].Value));
 				}
-				if (Strict && eSecond.MoveNext ())
-					throw new QueryZipException ();
 			} finally {
 				barrier.RemoveParticipant ();
 				eFirst.Dispose ();
 				eSecond.Dispose ();
 			}
 		}
-	}
-
-	internal class QueryZipException : Exception
-	{
 	}
 }
 

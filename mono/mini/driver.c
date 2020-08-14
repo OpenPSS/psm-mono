@@ -53,7 +53,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <locale.h>
-#include "version.h"
 #include "debugger-agent.h"
 
 static FILE *mini_stats_fd = NULL;
@@ -196,7 +195,7 @@ parse_optimizations (const char* p)
 					p++;
 			} else {
 				fprintf (stderr, "Invalid optimization name `%s'\n", p);
-				exit (1);
+				mono_exit (1);
 			}
 		}
 	}
@@ -269,7 +268,7 @@ mono_parse_graph_options (const char* p)
 	}
 
 	fprintf (stderr, "Invalid graph name provided: %s\n", p);
-	exit (1);
+	mono_exit (1);
 }
 
 int
@@ -444,6 +443,7 @@ mini_regression (MonoImage *image, int verbose, int *total_run)
 					cfailed++;
 					if (verbose)
 						g_print ("Test '%s' failed compilation.\n", method->name);
+					mono_destroy_compile (cfg);
 				}
 				if (mini_stats_fd)
 					fprintf (mini_stats_fd, "%f, ", 
@@ -476,7 +476,7 @@ mini_regression (MonoImage *image, int verbose, int *total_run)
 	return total;
 }
 
-static int
+int
 mini_regression_list (int verbose, int count, char *images [])
 {
 	int i, total, total_run, run;
@@ -891,7 +891,7 @@ compile_all_methods_thread_main (CompileAllThreadArgs *args)
 	}
 
 	if (fail_count)
-		exit (1);
+		mono_exit (1);
 }
 
 static void
@@ -967,7 +967,7 @@ static void main_thread_handler (gpointer user_data)
 			assembly = mono_domain_assembly_open (main_args->domain, main_args->argv [i]);
 			if (!assembly) {
 				fprintf (stderr, "Can not open image %s\n", main_args->argv [i]);
-				exit (1);
+				mono_exit (1);
 			}
 			/* Check that the assembly loaded matches the filename */
 			{
@@ -977,20 +977,20 @@ static void main_thread_handler (gpointer user_data)
 				img = mono_image_open (main_args->argv [i], &status);
 				if (img && strcmp (img->name, assembly->image->name)) {
 					fprintf (stderr, "Error: Loaded assembly '%s' doesn't match original file name '%s'. Set MONO_PATH to the assembly's location.\n", assembly->image->name, img->name);
-					exit (1);
+					mono_exit (1);
 				}
 			}
 			res = mono_compile_assembly (assembly, main_args->opts, main_args->aot_options);
 			if (res != 0) {
 				fprintf (stderr, "AOT of image %s failed.\n", main_args->argv [i]);
-				exit (1);
+				mono_exit (1);
 			}
 		}
 	} else {
 		assembly = mono_domain_assembly_open (main_args->domain, main_args->file);
 		if (!assembly){
 			fprintf (stderr, "Can not open image %s\n", main_args->file);
-			exit (1);
+			mono_exit (1);
 		}
 
 		/* 
@@ -1085,7 +1085,6 @@ mini_usage_jitdeveloper (void)
 		 "    --ncompile N           Number of times to compile METHOD (default: 1)\n"
 		 "    --print-vtable         Print the vtable of all used classes\n"
 		 "    --regression           Runs the regression test contained in the assembly\n"
-		 "    --statfile FILE        Sets the stat file to FILE\n"
 		 "    --stats                Print statistics about the JIT operations\n"
 		 "    --wapi=hps|semdel|seminfo IO-layer maintenance\n"
 		 "    --inject-async-exc METHOD OFFSET Inject an asynchronous exception at METHOD\n"
@@ -1143,6 +1142,9 @@ mini_usage (void)
 		"                           Currently the only supported option is 'disable'.\n"
 		"    --llvm, --nollvm       Controls whenever the runtime uses LLVM to compile code.\n"
 	        "    --gc=[sgen,boehm]      Select SGen or Boehm GC (runs mono or mono-sgen)\n"
+#ifdef HOST_WIN32
+	        "    --mixed-mode           Enable mixed-mode image support.\n"
+#endif
 	  );
 }
 
@@ -1233,7 +1235,7 @@ static const char info[] =
 	"";
 
 #ifndef MONO_ARCH_AOT_SUPPORTED
-#define error_if_aot_unsupported() do {fprintf (stderr, "AOT compilation is not supported on this platform.\n"); exit (1);} while (0)
+#define error_if_aot_unsupported() do {fprintf (stderr, "AOT compilation is not supported on this platform.\n"); mono_exit (1);} while (0)
 #else
 #define error_if_aot_unsupported()
 #endif
@@ -1241,7 +1243,8 @@ static const char info[] =
 #ifdef HOST_WIN32
 BOOL APIENTRY DllMain (HMODULE module_handle, DWORD reason, LPVOID reserved)
 {
-	if (!GC_DllMain (module_handle, reason, reserved))
+	int dummy;
+	if (!mono_gc_dllmain (module_handle, reason, reserved))
 		return FALSE;
 
 	switch (reason)
@@ -1250,11 +1253,16 @@ BOOL APIENTRY DllMain (HMODULE module_handle, DWORD reason, LPVOID reserved)
 		mono_install_runtime_load (mini_init);
 		break;
 	case DLL_PROCESS_DETACH:
-#ifdef ENABLE_COREE
 		if (coree_module_handle)
 			FreeLibrary (coree_module_handle);
-#endif
 		break;
+	case DLL_THREAD_ATTACH:
+		mono_thread_info_attach (&dummy);
+		break;
+	case DLL_THREAD_DETACH:
+		mono_thread_info_detach ();
+		break;
+	
 	}
 	return TRUE;
 }
@@ -1295,7 +1303,7 @@ mono_jit_parse_options (int argc, char * argv[])
 			opt->explicit_null_checks = TRUE;
 		} else {
 			fprintf (stderr, "Unsupported command line option: '%s'\n", argv [i]);
-			exit (1);
+			mono_exit (1);
 		}
 	}
 }
@@ -1350,6 +1358,9 @@ mono_main (int argc, char* argv[])
 #ifdef MONO_JIT_INFO_TABLE_TEST
 	int test_jit_info_table = FALSE;
 #endif
+#ifdef HOST_WIN32
+	int mixed_mode = FALSE;
+#endif
 
 #ifdef MOONLIGHT
 #ifndef HOST_WIN32
@@ -1400,7 +1411,7 @@ mono_main (int argc, char* argv[])
 			char *build = mono_get_runtime_build_info ();
 			char *gc_descr;
 
-			g_print ("Mono JIT compiler version %s\nCopyright (C) 2002-2012 Novell, Inc, Xamarin, Inc and Contributors. www.mono-project.com\n", build);
+			g_print ("Mono JIT compiler version %s\nCopyright (C) 2002-2011 Novell, Inc, Xamarin, Inc and Contributors. www.mono-project.com\n", build);
 			g_free (build);
 			g_print (info);
 			gc_descr = mono_gc_get_description ();
@@ -1435,12 +1446,6 @@ mono_main (int argc, char* argv[])
 		} else if (strcmp (argv [i], "--list-opt") == 0){
 			mini_usage_list_opt ();
 			return 0;
-		} else if (strncmp (argv [i], "--statfile", 10) == 0) {
-			if (i + 1 >= argc){
-				fprintf (stderr, "error: --statfile requires a filename argument\n");
-				return 1;
-			}
-			mini_stats_fd = fopen (argv [++i], "w+");
 		} else if (strncmp (argv [i], "--optimize=", 11) == 0) {
 			opt = parse_optimizations (argv [i] + 11);
 		} else if (strncmp (argv [i], "-O=", 3) == 0) {
@@ -1462,7 +1467,7 @@ mono_main (int argc, char* argv[])
 				char *p = strstr (copy, "-sgen");
 				if (p == NULL){
 					fprintf (stderr, "Error, this process is not named mono-sgen and the command line option --boehm was passed");
-					exit (1);
+					mono_exit (1);
 				}
 				*p = 0;
 				argv [0] = p;
@@ -1478,6 +1483,10 @@ mono_main (int argc, char* argv[])
 				return 1;
 			}
 			config_file = argv [++i];
+#ifdef HOST_WIN32
+		} else if (strcmp (argv [i], "--mixed-mode") == 0) {
+			mixed_mode = TRUE;
+#endif
 		} else if (strcmp (argv [i], "--ncompile") == 0) {
 			if (i + 1 >= argc){
 				fprintf (stderr, "error: --ncompile requires an argument\n");
@@ -1686,11 +1695,11 @@ mono_main (int argc, char* argv[])
 #ifdef MONO_CROSS_COMPILE
        if (!mono_compile_aot) {
 		   fprintf (stderr, "This mono runtime is compiled for cross-compiling. Only the --aot option is supported.\n");
-		   exit (1);
+		   mono_exit (1);
        }
 #if SIZEOF_VOID_P == 8 && defined(TARGET_ARM)
        fprintf (stderr, "Can't cross-compile on 64 bit platforms to arm.\n");
-       exit (1);
+       mono_exit (1);
 #endif
 #endif
 
@@ -1713,13 +1722,13 @@ mono_main (int argc, char* argv[])
 		 */
 		mono_jit_trace_calls = mono_trace_parse_options (trace_options);
 		if (mono_jit_trace_calls == NULL)
-			exit (1);
+			mono_exit (1);
 	}
 
 #ifdef DISABLE_JIT
 	if (!mono_aot_only) {
 		fprintf (stderr, "This runtime has been configured with --enable-minimal=jit, so the --full-aot command line option is required.\n");
-		exit (1);
+		mono_exit (1);
 	}
 #endif
 
@@ -1742,10 +1751,13 @@ mono_main (int argc, char* argv[])
 	}
 #endif
 
+#ifdef HOST_WIN32
+	if (mixed_mode)
+		mono_load_coree (argv [i]);
+#endif
+
 	mono_set_defaults (mini_verbose, opt);
 	domain = mini_init (argv [i], forced_version);
-
-	mono_gc_set_stack_end (&domain);
 
 	if (agents) {
 		int i;
@@ -1836,7 +1848,7 @@ mono_main (int argc, char* argv[])
 			fprintf (stderr, "Loaded from: %s\n",
 				mono_defaults.corlib? mono_image_get_filename (mono_defaults.corlib): "unknown");
 			fprintf (stderr, "Download a newer corlib or a newer runtime at http://www.go-mono.com/daily.\n");
-			exit (1);
+			mono_exit (1);
 		}
 
 #ifdef HOST_WIN32
@@ -1900,7 +1912,7 @@ mono_main (int argc, char* argv[])
 		if (error) {
 			fprintf (stderr, "Corlib not in sync with this runtime: %s\n", error);
 			fprintf (stderr, "Download a newer corlib or a newer runtime at http://www.go-mono.com/daily.\n");
-			exit (1);
+			mono_exit (1);
 		}
 
 		mini_debugger_main (domain, assembly, argc - i, argv + i);

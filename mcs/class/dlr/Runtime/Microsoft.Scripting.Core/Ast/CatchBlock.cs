@@ -31,7 +31,7 @@ namespace System.Linq.Expressions {
     /// Represents a catch statement in a try block. 
     /// This must have the same return type (i.e., the type of <see cref="P:CatchBlock.Body"/>) as the try block it is associated with.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.CatchBlockProxy))]
 #endif
     public sealed class CatchBlock {

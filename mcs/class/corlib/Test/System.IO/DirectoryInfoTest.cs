@@ -19,6 +19,7 @@ using NUnit.Framework;
 namespace MonoTests.System.IO
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class DirectoryInfoTest
 	{
 		string TempFolder = Path.Combine (Path.GetTempPath (), "MonoTests.System.IO.Tests");
@@ -1024,6 +1025,7 @@ namespace MonoTests.System.IO
 			Assert.AreEqual (TempFolder + DSC + "ToString.Test", info.ToString ());
 		}
 
+#if !NET_2_1
 		[Test]
 		public void Serialization ()
 		{
@@ -1061,11 +1063,13 @@ namespace MonoTests.System.IO
 			Assert.AreEqual (info.Name, clone.Name, "#1");
 			Assert.AreEqual (info.FullName, clone.FullName, "#2");
 		}
+#endif
 		
 		// Needed so that UnixSymbolicLinkInfo doesn't have to
 		// be JITted on windows
 		private void Symlink_helper ()
 		{
+#if !NET_2_1
 			string path = TempFolder + DSC + "DIT.Symlink";
 			string dir = path + DSC + "dir";
 			string link = path + DSC + "link";
@@ -1084,6 +1088,7 @@ namespace MonoTests.System.IO
 			} finally {
 				DeleteDir (path);
 			}
+#endif
 		}
 
 		[Test]

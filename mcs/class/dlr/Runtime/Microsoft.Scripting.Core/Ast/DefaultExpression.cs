@@ -24,7 +24,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents the default value of a type or an empty expression.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.DefaultExpressionProxy))]
 #endif
     public sealed class DefaultExpression : Expression {

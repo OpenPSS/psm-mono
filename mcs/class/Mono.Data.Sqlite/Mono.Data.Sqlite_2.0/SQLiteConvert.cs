@@ -25,11 +25,6 @@ namespace Mono.Data.Sqlite
   public abstract class SqliteConvert
   {
     /// <summary>
-    /// The value for the Unix epoch (e.g. January 1, 1970 at midnight, in UTC).
-    /// </summary>
-    protected static readonly DateTime UnixEpoch =
-        new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-    /// <summary>
     /// An array of ISO8601 datetime formats we support conversion from
     /// </summary>
     private static string[] _datetimeFormats = new string[] {
@@ -164,8 +159,6 @@ namespace Mono.Data.Sqlite
           return new DateTime(Convert.ToInt64(dateText, CultureInfo.InvariantCulture));
         case SQLiteDateFormats.JulianDay:
           return ToDateTime(Convert.ToDouble(dateText, CultureInfo.InvariantCulture));
-        case SQLiteDateFormats.UnixEpoch:
-          return UnixEpoch.AddSeconds(Convert.ToInt32(dateText, CultureInfo.InvariantCulture));
         default:
           return DateTime.ParseExact(dateText, _datetimeFormats, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None);
       }
@@ -204,8 +197,6 @@ namespace Mono.Data.Sqlite
           return dateValue.Ticks.ToString(CultureInfo.InvariantCulture);
         case SQLiteDateFormats.JulianDay:
           return ToJulianDay(dateValue).ToString(CultureInfo.InvariantCulture);
-        case SQLiteDateFormats.UnixEpoch:
-          return ((long)(dateValue.Subtract(UnixEpoch).Ticks / TimeSpan.TicksPerSecond)).ToString();
         default:
           return dateValue.ToString(_datetimeFormats[7], CultureInfo.InvariantCulture);
       }
@@ -640,42 +631,13 @@ namespace Mono.Data.Sqlite
     {
       if (String.IsNullOrEmpty(Name)) return DbType.Object;
 
-      string nameToCompare = Name;
-      int parenthesis = nameToCompare.IndexOf ('(');
-      if (parenthesis > 0)
-        nameToCompare = nameToCompare.Substring (0, parenthesis);
-        
-      for (int n = 0; n < _typeNames.Length; n++)
+      int x = _typeNames.Length;
+      for (int n = 0; n < x; n++)
       {
-        if (string.Compare(nameToCompare, _typeNames[n].typeName, true, CultureInfo.InvariantCulture) == 0)
+        if (String.Compare(Name, 0, _typeNames[n].typeName, 0, _typeNames[n].typeName.Length, true, CultureInfo.InvariantCulture) == 0)
           return _typeNames[n].dataType; 
       }
-      
-      /* http://www.sqlite.org/datatype3.html
-       * 2.1 Determination Of Column Affinity
-       * The affinity of a column is determined by the declared type of the column, according to the following rules in the order shown:
-       *   1. If the declared type contains the string "INT" then it is assigned INTEGER affinity.
-       *   2. If the declared type of the column contains any of the strings "CHAR", "CLOB", or "TEXT" then that column has TEXT affinity. Notice that the type VARCHAR contains the string "CHAR" and is thus assigned TEXT affinity.
-       *   3. If the declared type for a column contains the string "BLOB" or if no type is specified then the column has affinity NONE.
-       *   4. If the declared type for a column contains any of the strings "REAL", "FLOA", or "DOUB" then the column has REAL affinity.
-       *   5. Otherwise, the affinity is NUMERIC.
-       */
-      
-      if (Name.IndexOf ("INT", StringComparison.OrdinalIgnoreCase) >= 0) {
-        return DbType.Int64;
-      } else if (Name.IndexOf ("CHAR", StringComparison.OrdinalIgnoreCase) >= 0
-              || Name.IndexOf ("CLOB", StringComparison.OrdinalIgnoreCase) >= 0
-              || Name.IndexOf ("TEXT", StringComparison.OrdinalIgnoreCase) >= 0) {
-        return DbType.String;
-      } else if (Name.IndexOf ("BLOB", StringComparison.OrdinalIgnoreCase) >= 0 /* || Name == string.Empty // handled at the top of this functin */) {
-        return DbType.Object;
-      } else if (Name.IndexOf ("REAL", StringComparison.OrdinalIgnoreCase) >= 0
-              || Name.IndexOf ("FLOA", StringComparison.OrdinalIgnoreCase) >= 0
-              || Name.IndexOf ("DOUB", StringComparison.OrdinalIgnoreCase) >= 0) {
-        return DbType.Double;
-      } else {
-        return DbType.Object; // This can be anything, so use Object instead of Decimal (which we use otherwise where the type affinity is NUMERIC)
-      }
+      return DbType.Object;
     }
     #endregion
 
@@ -704,7 +666,6 @@ namespace Mono.Data.Sqlite
       new SQLiteTypeNames("YESNO", DbType.Boolean),
       new SQLiteTypeNames("LOGICAL", DbType.Boolean),
       new SQLiteTypeNames("BOOL", DbType.Boolean),
-      new SQLiteTypeNames("BOOLEAN", DbType.Boolean),
       new SQLiteTypeNames("NUMERIC", DbType.Decimal),
       new SQLiteTypeNames("DECIMAL", DbType.Decimal),
       new SQLiteTypeNames("MONEY", DbType.Decimal),
@@ -719,14 +680,11 @@ namespace Mono.Data.Sqlite
       new SQLiteTypeNames("GENERAL", DbType.Binary),
       new SQLiteTypeNames("OLEOBJECT", DbType.Binary),
       new SQLiteTypeNames("GUID", DbType.Guid),
-      new SQLiteTypeNames("GUIDBLOB", DbType.Guid),
       new SQLiteTypeNames("UNIQUEIDENTIFIER", DbType.Guid),
       new SQLiteTypeNames("MEMO", DbType.String),
       new SQLiteTypeNames("NOTE", DbType.String),
       new SQLiteTypeNames("SMALLINT", DbType.Int16),
       new SQLiteTypeNames("BIGINT", DbType.Int64),
-      new SQLiteTypeNames("TIMESTAMP", DbType.DateTime),
-      new SQLiteTypeNames("DATETIME", DbType.DateTime),
     };
   }
 
@@ -796,11 +754,7 @@ namespace Mono.Data.Sqlite
     /// <summary>
     /// JulianDay format, which is what SQLite uses internally
     /// </summary>
-    JulianDay = 2,
-    /// <summary>
-    /// The whole number of seconds since the Unix epoch (January 1, 1970).
-    /// </summary>
-    UnixEpoch = 3,
+    JulianDay = 2
   }
 
   /// <summary>

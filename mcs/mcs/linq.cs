@@ -6,6 +6,7 @@
 // Dual licensed under the terms of the MIT X11 or GNU GPL
 //
 // Copyright 2007-2008 Novell, Inc
+// Copyright 2011 Xamarin Inc
 //
 
 using System;
@@ -16,7 +17,7 @@ namespace Mono.CSharp.Linq
 	public class QueryExpression : AQueryClause
 	{
 		public QueryExpression (AQueryClause start)
-			: base (null, null, Location.Null)
+			: base (null, null, start.Location)
 		{
 			this.next = start;
 		}
@@ -116,7 +117,7 @@ namespace Mono.CSharp.Linq
 						TypeInferenceContext tic = new TypeInferenceContext (source_type.TypeArguments);
 						tic.OutputTypeInference (rc, a.Expr, source_type);
 						if (tic.FixAllTypes (rc)) {
-							source_type = source_type.GetDefinition ().MakeGenericType (tic.InferredTypeArguments);
+							source_type = source_type.GetDefinition ().MakeGenericType (rc, tic.InferredTypeArguments);
 						}
 					}
 
@@ -623,7 +624,7 @@ namespace Mono.CSharp.Linq
 			} else {
 				result_selector_expr = CreateRangeVariableType (ec, parameter, target, new SimpleName (target.Name, target.Location));
 
-				result_block = new QueryBlock (ec.Compiler, block.Parent, block.StartLocation);
+				result_block = new QueryBlock (block.Parent, block.StartLocation);
 				result_block.SetParameters (parameter, target_param);
 			}
 
@@ -723,13 +724,13 @@ namespace Mono.CSharp.Linq
 				Identifier = identifier.Name;
 			}
 
-			public new static void Reset ()
+			public static void Reset ()
 			{
 				Counter = 0;
 			}
 		}
 
-		public QueryBlock (CompilerContext ctx, Block parent, Location start)
+		public QueryBlock (Block parent, Location start)
 			: base (parent, ParametersCompiled.EmptyReadOnlyParameters, start)
 		{
 			flags |= Flags.CompilerGenerated;

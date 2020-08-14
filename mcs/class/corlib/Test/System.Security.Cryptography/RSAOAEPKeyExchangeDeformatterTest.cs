@@ -256,6 +256,7 @@ namespace MonoTests.System.Security.Cryptography {
 			AsymmetricKeyExchangeDeformatter keyex = new RSAOAEPKeyExchangeDeformatter (dsa);
 		}
 
+#if !MOBILE
 		[Test]
 		[ExpectedException (typeof (CryptographicException))]
 		public void Bug79320 ()
@@ -267,5 +268,6 @@ namespace MonoTests.System.Security.Cryptography {
 			RSAOAEPKeyExchangeDeformatter def = new RSAOAEPKeyExchangeDeformatter (r);
 			AssertNotNull (def.DecryptKeyExchange (bytes));
 		}
+#endif
 	}
 }

@@ -19,6 +19,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Net
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class WebClientTest
 	{
 		private string _tempFolder;
@@ -2137,16 +2138,6 @@ namespace MonoTests.System.Net
 			sw.Flush ();
 
 			return Encoding.UTF8.GetBytes (sw.ToString ());
-		}
-
-		[Test]
-		public void DefaultProxy ()
-		{
-			WebClient wc = new WebClient ();
-			// this is never null on .net
-			Assert.IsNotNull (wc.Proxy);
-			// and return the same instance as WebRequest.DefaultWebProxy
-			Assert.AreSame (wc.Proxy, WebRequest.DefaultWebProxy);
 		}
 	}
 }

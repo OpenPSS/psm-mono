@@ -38,6 +38,7 @@ using System.Text;
 namespace MonoTests.System.Security.Policy {
 
 	[TestFixture]
+	[Category("NotMobile")] // the mobile profile's SecurityManager implementation throws NotSupported for everything here
 	public class PolicyLevelTest {
 
 		static string minimal = null;

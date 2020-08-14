@@ -226,6 +226,7 @@ namespace MonoTests.System {
 		[Test]
 		[ExpectedException (typeof (ArgumentNullException))]
 		[Category ("TargetJvmNotWorking")]
+		[Category ("NotMobile")] // no COM in mobile, so we get a RemotingException here
 		public void GetObject_UrlNull ()
 		{
 			Activator.GetObject (typeof (COMTest), null);
@@ -281,6 +282,7 @@ namespace MonoTests.System {
 
 		[Test]
 		[Category ("TargetJvmNotSupported")] // No support under TARGET_JVM for assemlies versioning
+		[Category ("NotMobile")] // no System.Net.DnsPermission in the mobile profile
 		public void Unification_FromFx10 ()
 		{
 			Unification (String.Format (CorlibPermissionPattern, fx10version));
@@ -289,6 +291,7 @@ namespace MonoTests.System {
 
 		[Test]
 		[Category ("TargetJvmNotSupported")] // No support under TARGET_JVM for assemlies versioning
+		[Category ("NotMobile")] // no System.Net.DnsPermission in the mobile profile
 		public void Unification_FromFx11 ()
 		{
 			Unification (String.Format (CorlibPermissionPattern, fx11version));
@@ -297,6 +300,7 @@ namespace MonoTests.System {
 
 		[Test]
 		[Category ("TargetJvmNotSupported")] // No support under TARGET_JVM for assemlies versioning
+		[Category ("NotMobile")] // no System.Net.DnsPermission in the mobile profile
 		public void Unification_FromFx20 ()
 		{
 			Unification (String.Format (CorlibPermissionPattern, fx20version));

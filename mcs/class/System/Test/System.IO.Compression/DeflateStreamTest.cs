@@ -18,6 +18,7 @@ using System.IO.Compression;
 namespace MonoTests.System.IO.Compression
 {
 	[TestFixture]
+	[Category("PssCompression")]
 	public class DeflateStreamTest
 	{
 		private static void CopyStream (Stream src, Stream dest)
@@ -119,6 +120,7 @@ namespace MonoTests.System.IO.Compression
 			decompressing.Read (dummy, 10, 20);
 		}
 
+#if !MOBILE
 		[Test]
 		[Category("NotWorking")]
 		[ExpectedException (typeof (InvalidDataException))]
@@ -130,6 +132,7 @@ namespace MonoTests.System.IO.Compression
 			DeflateStream decompressing = new DeflateStream (backing, CompressionMode.Decompress);
 			decompressing.Read (dummy, 0, 20);
 		}
+#endif
 
 		[Test]
 		[ExpectedException (typeof (ObjectDisposedException))]

@@ -29,6 +29,7 @@ namespace MonoTests.System.Reflection.Emit
 	/// </summary>
 
 	[TestFixture]
+	[Category("NotMobile")] // mobile profile doesn't support S.R.E
 	public class CustomAttributeBuilderTest
 	{
 		

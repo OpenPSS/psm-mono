@@ -84,12 +84,10 @@ namespace System.ServiceModel.Channels
 		}
 
 #if !NET_2_1
+		[MonoTODO]
 		public XmlElement GetTransportTokenAssertion ()
 		{
-			var doc = new XmlDocument ();
-			var token = doc.CreateElement ("sp", "HttpsToken", PolicyImportHelper.SecurityPolicyNS);
-			token.SetAttribute ("RequireClientCertificate", req_cli_cert ? "true" : "false");
-			return token;
+			throw new NotImplementedException ();
 		}
 
 		// overriden only in full profile

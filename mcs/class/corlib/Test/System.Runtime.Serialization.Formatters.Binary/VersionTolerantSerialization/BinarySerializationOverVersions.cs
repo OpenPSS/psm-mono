@@ -11,6 +11,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Runtime.Serialization.Formatters.Binary
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class BinarySerializationOverVersions {
 
 		static readonly string dirName = typeof(VersionTolerantSerializationTestLib.Address).Namespace;

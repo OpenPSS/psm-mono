@@ -151,8 +151,7 @@ namespace System.Net.Sockets
 		public override int ReadTimeout
 		{
 			get {
-				int r = socket.ReceiveTimeout;
-				return (r <= 0) ? Timeout.Infinite : r;
+				return(socket.ReceiveTimeout);
 			}
 			set {
 				if (value <= 0 && value != Timeout.Infinite) {
@@ -187,8 +186,7 @@ namespace System.Net.Sockets
 		public override int WriteTimeout
 		{
 			get {
-				int r = socket.SendTimeout;
-				return (r <= 0) ? Timeout.Infinite : r;
+				return(socket.SendTimeout);
 			}
 			set {
 				if (value <= 0 && value != Timeout.Infinite) {

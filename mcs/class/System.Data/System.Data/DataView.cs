@@ -268,7 +268,7 @@ namespace System.Data
 					initSort = value;
 					return;
 				}
-				if (value == Sort)
+				if (value == sort)
 					return;
 
 				if (value == null || value.Length == 0) {

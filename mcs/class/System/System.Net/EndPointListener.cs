@@ -2,10 +2,9 @@
 // System.Net.EndPointListener
 //
 // Author:
-//	Gonzalo Paniagua Javier (gonzalo.mono@gmail.com)
+//	Gonzalo Paniagua Javier (gonzalo@novell.com)
 //
 // Copyright (c) 2005 Novell, Inc. (http://www.novell.com)
-// Copyright (c) 2012 Xamarin, Inc. (http://xamarin.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -66,7 +65,7 @@ namespace System.Net {
 			args.Completed += OnAccept;
 			sock.AcceptAsync (args);
 			prefixes = new Hashtable ();
-			unregistered = new Hashtable ();
+			unregistered = Hashtable.Synchronized (new Hashtable ());
 		}
 
 		void LoadCertificateAndKey (IPAddress addr, int port)
@@ -77,11 +76,7 @@ namespace System.Net {
 				string path = Path.Combine (dirname, ".mono");
 				path = Path.Combine (path, "httplistener");
 				string cert_file = Path.Combine (path, String.Format ("{0}.cer", port));
-				if (!File.Exists (cert_file))
-					return;
 				string pvk_file = Path.Combine (path, String.Format ("{0}.pvk", port));
-				if (!File.Exists (pvk_file))
-					return;
 				cert = new X509Certificate2 (cert_file);
 				key = PrivateKey.CreateFromFile (pvk_file).RSA;
 			} catch {
@@ -119,17 +114,13 @@ namespace System.Net {
 				return;
 			}
 			HttpConnection conn = new HttpConnection (accepted, epl, epl.secure, epl.cert, epl.key);
-			lock (epl.unregistered) {
-				epl.unregistered [conn] = conn;
-			}
+			epl.unregistered [conn] = conn;
 			conn.BeginReadRequest ();
 		}
 
 		internal void RemoveConnection (HttpConnection conn)
 		{
-			lock (unregistered) {
-				unregistered.Remove (conn);
-			}
+			unregistered.Remove (conn);
 		}
 
 		public bool BindContext (HttpListenerContext context)
@@ -275,7 +266,7 @@ namespace System.Net {
 		public void Close ()
 		{
 			sock.Close ();
-			lock (unregistered) {
+			lock (unregistered.SyncRoot) {
 				foreach (HttpConnection c in unregistered.Keys)
 					c.Close (true);
 				unregistered.Clear ();

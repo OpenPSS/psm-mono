@@ -20,6 +20,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Diagnostics
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class FileVersionInfoTest
 	{
 		private string tempDir;

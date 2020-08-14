@@ -30,6 +30,7 @@
 // (C) 2002 Ximian, Inc.
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[StructLayout (LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -40,3 +41,4 @@ namespace System.Runtime.InteropServices.ComTypes
 		public int cNamedArgs;
 	}
 }
+#endif

@@ -243,13 +243,13 @@ MINI_OP(OP_LSHR_UN, "long_shr_un", LREG, LREG, IREG)
 /* 64 bit opcodes: must be in the same order as the matching CEE_ opcodes: unops_op_map */
 MINI_OP(OP_LNEG,       "long_neg", LREG, LREG, NONE)
 MINI_OP(OP_LNOT,       "long_not", LREG, LREG, NONE)
-MINI_OP(OP_LCONV_TO_I1,"long_conv_to_i1", LREG, LREG, NONE)
-MINI_OP(OP_LCONV_TO_I2,"long_conv_to_i2", LREG, LREG, NONE)
-MINI_OP(OP_LCONV_TO_I4,"long_conv_to_i4", LREG, LREG, NONE)
+MINI_OP(OP_LCONV_TO_I1,"long_conv_to_i1", IREG, LREG, NONE)
+MINI_OP(OP_LCONV_TO_I2,"long_conv_to_i2", IREG, LREG, NONE)
+MINI_OP(OP_LCONV_TO_I4,"long_conv_to_i4", IREG, LREG, NONE)
 MINI_OP(OP_LCONV_TO_I8,"long_conv_to_i8", LREG, LREG, NONE)
 MINI_OP(OP_LCONV_TO_R4,"long_conv_to_r4", FREG, LREG, NONE)
 MINI_OP(OP_LCONV_TO_R8,"long_conv_to_r8", FREG, LREG, NONE)
-MINI_OP(OP_LCONV_TO_U4,"long_conv_to_u4", LREG, LREG, NONE)
+MINI_OP(OP_LCONV_TO_U4,"long_conv_to_u4", IREG, LREG, NONE)
 MINI_OP(OP_LCONV_TO_U8,"long_conv_to_u8", LREG, LREG, NONE)
 
 MINI_OP(OP_LCONV_TO_U2,   "long_conv_to_u2", IREG, LREG, NONE)
@@ -1011,6 +1011,9 @@ MINI_OP(OP_CHECK_FINITE,           "ppc_check_finite", NONE, IREG, NONE)
 #if defined(TARGET_ARM)
 MINI_OP(OP_ARM_RSBS_IMM,            "arm_rsbs_imm", IREG, IREG, NONE)
 MINI_OP(OP_ARM_RSC_IMM,             "arm_rsc_imm", IREG, IREG, NONE)
+/* Load an R4 value to an fp register but don't convert to R8 */
+MINI_OP(OP_ARM_LOADR4_MEMBASE,      "arm_loadr4_membase", FREG, IREG, NONE)
+MINI_OP(OP_ARM_OUTARG_VFP_R4,       "arm_outarg_vfp_r4", FREG, FREG, NONE)
 #endif
 
 #if defined(__sparc__) || defined(sparc)

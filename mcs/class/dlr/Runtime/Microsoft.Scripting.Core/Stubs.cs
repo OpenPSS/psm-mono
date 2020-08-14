@@ -75,7 +75,7 @@ namespace System {
     }
 
     // We reference these namespaces via "using"
-    // We don't actually use them because the code is #if !SILVERLIGHT
+    // We don't actually use them because the code is #if !SILVERLIGHT && !MOBILE
     // Rather than fix the usings all over the place, just define these here
     namespace Runtime.Remoting { class Dummy {} }
     namespace Security.Policy { class Dummy {} }

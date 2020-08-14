@@ -40,7 +40,9 @@ namespace System.Xml.Serialization
 	/// </summary>
 	public class XmlAttributes
 	{
+#if !MOONLIGHT
 		private XmlAnyAttributeAttribute xmlAnyAttribute;
+#endif
 		private XmlAnyElementAttributes xmlAnyElements = new XmlAnyElementAttributes();
 		private XmlArrayAttribute xmlArray;
 		private XmlArrayItemAttributes xmlArrayItems = new XmlArrayItemAttributes();
@@ -64,9 +66,12 @@ namespace System.Xml.Serialization
 			object[] attributes = provider.GetCustomAttributes(false);
 			foreach(object obj in attributes)
 			{
+#if !MOONLIGHT
 				if(obj is XmlAnyAttributeAttribute)
 					xmlAnyAttribute = (XmlAnyAttributeAttribute) obj;
-				else if(obj is XmlAnyElementAttribute)
+				else
+#endif
+				if(obj is XmlAnyElementAttribute)
 					xmlAnyElements.Add((XmlAnyElementAttribute) obj);
 				else if(obj is XmlArrayAttribute)
 					xmlArray = (XmlArrayAttribute) obj;
@@ -93,25 +98,10 @@ namespace System.Xml.Serialization
 				else if(obj is XmlTypeAttribute)
 					xmlType = (XmlTypeAttribute) obj;
 			}
-			
-			if (xmlIgnore) {
-				xmlAnyAttribute = null;
-				xmlAnyElements.Clear ();
-				xmlArray = null;
-				xmlArrayItems.Clear ();
-				xmlAttribute = null;
-				xmlChoiceIdentifier = null;
-				xmlDefaultValue = null;
-				xmlElements.Clear ();
-				xmlEnum = null;
-				xmlns = false;
-				xmlRoot = null;
-				xmlText = null;
-				xmlType = null;
-			}
 		}
 
 		#region public properties
+#if !MOONLIGHT
 		public XmlAnyAttributeAttribute XmlAnyAttribute 
 		{
 			get 
@@ -123,6 +113,7 @@ namespace System.Xml.Serialization
 				xmlAnyAttribute = value;
 			}
 		}
+#endif
 		public XmlAnyElementAttributes XmlAnyElements 
 		{
 			get 
@@ -257,7 +248,9 @@ namespace System.Xml.Serialization
 			
 			KeyHelper.AddField (sb, 1, xmlIgnore);
 			KeyHelper.AddField (sb, 2, xmlns);
+#if !MOONLIGHT
 			KeyHelper.AddField (sb, 3, xmlAnyAttribute!=null);
+#endif
 
 			xmlAnyElements.AddKeyHash (sb);
 			xmlArrayItems.AddKeyHash (sb);

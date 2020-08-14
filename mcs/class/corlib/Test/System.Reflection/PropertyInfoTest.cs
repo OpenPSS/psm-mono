@@ -356,6 +356,7 @@ namespace MonoTests.System.Reflection
 		}
 
 		[Test]
+		[Category("PssFileIO")]
 		public void ConstantValue () {
 			/*This test looks scary because we can't generate a default value with C# */
 			var assemblyName = new AssemblyName ();
@@ -503,23 +504,6 @@ namespace MonoTests.System.Reflection
 	
 		public class InheritsFromClassWithNullableDateTime : ClassWithNullableDateTime
 		{
-		}
-
-		public static int ThrowingProperty {
-			get {
-				throw new ObjectDisposedException("TestClass");
-			}
-		}
-
-		[Test]
-		public void GetException () {
-			var prop = typeof(PropertyInfoTest).GetProperty("ThrowingProperty");
-			try {
-				prop.GetValue (null, null);
-				Assert.Fail ();
-			} catch (TargetInvocationException ex) {
-				Assert.IsTrue (ex.InnerException is ObjectDisposedException);
-			}
 		}
 	}
 }

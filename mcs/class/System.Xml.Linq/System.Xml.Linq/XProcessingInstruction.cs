@@ -34,13 +34,13 @@ namespace System.Xml.Linq
 		string name;
 		string data;
 
-		public XProcessingInstruction (string target, string data)
+		public XProcessingInstruction (string name, string data)
 		{
-			if (target == null)
-				throw new ArgumentNullException ("target");
+			if (name == null)
+				throw new ArgumentNullException ("name");
 			if (data == null)
 				throw new ArgumentNullException ("data");
-			this.name = target;
+			this.name = name;
 			this.data = data;
 		}
 
@@ -74,9 +74,9 @@ namespace System.Xml.Linq
 			}
 		}
 
-		public override void WriteTo (XmlWriter writer)
+		public override void WriteTo (XmlWriter w)
 		{
-			writer.WriteProcessingInstruction (name, data);
+			w.WriteProcessingInstruction (name, data);
 		}
 	}
 }

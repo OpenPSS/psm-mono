@@ -10,12 +10,18 @@
 #include <glib.h>
 #include <mono/metadata/mono-gc.h>
 #include <mono/metadata/gc-internal.h>
+#include <mono/metadata/runtime.h>
 
 #ifdef HAVE_NULL_GC
 
 void
 mono_gc_base_init (void)
 {
+	MonoThreadInfoCallbacks cb;
+
+	memset (&cb, 0, sizeof (cb));
+	cb.mono_method_is_critical = mono_runtime_is_critical_method;
+	cb.mono_gc_pthread_create = (gpointer)mono_gc_pthread_create;
 }
 
 void
@@ -57,6 +63,16 @@ int64_t
 mono_gc_get_heap_size (void)
 {
 	return 2*1024*1024;
+}
+
+void
+mono_gc_disable (void)
+{
+}
+
+void
+mono_gc_enable (void)
+{
 }
 
 gboolean
@@ -106,7 +122,7 @@ mono_gc_weak_link_add (void **link_addr, MonoObject *obj, gboolean track)
 }
 
 void
-mono_gc_weak_link_remove (void **link_addr, gboolean track)
+mono_gc_weak_link_remove (void **link_addr)
 {
 	*link_addr = NULL;
 }
@@ -200,6 +216,12 @@ mono_gc_wbarrier_object_copy (MonoObject* obj, MonoObject *src)
 	/* do not copy the sync state */
 	mono_gc_memmove ((char*)obj + sizeof (MonoObject), (char*)src + sizeof (MonoObject),
 			mono_object_class (obj)->instance_size - sizeof (MonoObject));
+}
+
+gboolean
+mono_gc_is_critical_method (MonoMethod *method)
+{
+	return FALSE;
 }
 
 MonoMethod*
@@ -320,7 +342,44 @@ mono_gc_get_nursery (int *shift_bits, size_t *size)
 }
 
 void
-mono_gc_set_stack_end (void *stack_end)
+mono_gc_set_current_thread_appdomain (MonoDomain *domain)
+{
+}
+
+gboolean
+mono_gc_precise_stack_mark_enabled (void)
+{
+	return FALSE;
+}
+
+FILE *
+mono_gc_get_logfile (void)
+{
+	return NULL;
+}
+
+void
+mono_gc_conservatively_scan_area (void *start, void *end)
+{
+	g_assert_not_reached ();
+}
+
+void *
+mono_gc_scan_object (void *obj)
+{
+	g_assert_not_reached ();
+	return NULL;
+}
+
+gsize*
+mono_gc_get_bitmap_for_descr (void *descr, int *numbits)
+{
+	g_assert_not_reached ();
+	return NULL;
+}
+
+void
+mono_gc_set_gc_callbacks (MonoGCCallbacks *callbacks)
 {
 }
 
@@ -344,16 +403,23 @@ mono_gc_pthread_detach (pthread_t thread)
 	return pthread_detach (thread);
 }
 
-void mono_gc_set_skip_thread (gboolean value)
+void
+mono_gc_pthread_exit (void *retval)
 {
+	pthread_exit (retval);
 }
 
 #endif
 
-guint
-mono_gc_get_vtable_bits (MonoClass *class)
+#ifdef HOST_WIN32
+BOOL APIENTRY mono_gc_dllmain (HMODULE module_handle, DWORD reason, LPVOID reserved)
 {
-	return 0;
+	return TRUE;
+}
+#endif
+
+void mono_gc_set_skip_thread (gboolean skip)
+{
 }
 
 #endif

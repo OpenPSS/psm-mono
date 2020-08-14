@@ -26,12 +26,13 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if NET_4_0 || MOBILE
+#if NET_4_0
 
 using System;
 using System.IO;
 using System.Collections.Generic;
 using Microsoft.Win32.SafeHandles;
+using Mono.Unix.Native;
 
 namespace System.IO.MemoryMappedFiles
 {
@@ -43,7 +44,10 @@ namespace System.IO.MemoryMappedFiles
 		internal MemoryMappedViewAccessor (int file_handle, long offset, long size, MemoryMappedFileAccess access)
 		{
 			this.file_handle = file_handle;
-			Create (offset, size, access);
+			if (MonoUtil.IsUnix)
+				CreatePosix (offset, size, access);
+			else
+				throw new NotImplementedException ("Not implemented on windows.");
 		}
 
 		static FileAccess ToFileAccess (MemoryMappedFileAccess access)
@@ -64,11 +68,11 @@ namespace System.IO.MemoryMappedFiles
 			}
 		}
 		
-		unsafe void Create (long offset, long size, MemoryMappedFileAccess access)
+		unsafe void CreatePosix (long offset, long size, MemoryMappedFileAccess access)
 		{
 			int offset_diff;
 
-			MemoryMapImpl.Map (file_handle, offset, ref size, access, out mmap_addr, out offset_diff);
+			MemoryMappedFile.MapPosix (file_handle, offset, ref size, access, out mmap_addr, out offset_diff);
 
 			handle = new SafeMemoryMappedViewHandle ((IntPtr)((long)mmap_addr + offset_diff), size);
 			Initialize (handle, 0, size, ToFileAccess (access));
@@ -91,7 +95,10 @@ namespace System.IO.MemoryMappedFiles
 
 		public void Flush ()
 		{
-			MemoryMapImpl.Flush (file_handle);
+			if (MonoUtil.IsUnix)
+				Syscall.fsync (file_handle);
+			else
+				throw new NotImplementedException ("Not implemented on Windows");
 		}
 	}
 }

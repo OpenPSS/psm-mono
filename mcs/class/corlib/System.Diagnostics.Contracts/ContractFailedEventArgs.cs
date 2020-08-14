@@ -26,18 +26,14 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#if NET_4_0 || NET_2_1
+#if NET_4_0 || MOONLIGHT
 
 using System;
 using System.Runtime.ConstrainedExecution;
 
 namespace System.Diagnostics.Contracts {
-#if NET_4_0
-	public
-#else
-	internal
-#endif
-	sealed class ContractFailedEventArgs : EventArgs {
+
+	public sealed class ContractFailedEventArgs : EventArgs {
 		
 		[ReliabilityContract (Consistency.WillNotCorruptState, Cer.Success)]
 		public ContractFailedEventArgs (ContractFailureKind failureKind, string message, string condition, Exception originalException)

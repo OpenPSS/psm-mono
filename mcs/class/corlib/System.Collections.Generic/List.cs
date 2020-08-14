@@ -6,9 +6,11 @@
 //    Martin Baulig (martin@ximian.com)
 //    Carlos Alberto Cortez (calberto.cortez@gmail.com)
 //    David Waite (mass@akuma.org)
+//    Marek Safar (marek.safar@gmail.com)
 //
 // Copyright (C) 2004-2005 Novell, Inc (http://www.novell.com)
 // Copyright (C) 2005 David Waite
+// Copyright (C) 2011 Xamarin, Inc (http://www.xamarin.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -33,13 +35,16 @@
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace System.Collections.Generic {
 	[Serializable]
 	[DebuggerDisplay ("Count={Count}")]
 	[DebuggerTypeProxy (typeof (CollectionDebuggerView<>))]
-	public class List <T> : IList <T>, IList, ICollection {
+	public class List<T> : IList<T>, IList
+#if NET_4_5
+		, IReadOnlyList<T>
+#endif
+	{
 		T [] _items;
 		int _size;
 		int _version;
@@ -468,8 +473,6 @@ namespace System.Collections.Generic {
 
 		public int LastIndexOf (T item)
 		{
-			if (_size == 0)
-				return -1;
 			return Array.LastIndexOf<T> (_items, item, _size - 1, _size);
 		}
 		
@@ -633,9 +636,8 @@ namespace System.Collections.Generic {
 			get {
 				if ((uint) index >= (uint) _size)
 					throw new ArgumentOutOfRangeException ("index");
-				return Array.UnsafeLoad (_items, index);
+				return _items [index];
 			}
-
 			set {
 				CheckIndex (index);
 				if ((uint) index == (uint) _size)

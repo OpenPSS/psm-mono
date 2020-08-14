@@ -107,13 +107,8 @@ namespace System.Xml.Serialization
 
 		internal string XmlTypeNamespace
 		{
-			get { return xmlTypeNamespace ?? string.Empty; }
+			get { return xmlTypeNamespace; }
 			set { xmlTypeNamespace = value; }
-		}
-
-		internal bool HasXmlTypeNamespace
-		{
-			get { return xmlTypeNamespace != null; }
 		}
 
 		internal ArrayList DerivedTypes
@@ -175,9 +170,9 @@ namespace System.Xml.Serialization
 
 		internal XmlTypeMapping GetRealElementMap (string name, string ens)
 		{
-			if (xmlType == name && XmlTypeNamespace == ens) return this;
+			if (xmlType == name && xmlTypeNamespace == ens) return this;
 			foreach (XmlTypeMapping map in _derivedTypes)
-				if (map.xmlType == name && map.XmlTypeNamespace == ens) return map;
+				if (map.xmlType == name && map.xmlTypeNamespace == ens) return map;
 			
 			return null;
 		}
@@ -196,7 +191,7 @@ namespace System.Xml.Serialization
 	internal class XmlSerializableMapping : XmlTypeMapping
 	{
 		XmlSchema _schema;
-#if NET_2_0
+#if NET_2_0 && !MOONLIGHT
 		XmlSchemaComplexType _schemaType;
 		XmlQualifiedName _schemaTypeName;
 #endif
@@ -204,7 +199,7 @@ namespace System.Xml.Serialization
 		internal XmlSerializableMapping(XmlRootAttribute root, string elementName, string ns, TypeData typeData, string xmlType, string xmlTypeNamespace)
 			: base(elementName, ns, typeData, xmlType, xmlTypeNamespace)
 		{
-#if NET_2_0
+#if NET_2_0 && !MOONLIGHT
 			XmlSchemaProviderAttribute schemaProvider = (XmlSchemaProviderAttribute) Attribute.GetCustomAttribute (typeData.Type, typeof (XmlSchemaProviderAttribute));
 
 			if (schemaProvider != null) {
@@ -251,21 +246,24 @@ namespace System.Xml.Serialization
 				return;
 			}
 #endif
+#if NET_2_0 && !MOONLIGHT
 			IXmlSerializable serializable = (IXmlSerializable)Activator.CreateInstance (typeData.Type, true);
-#if NET_2_0
 			try {
 				_schema = serializable.GetSchema();
 			} catch (Exception) {
 				// LAMESPEC: .NET has a bad exception catch and swallows it silently.
 			}
 #else
+			IXmlSerializable serializable = (IXmlSerializable)Activator.CreateInstance (typeData.Type);
 			_schema = serializable.GetSchema();
 #endif
+#if !MOONLIGHT
 			if (_schema != null) 
 			{
 				if (_schema.Id == null || _schema.Id.Length == 0) 
 					throw new InvalidOperationException("Schema Id is missing. The schema returned from " + typeData.Type.FullName + ".GetSchema() must have an Id.");
 			}
+#endif
 		}
 
 		internal XmlSchema Schema
@@ -273,7 +271,7 @@ namespace System.Xml.Serialization
 			get { return _schema; }
 		}
 
-#if NET_2_0
+#if NET_2_0 && !MOONLIGHT
 		internal XmlSchemaType SchemaType {
 			get { return _schemaType; }
 		}

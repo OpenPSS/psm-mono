@@ -22,6 +22,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Reflection.Emit
 {
 	[TestFixture]
+	[Category("NotMobile")] // mobile profile doesn't support S.R.E
 	public class ModuleBuilderTest
 	{
 		static string tempDir = Path.Combine (Path.GetTempPath (), typeof (ModuleBuilderTest).FullName);

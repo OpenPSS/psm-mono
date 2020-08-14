@@ -51,6 +51,7 @@ namespace MonoTests.System.Security.Permissions {
 #endif
 
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class FileIOPermissionTest {
 		
 		string[] pathArrayGood;

@@ -46,8 +46,6 @@ namespace System.ServiceModel.MonoInternal
 	{
 		ContractDescription Contract { get; }
 
-		OperationContext Context { set; }
-
 		object Process (MethodBase method, string operationName, object [] parameters);
 
 		IAsyncResult BeginProcess (MethodBase method, string operationName, object [] parameters, AsyncCallback callback, object asyncState);
@@ -147,10 +145,6 @@ namespace System.ServiceModel.MonoInternal
 
 		internal IDuplexChannel DuplexChannel {
 			get { return channel as IDuplexChannel; }
-		}
-
-		public OperationContext Context {
-			set { context = value; }
 		}
 
 		#region IClientChannel
@@ -456,26 +450,19 @@ namespace System.ServiceModel.MonoInternal
 
 		public object EndProcess (MethodBase method, string operationName, object [] parameters, IAsyncResult result)
 		{
-				
+			context = null;
 			if (result == null)
 				throw new ArgumentNullException ("result");
 			if (parameters == null)
 				throw new ArgumentNullException ("parameters");
 			// FIXME: the method arguments should be verified to be 
 			// identical to the arguments in the corresponding begin method.
-			object asyncResult = _processDelegate.EndInvoke (result);
-			context = null;
-			return asyncResult;
+			return _processDelegate.EndInvoke (result);
 		}
 
 		public object Process (MethodBase method, string operationName, object [] parameters)
 		{
-			var previousContext = OperationContext.Current;
 			try {
-				// Inherit the context from the calling thread
-				if (this.context != null) 
-					OperationContext.Current = this.context;
-
 				return DoProcess (method, operationName, parameters);
 			} catch (Exception ex) {
 #if MOONLIGHT // just for debugging
@@ -483,9 +470,6 @@ namespace System.ServiceModel.MonoInternal
 				Console.WriteLine (ex);
 #endif
 				throw;
-			} finally {
-				// Reset the context before the thread goes back into the pool
-				OperationContext.Current = previousContext;
 			}
 		}
 
@@ -545,12 +529,14 @@ namespace System.ServiceModel.MonoInternal
 						Type detailType = typeof (ExceptionDetail);
 						var freader = fault.GetReaderAtDetailContents ();
 						DataContractSerializer ds = null;
+#if !NET_2_1
 						foreach (var fci in op.FaultContractInfos)
 							if (res.Headers.Action == fci.Action || fci.Serializer.IsStartObject (freader)) {
 								detailType = fci.Detail;
 								ds = fci.Serializer;
 								break;
 							}
+#endif
 						if (ds == null)
 							ds = new DataContractSerializer (detailType);
 						var detail = ds.ReadObject (freader);

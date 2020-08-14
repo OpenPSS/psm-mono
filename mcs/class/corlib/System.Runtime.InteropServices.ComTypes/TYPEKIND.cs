@@ -31,6 +31,7 @@
 
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 
@@ -48,3 +49,4 @@ namespace System.Runtime.InteropServices.ComTypes
 	}
 }
 
+#endif

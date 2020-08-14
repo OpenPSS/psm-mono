@@ -30,6 +30,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Runtime.InteropServices;
 using System.Reflection;
 
@@ -48,10 +49,8 @@ namespace System.CodeDom
 		private bool isStruct;
 		//int populated;
 
-#if NET_2_0
 		bool isPartial;
 		CodeTypeParameterCollection typeParameters;
-#endif
 
 		//
 		// Constructors
@@ -167,7 +166,6 @@ namespace System.CodeDom
 			}
 		}
 
-#if NET_2_0
 		public bool IsPartial {
 			get {
 				return isPartial;
@@ -185,7 +183,6 @@ namespace System.CodeDom
 				return typeParameters;
 			}
 		}
-#endif
 
 		//
 		// Events
@@ -195,3 +192,4 @@ namespace System.CodeDom
 		public event EventHandler PopulateMembers;
 	}
 }
+#endif

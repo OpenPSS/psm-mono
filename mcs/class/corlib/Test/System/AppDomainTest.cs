@@ -5,6 +5,7 @@
 //	Sebastien Pouliot (sebastien@ximian.com)
 //
 // Copyright (C) 2004 Novell, Inc (http://www.novell.com)
+// Copyright 2011 Xamarin Inc (http://www.xamarin.com).
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -44,6 +45,7 @@ using System.Security.Principal;
 namespace MonoTests.System
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class AppDomainTest
 	{
 		private AppDomain ad;
@@ -1537,6 +1539,7 @@ namespace MonoTests.System
 		}
 
 		[Test] // DefineDynamicAssembly (AssemblyName name, AssemblyBuilderAccess, IEnumerable<CustomAttributeBuilder>)
+		[Category("NotMobile")] // no S.R.E. in mobile profile
 		public void DefineDynamicAssembly11 ()
 		{
 			List<CustomAttributeBuilder> cattrs;
@@ -2183,6 +2186,7 @@ namespace MonoTests.System
 
 		[Test] // bug #79720
 		[Category ("NotWorking")]
+		[Category("PssFileIO")]
 		public void Load_Loaded_Ignore ()
 		{
 			int assemblyStartCount = AppDomain.CurrentDomain.GetAssemblies ().Length;
@@ -2488,6 +2492,7 @@ namespace MonoTests.System
 
 		[Test]
 		[Category ("NotWorking")]
+		[Category("PssFileIO")]
 		public void Load_Loaded_Multiple ()
 		{
 			string cultureDir = Path.Combine (tempDir, "nl-BE");
@@ -2622,6 +2627,7 @@ namespace MonoTests.System
 
 		[Test] // bug #79522
 		[Category ("NotWorking")]
+		[Category("PssFileIO")]
 		public void Load_Manifest_Mismatch ()
 		{
 			string assemblyFile = Path.Combine (tempDir, "bug79522A.dll");
@@ -3060,6 +3066,7 @@ namespace MonoTests.System
 		}
 
 		[Test] // bug #79715
+		[Category("PssFileIO")]
 		public void Load_PartialVersion ()
 		{
 			AppDomain ad = CreateTestDomain (tempDir, true);
@@ -3210,6 +3217,8 @@ namespace MonoTests.System
 		}
 
 		[Test]
+		[Category("NotWorking")]
+		[Category("PssFileIO")]
 		public void ReflectionOnlyGetAssemblies ()
 		{
 			ad = AppDomain.CreateDomain ("ReflectionOnlyGetAssemblies");

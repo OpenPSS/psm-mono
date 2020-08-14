@@ -15,6 +15,7 @@ using System.Text;
 namespace MonoTests.System.IO
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class BinaryReaderTest
 	{		
 		static string TempFolder = Path.Combine (Path.GetTempPath (), "MonoTests.System.IO.Tests");

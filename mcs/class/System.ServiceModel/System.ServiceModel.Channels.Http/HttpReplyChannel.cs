@@ -168,13 +168,12 @@ namespace System.ServiceModel.Channels.Http
 
 			Message msg = null;
 
-			if (ctxi.Request.HttpMethod == "POST")
+			if (ctxi.Request.HttpMethod == "POST") {
 				msg = CreatePostMessage (ctxi);
-			else if (ctxi.Request.HttpMethod == "GET")
+				if (msg == null)
+					return false;
+			} else if (ctxi.Request.HttpMethod == "GET")
 				msg = Message.CreateMessage (MessageVersion.None, null); // HTTP GET-based request
-
-			if (msg == null)
-				return false;
 
 			if (msg.Headers.To == null)
 				msg.Headers.To = ctxi.Request.Url;

@@ -298,6 +298,9 @@ namespace MonoTests.System.Net
 		//FIXME: include Java serialization compliant tests
 		[Ignore ("The MS compliant binary serialization is not supported")]
 #endif		
+#if MOBILE
+		[Category("NotWorking")]
+#endif
 		public void Serialize ()
 		{
 			WebHeaderCollection headers = new WebHeaderCollection ();

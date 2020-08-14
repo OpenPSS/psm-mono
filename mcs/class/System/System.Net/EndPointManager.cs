@@ -74,17 +74,13 @@ namespace System.Net {
 			if (lp.Path.IndexOf ("//", StringComparison.Ordinal) != -1) // TODO: Code?
 				throw new HttpListenerException (400, "Invalid path.");
 
-			// listens on all the interfaces if host name cannot be parsed by IPAddress.
-			EndPointListener epl = GetEPListener (lp.Host, lp.Port, listener, lp.Secure);
+			// Always listens on all the interfaces, no matter the host name/ip used.
+			EndPointListener epl = GetEPListener (IPAddress.Any, lp.Port, listener, lp.Secure);
 			epl.AddPrefix (lp, listener);
 		}
 
-		static EndPointListener GetEPListener (string host, int port, HttpListener listener, bool secure)
+		static EndPointListener GetEPListener (IPAddress addr, int port, HttpListener listener, bool secure)
 		{
-			IPAddress addr;
-			if (IPAddress.TryParse(host, out addr) == false)
-				addr = IPAddress.Any;
-
 			Hashtable p = null;  // Dictionary<int, EndPointListener>
 			if (ip_to_endpoints.ContainsKey (addr)) {
 				p = (Hashtable) ip_to_endpoints [addr];
@@ -143,7 +139,7 @@ namespace System.Net {
 			if (lp.Path.IndexOf ("//", StringComparison.Ordinal) != -1)
 				return;
 
-			EndPointListener epl = GetEPListener (lp.Host, lp.Port, listener, lp.Secure);
+			EndPointListener epl = GetEPListener (IPAddress.Any, lp.Port, listener, lp.Secure);
 			epl.RemovePrefix (lp, listener);
 		}
 	}

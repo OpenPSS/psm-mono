@@ -17,6 +17,7 @@ using NUnit.Framework;
 namespace MonoTests.System.Reflection.Emit
 {
 	[TestFixture]
+	[Category("NotMobile")] // mobile profile doesn't support S.R.E
 	public class DynamicMethodTest
 	{
 		private delegate int HelloInvoker (string msg);
@@ -398,6 +399,20 @@ namespace MonoTests.System.Reflection.Emit
 			var function = (Func<bool>) method.CreateDelegate (typeof (Func<bool>));
 
 			Assert.IsTrue (function ());
+		}
+
+		[Test]
+		[ExpectedException (typeof (InvalidOperationException))]
+		public void GetMethodBody ()
+		{
+			var method = new DynamicMethod ("method", typeof (object), new Type [] { typeof (object) });
+
+			var il = method.GetILGenerator ();
+			il.Emit (OpCodes.Ldarg_0);
+			il.Emit (OpCodes.Ret);
+
+			var f = (Func<object, object>) method.CreateDelegate (typeof (Func<object, object>));
+			f.Method.GetMethodBody ();
 		}
 
 	public delegate object RetObj();

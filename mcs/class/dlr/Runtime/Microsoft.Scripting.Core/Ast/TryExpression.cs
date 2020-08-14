@@ -38,7 +38,7 @@ namespace System.Linq.Expressions {
     /// Only one of fault or finally can be supplied.
     /// The return type of the try block must match the return type of any associated catch statements.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.TryExpressionProxy))]
 #endif
     public sealed class TryExpression : Expression {

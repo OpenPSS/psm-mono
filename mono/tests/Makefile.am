@@ -13,7 +13,7 @@ JITTEST_PROG_RUN = MONO_SHARED_DIR=$(mono_build_root)/runtime MONO_CFG_DIR=$(mon
 
 RUNTIME_ARGS=--config tests-config --optimize=all --debug
 
-with_mono_path = MONO_PATH=$(mcs_topdir)/class/lib/net_2_0
+with_mono_path = MONO_PATH=$(mcs_topdir)/class/lib/net_4_5
 with_mono_path_moonlight = MONO_PATH=$(mcs_topdir)/class/lib/moonlight_raw
 
 RUNTIME = $(with_mono_path) $(top_builddir)/runtime/mono-wrapper
@@ -21,11 +21,10 @@ RUNTIME_MOONLIGHT = $(with_mono_path_moonlight) $(top_builddir)/runtime/mono-wra
 
 MKBUNDLE = \
 	PKG_CONFIG_PATH=$(top_builddir):$(PKG_CONFIG_PATH) \
-	$(RUNTIME) $(mcs_topdir)/class/lib/net_2_0/mkbundle.exe
+	$(RUNTIME) $(mcs_topdir)/class/lib/net_4_5/mkbundle.exe
 
-MCS = $(RUNTIME) $(mcs_topdir)/class/lib/net_2_0/gmcs.exe -unsafe -nowarn:0162 -nowarn:0168 -nowarn:0219 -debug
-SMCS = $(RUNTIME_MOONLIGHT) --runtime=moonlight --security=temporary-smcs-hack $(mcs_topdir)/class/lib/moonlight_raw/smcs.exe -unsafe -nowarn:0162 -nowarn:0168 -nowarn:0219
-ILASM = $(RUNTIME) $(mcs_topdir)/class/lib/net_2_0/ilasm.exe
+MCS = $(RUNTIME) $(mcs_topdir)/class/lib/build/mcs.exe -unsafe -nowarn:0162 -nowarn:0168 -nowarn:0219 -debug
+ILASM = $(RUNTIME) $(mcs_topdir)/class/lib/net_4_5/ilasm.exe
 
 BENCHSRC=fib.cs random.cs nested-loops.cs ackermann.cs tight-loop.cs sieve.cs
 
@@ -372,11 +371,13 @@ BASE_TEST_CS_SRC=		\
 	bug-599469.cs	\
 	bug-389886-3.cs \
 	monitor.cs	\
-	bug-1147.cs	\
-	mono-path.cs	\
-	bug-bxc-795.cs	\
-	bug-3903.cs	\
-	sgen-case-23400.cs
+	dynamic-method-resurrection.cs	\
+	bug-666008.cs	\
+	bug-685908.cs	\
+	sgen-long-vtype.cs	\
+	delegate-invoke.cs	\
+	bug-696593.cs	\
+	bug-705140.cs
 
 TEST_CS_SRC_DIST=	\
 	$(BASE_TEST_CS_SRC)	\
@@ -387,7 +388,6 @@ TEST_CS_SRC_DIST=	\
 TEST_CS_SRC_GEN = \
 	runtime-invoke.gen.cs \
 	imt_big_iface_test.cs
-	
 
 if AMD64
 TEST_CS_SRC = $(BASE_TEST_CS_SRC) $(TEST_CS_SRC_GEN) async-exc-compilation.cs finally_guard.cs
@@ -411,7 +411,7 @@ endif
 if X86
 
 if HOST_WIN32
-PLATFORM_DISABLED_TESTS=async-exc-compilation.exe
+PLATFORM_DISABLED_TESTS=async-exc-compilation.exe finally_guard.exe
 endif
 
 endif
@@ -425,9 +425,16 @@ if ARM
 PLATFORM_DISABLED_TESTS=filter-stack.exe
 endif
 
+if S390x
+PLATFORM_DISABLED_TESTS=dynamic-method-resurrection.exe
+#PLATFORM_DISABLED_TESTS=dynamic-method-resurrection.exe exception17.exe
+endif
+
 # The two finalizer tests only work under sgen
 # gc-altstack.exe fails under boehm because it has no support for altstack
 # bug-459094.exe creates an extremely deep directory tree
+# delegate-invoke.exe depends on 929c6bc9b6d76a273f251e6f5dfacac36e9c38bd which was
+# reverted.
 DISABLED_TESTS=			\
 	delegate-async-exception.exe	\
 	bug-348522.2.exe	\
@@ -435,6 +442,7 @@ DISABLED_TESTS=			\
 	critical-finalizers.exe	\
 	gc-altstack.exe \
 	bug-459094.exe \
+	delegate-invoke.exe \
 	$(PLATFORM_DISABLED_TESTS)
 
 AOT_DISABLED_TESTS=constraints-load.exe
@@ -508,8 +516,7 @@ TEST_IL_SRC=			\
 	bug-515884.il	\
 	bug-633291.il	\
 	delegate-with-null-target.il	\
-	bug-318677.il	\
-	invalid_generic_instantiation.il
+	bug-318677.il
 
 # pre-requisite test sources: files that are not test themselves
 # but that need to be compiled
@@ -581,7 +588,6 @@ endif
 # test_messages fails on the buildbots
 #test: assemblyresolve/test/asm.dll testjit test-type-load test-generic-sharing test_platform test_2_1 test_messages
 test: assemblyresolve/test/asm.dll testjit test-generic-sharing test-type-load test_platform test_2_1 test-process-exit
-test-wrench: assemblyresolve/test/asm.dll testjit test-generic-sharing test-type-load test_platform test_2_1 test-process-exit
 
 assemblyresolve/test/asm.dll:
 	$(MAKE) -C assemblyresolve prereq
@@ -824,9 +830,6 @@ generic-delegate2-lib.2.dll : generic-delegate2-lib.2.il
 generic-delegate2.2.exe : generic-delegate2.2.cs generic-delegate2-lib.2.dll
 	$(MCS) -r:generic-delegate2-lib.2.dll -out:$@ $(srcdir)/generic-delegate2.2.cs
 
-bug-3903.exe: bug-3903.cs
-	$(MCS) -sdk:2 bug-3903.cs -out:bug-3903.exe
-
 gshared: test-generic-sharing
 
 gshared-aot:
@@ -857,8 +860,7 @@ GSHARED_TESTS = \
 		generic-stack-traces.2.exe generic-stack-traces2.2.exe		\
 		bug-472600.2.exe bug-473482.2.exe bug-473999.2.exe		\
 		bug-479763.2.exe generic-xdomain.2.exe				\
-		generic-type-load-exception.2.exe bug-616463.exe	\
-		bug-1147.exe
+		generic-type-load-exception.2.exe bug-616463.exe
 
 test-generic-sharing-normal: $(GSHARED_TESTS)
 	@for fn in $+ ; do	\
@@ -875,8 +877,6 @@ test-generic-sharing-managed: test-runner.exe $(GSHARED_TESTS)
 
 test-generic-sharing:
 	@if test x$(M) != x; then $(MAKE) test-generic-sharing-managed; else $(MAKE) test-generic-sharing-normal; fi
-
-EXTRA_DIST += delegate2.exe.config
 
 EXTRA_DIST += async-exceptions.cs
 async-exceptions.exe : async-exceptions.cs
@@ -903,7 +903,7 @@ test-process-exit:
 	@$(MCS) $(srcdir)/bug-438454.cs -out:bug-438454.exe
 	@echo "Testing bug-438454.exe..."
 	@$(RUNTIME) bug-438454.exe > bug-438454.exe.stdout
-	@diff bug-438454.exe.stdout $(srcdir)/bug-438454.exe.stdout.expected
+	@diff -w bug-438454.exe.stdout $(srcdir)/bug-438454.exe.stdout.expected
 
 OOM_TESTS =	\
 	gc-oom-handling.exe	\
@@ -934,6 +934,6 @@ else
 libtest_la_LDFLAGS = -rpath `pwd`
 endif
 libtest_la_SOURCES = libtest.c
-libtest_la_LIBADD = $(GLIB_LIBS)
+libtest_la_LIBADD = $(GLIB_LIBS) $(LIBICONV)
 
 CLEANFILES = $(TESTSI_CS) $(TESTSI_IL) $(STRESS_TESTS) *.dll *.stdout *.aotlog *.exe stest.dat

@@ -29,6 +29,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[Serializable]
@@ -44,3 +45,4 @@ namespace System.Runtime.InteropServices.ComTypes
 	}
 }
 
+#endif

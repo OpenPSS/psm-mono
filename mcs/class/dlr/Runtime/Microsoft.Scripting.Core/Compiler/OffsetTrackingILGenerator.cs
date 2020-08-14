@@ -23,7 +23,7 @@ using System.Diagnostics.SymbolStore;
 // Not needed in CLR 4 builds because we have the
 // ILGenerator.ILOffset property.
 
-#if CLR2 || SILVERLIGHT
+#if CLR2 || SILVERLIGHT || MOBILE
 
 #if CLR2
 namespace Microsoft.Scripting.Ast.Compiler {

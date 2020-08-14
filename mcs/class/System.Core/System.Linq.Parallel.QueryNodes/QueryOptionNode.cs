@@ -35,12 +35,7 @@ namespace System.Linq.Parallel.QueryNodes
 	// Last CancellationToken parameter is used internally for ImplementerToken
 	using OptionsList = Tuple<ParallelMergeOptions?, ParallelExecutionMode?, CancellationToken?, int, CancellationTokenSource>;
 
-
-	interface QueryOptionNode : IVisitableNode {
-		OptionsList GetOptions ();
-	}
-
-	internal class QueryOptionNode<T> : QueryChildNode<T, T>, QueryOptionNode
+	internal class QueryOptionNode<T> : QueryChildNode<T, T>
 	{
 
 		public QueryOptionNode (QueryBaseNode<T> parent)
@@ -49,7 +44,7 @@ namespace System.Linq.Parallel.QueryNodes
 
 		}
 
-		public virtual OptionsList GetOptions ()
+		internal virtual OptionsList GetOptions ()
 		{
 			return new OptionsList (null, null, null, -1, null);
 		}
@@ -71,7 +66,7 @@ namespace System.Linq.Parallel.QueryNodes
 
 		public override void Visit (INodeVisitor visitor)
 		{
-			visitor.Visit ((QueryOptionNode)this);
+			visitor.Visit<T> (this);
 		}
 	}
 
@@ -85,7 +80,7 @@ namespace System.Linq.Parallel.QueryNodes
 			this.mode = mode;
 		}
 
-		public override OptionsList GetOptions ()
+		internal override OptionsList GetOptions ()
 		{
 			return new OptionsList (null, mode, null, -1, null);
 		}
@@ -102,7 +97,7 @@ namespace System.Linq.Parallel.QueryNodes
 			this.opts = opts;
 		}
 
-		public override OptionsList GetOptions ()
+		internal override OptionsList GetOptions ()
 		{
 			return new OptionsList (opts, null, null, -1, null);
 		}
@@ -119,7 +114,7 @@ namespace System.Linq.Parallel.QueryNodes
 			this.token = token;
 		}
 
-		public override OptionsList GetOptions ()
+		internal override OptionsList GetOptions ()
 		{
 			return new OptionsList (null, null, token, -1, null);
 		}
@@ -135,7 +130,7 @@ namespace System.Linq.Parallel.QueryNodes
 			this.degreeParallelism = degreeParallelism;
 		}
 
-		public override OptionsList GetOptions ()
+		internal override OptionsList GetOptions ()
 		{
 			return new OptionsList (null, null, null, degreeParallelism, null);
 		}
@@ -151,7 +146,7 @@ namespace System.Linq.Parallel.QueryNodes
 			this.source = token;
 		}
 
-		public override OptionsList GetOptions ()
+		internal override OptionsList GetOptions ()
 		{
 			return new OptionsList (null, null, null, -1, source);
 		}

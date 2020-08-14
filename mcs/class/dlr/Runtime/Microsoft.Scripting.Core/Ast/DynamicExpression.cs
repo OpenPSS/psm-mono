@@ -35,7 +35,7 @@ namespace System.Linq.Expressions {
     /// <summary>
     /// Represents a dynamic operation.
     /// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !MOBILE
     [DebuggerTypeProxy(typeof(Expression.DynamicExpressionProxy))]
 #endif
     public class DynamicExpression : Expression, IArgumentProvider {

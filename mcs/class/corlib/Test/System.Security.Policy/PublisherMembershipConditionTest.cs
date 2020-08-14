@@ -229,6 +229,7 @@ namespace MonoTests.System.Security.Policy {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void FromXml_PolicyLevel ()
 		{
 			PublisherMembershipCondition pmc = new PublisherMembershipCondition (x509);
@@ -271,6 +272,7 @@ namespace MonoTests.System.Security.Policy {
 		}
 
 		[Test]
+		[Category("NotMobile")] // mobile profile throws a NotSupportedException
 		public void ToXmlPolicyLevel () 
 		{
 			PublisherMembershipCondition pmc = new PublisherMembershipCondition (x509);

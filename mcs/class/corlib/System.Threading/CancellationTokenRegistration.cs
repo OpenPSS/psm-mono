@@ -40,13 +40,14 @@ namespace System.Threading
 			this.id = id;
 			this.source = source;
 		}
-
+		
 		#region IDisposable implementation
 		public void Dispose ()
 		{
-			if (source != null)
-				source.RemoveCallback (this);
+			// Remove the corresponding callback from source
+			source.RemoveCallback (this);
 		}
+
 		#endregion
 
 		#region IEquatable<CancellationTokenRegistration> implementation
@@ -68,13 +69,14 @@ namespace System.Threading
 		
 		public override int GetHashCode ()
 		{
-			return id.GetHashCode () ^ (source == null ? 0 : source.GetHashCode ());
+			return id.GetHashCode () ^ source.GetHashCode ();
 		}
 
 		public override bool Equals (object obj)
 		{
 			return (obj is CancellationTokenRegistration) ? Equals ((CancellationTokenRegistration)obj) : false;
 		}
+
 	}
 }
 #endif

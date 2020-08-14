@@ -167,6 +167,7 @@ class MakeBundle {
 		case "osx":
 			sw.WriteLine (
 				"\t.section __TEXT,__text,regular,pure_instructions\n" + 
+				"\t.section __TEXT,__picsymbolstub1,symbol_stubs,pure_instructions,32\n" + 
 				"\t.globl _{0}\n" +
 				"\t.data\n" +
 				"\t.align 4\n" +
@@ -182,26 +183,6 @@ class MakeBundle {
 				name, size);
 			break;
 		}
-	}
-	
-	static string [] chars = new string [256];
-	
-	static void WriteBuffer (StreamWriter ts, Stream stream, byte[] buffer)
-	{
-		int n;
-		
-		// Preallocate the strings we need.
-		if (chars [0] == null) {
-			for (int i = 0; i < chars.Length; i++)
-				chars [i] = string.Format ("\t.byte {0}\n", i.ToString ());
-		}
-
-		while ((n = stream.Read (buffer, 0, buffer.Length)) != 0) {
-			for (int i = 0; i < n; i++)
-				ts.Write (chars [buffer [i]]);
-		}
-
-		ts.WriteLine ();
 	}
 	
 	static void GenerateBundles (ArrayList files)
@@ -247,13 +228,12 @@ class MakeBundle {
 				
 				Stream stream = File.OpenRead (fname);
 
-				// Compression can be parallelized
 				long real_size = stream.Length;
 				int n;
 				if (compress) {
 					MemoryStream ms = new MemoryStream ();
 					DeflaterOutputStream deflate = new DeflaterOutputStream (ms);
-					while ((n = stream.Read (buffer, 0, buffer.Length)) != 0){
+					while ((n = stream.Read (buffer, 0, 8192)) != 0){
 						deflate.Write (buffer, 0, n);
 					}
 					stream.Close ();
@@ -263,8 +243,13 @@ class MakeBundle {
 				}
 
 				WriteSymbol (ts, "assembly_data_" + encoded, stream.Length);
-			
-				WriteBuffer (ts, stream, buffer);
+
+				while ((n = stream.Read (buffer, 0, 8192)) != 0){
+					for (int i = 0; i < n; i++){
+						ts.Write ("\t.byte {0}\n", buffer [i]);
+					}
+				}
+				ts.WriteLine ();
 
 				if (compress) {
 					tc.WriteLine ("extern const unsigned char assembly_data_{0} [];", encoded);
@@ -287,7 +272,11 @@ class MakeBundle {
 					Console.WriteLine (" config from: " + fname + ".config");
 					tc.WriteLine ("extern const unsigned char assembly_config_{0} [];", encoded);
 					WriteSymbol (ts, "assembly_config_" + encoded, cf.Length);
-					WriteBuffer (ts, cf, buffer);
+					while ((n = cf.Read (buffer, 0, 8192)) != 0){
+						for (int i = 0; i < n; i++){
+							ts.Write ("\t.byte {0}\n", buffer [i]);
+						}
+					}
 					ts.WriteLine ();
 					config_names.Add (new string[] {aname, encoded});
 				} catch (FileNotFoundException) {
@@ -307,7 +296,12 @@ class MakeBundle {
 				tc.WriteLine ("extern const unsigned char system_config;");
 				WriteSymbol (ts, "system_config", config_file.Length);
 
-				WriteBuffer (ts, conf, buffer);
+				int n;
+				while ((n = conf.Read (buffer, 0, 8192)) != 0){
+					for (int i = 0; i < n; i++){
+						ts.Write ("\t.byte {0}\n", buffer [i]);
+					}
+				}
 				// null terminator
 				ts.Write ("\t.byte 0\n");
 				ts.WriteLine ();
@@ -325,7 +319,13 @@ class MakeBundle {
 				tc.WriteLine ("extern const unsigned char machine_config;");
 				WriteSymbol (ts, "machine_config", machine_config_file.Length);
 
-				WriteBuffer (ts, conf, buffer);
+				int n;
+				while ((n = conf.Read (buffer, 0, 8192)) != 0){
+					for (int i = 0; i < n; i++){
+						ts.Write ("\t.byte {0}\n", buffer [i]);
+					}
+				}
+				// null terminator
 				ts.Write ("\t.byte 0\n");
 				ts.WriteLine ();
 			}

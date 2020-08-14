@@ -31,6 +31,7 @@
 
 using System;
 
+#if !MOBILE
 namespace System.Runtime.InteropServices.ComTypes
 {
 	[Serializable, Flags]
@@ -54,3 +55,4 @@ namespace System.Runtime.InteropServices.ComTypes
 	}
 }
 
+#endif

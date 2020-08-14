@@ -83,6 +83,7 @@ namespace MonoTests.System.Security.Permissions {
 			catch {} // don't mess up results over that
 		}
 
+#if !MOBILE
 		[Test]
 		public void Default () 
 		{
@@ -234,5 +235,6 @@ namespace MonoTests.System.Security.Permissions {
 			AttributeTargets at = (AttributeTargets.Assembly | AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Constructor | AttributeTargets.Method);
 			Assert.AreEqual (at, aua.ValidOn, "ValidOn");
 		}
+#endif
 	}
 }

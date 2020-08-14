@@ -32,7 +32,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 namespace System.Runtime.CompilerServices {
-#if CLR2 || SILVERLIGHT
+#if CLR2 || SILVERLIGHT || MOBILE
     using ILGenerator = OffsetTrackingILGenerator;
 #endif
 

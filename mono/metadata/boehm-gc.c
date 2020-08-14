@@ -4,6 +4,7 @@
  * Copyright 2001-2003 Ximian, Inc (http://www.ximian.com)
  * Copyright 2004-2011 Novell, Inc (http://www.novell.com)
  * Copyright 2011 Xamarin, Inc (http://www.xamarin.com)
+ * Copyright 2011 SCEA LLC (http://us.playstation.com)
  */
 
 #include "config.h"
@@ -21,8 +22,10 @@
 #include <mono/metadata/domain-internals.h>
 #include <mono/metadata/metadata-internals.h>
 #include <mono/metadata/marshal.h>
+#include <mono/metadata/runtime.h>
 #include <mono/utils/mono-logger-internal.h>
 #include <mono/utils/mono-time.h>
+#include <mono/utils/mono-threads.h>
 #include <mono/utils/dtrace.h>
 #include <mono/utils/gc_wrapper.h>
 
@@ -42,6 +45,9 @@
 
 static gboolean gc_initialized = FALSE;
 
+static void*
+boehm_thread_register (MonoThreadInfo* info, void *baseptr);
+
 static void
 mono_gc_warning (char *msg, GC_word arg)
 {
@@ -51,6 +57,7 @@ mono_gc_warning (char *msg, GC_word arg)
 void
 mono_gc_base_init (void)
 {
+	MonoThreadInfoCallbacks cb;
 	char *env;
 
 	if (gc_initialized)
@@ -164,6 +171,15 @@ mono_gc_base_init (void)
 		}
 		g_strfreev (opts);
 	}
+
+	memset (&cb, 0, sizeof (cb));
+	cb.thread_register = boehm_thread_register;
+	cb.mono_method_is_critical = (gpointer)mono_runtime_is_critical_method;
+#ifndef HOST_WIN32
+	cb.mono_gc_pthread_create = (gpointer)mono_gc_pthread_create;
+#endif
+	
+	mono_threads_init (&cb, sizeof (MonoThreadInfo));
 
 	mono_gc_enable_events ();
 	gc_initialized = TRUE;
@@ -285,6 +301,32 @@ mono_gc_get_heap_size (void)
 	return GC_get_heap_size ();
 }
 
+void
+mono_gc_set_heap_size_limit (int64_t max_heap, int64_t soft_limit)
+{
+	GC_set_max_heap_size (max_heap);
+}
+
+void
+mono_gc_disable (void)
+{
+#ifdef HAVE_GC_ENABLE
+	GC_disable ();
+#else
+	g_assert_not_reached ();
+#endif
+}
+
+void
+mono_gc_enable (void)
+{
+#ifdef HAVE_GC_ENABLE
+	GC_enable ();
+#else
+	g_assert_not_reached ();
+#endif
+}
+
 gboolean
 mono_gc_is_gc_thread (void)
 {
@@ -302,6 +344,12 @@ extern int GC_thread_register_foreign (void *base_addr);
 gboolean
 mono_gc_register_thread (void *baseptr)
 {
+	return mono_thread_info_attach (baseptr) != NULL;
+}
+
+static void*
+boehm_thread_register (MonoThreadInfo* info, void *baseptr)
+{
 #if GC_VERSION_MAJOR >= 7
 	struct GC_stack_base sb;
 	int res;
@@ -317,16 +365,16 @@ mono_gc_register_thread (void *baseptr)
 	res = GC_register_my_thread (&sb);
 	if ((res != GC_SUCCESS) && (res != GC_DUPLICATE)) {
 		g_warning ("GC_register_my_thread () failed.\n");
-		return FALSE;
+		return NULL;
 	}
-	return TRUE;
+	return info;
 #else
 	if (mono_gc_is_gc_thread())
-		return TRUE;
+		return info;
 #if defined(USE_INCLUDED_LIBGC) && !defined(HOST_WIN32)
-	return GC_thread_register_foreign (baseptr);
+	return GC_thread_register_foreign (baseptr) ? info : NULL;
 #else
-	return FALSE;
+	return NULL;
 #endif
 #endif
 }
@@ -354,30 +402,42 @@ static gint64 gc_start_time;
 static void
 on_gc_notification (GCEventType event)
 {
-	if (event == MONO_GC_EVENT_START) {
-		mono_perfcounters->gc_collections0++;
+	MonoGCEvent e = (MonoGCEvent)event;
+
+	if (e == MONO_GC_EVENT_PRE_STOP_WORLD) 
+		mono_thread_info_suspend_lock ();
+	else if (e == MONO_GC_EVENT_POST_START_WORLD)
+		mono_thread_info_suspend_unlock ();
+	
+	if (e == MONO_GC_EVENT_START) {
+		if (mono_perfcounters)
+			mono_perfcounters->gc_collections0++;
 		mono_stats.major_gc_count ++;
 		gc_start_time = mono_100ns_ticks ();
-	} else if (event == MONO_GC_EVENT_END) {
-		guint64 heap_size = GC_get_heap_size ();
-		guint64 used_size = heap_size - GC_get_free_bytes ();
-		mono_perfcounters->gc_total_bytes = used_size;
-		mono_perfcounters->gc_committed_bytes = heap_size;
-		mono_perfcounters->gc_reserved_bytes = heap_size;
-		mono_perfcounters->gc_gen0size = heap_size;
+	} else if (e == MONO_GC_EVENT_END) {
+		if (mono_perfcounters) {
+			guint64 heap_size = GC_get_heap_size ();
+			guint64 used_size = heap_size - GC_get_free_bytes ();
+			mono_perfcounters->gc_total_bytes = used_size;
+			mono_perfcounters->gc_committed_bytes = heap_size;
+			mono_perfcounters->gc_reserved_bytes = heap_size;
+			mono_perfcounters->gc_gen0size = heap_size;
+		}
 		mono_stats.major_gc_time_usecs += (mono_100ns_ticks () - gc_start_time) / 10;
 		mono_trace_message (MONO_TRACE_GC, "gc took %d usecs", (mono_100ns_ticks () - gc_start_time) / 10);
 	}
-	mono_profiler_gc_event ((MonoGCEvent) event, 0);
+	mono_profiler_gc_event (e, 0);
 }
  
 static void
 on_gc_heap_resize (size_t new_size)
 {
 	guint64 heap_size = GC_get_heap_size ();
-	mono_perfcounters->gc_committed_bytes = heap_size;
-	mono_perfcounters->gc_reserved_bytes = heap_size;
-	mono_perfcounters->gc_gen0size = heap_size;
+	if (mono_perfcounters) {
+		mono_perfcounters->gc_committed_bytes = heap_size;
+		mono_perfcounters->gc_reserved_bytes = heap_size;
+		mono_perfcounters->gc_gen0size = heap_size;
+	}
 	mono_profiler_gc_heap_resize (new_size);
 }
 
@@ -421,19 +481,13 @@ mono_gc_weak_link_add (void **link_addr, MonoObject *obj, gboolean track)
 {
 	/* libgc requires that we use HIDE_POINTER... */
 	*link_addr = (void*)HIDE_POINTER (obj);
-	if (track)
-		GC_REGISTER_LONG_LINK (link_addr, obj);
-	else
-		GC_GENERAL_REGISTER_DISAPPEARING_LINK (link_addr, obj);
+	GC_GENERAL_REGISTER_DISAPPEARING_LINK (link_addr, obj);
 }
 
 void
-mono_gc_weak_link_remove (void **link_addr, gboolean track)
+mono_gc_weak_link_remove (void **link_addr)
 {
-	if (track)
-		GC_unregister_long_link (link_addr);
-	else
-		GC_unregister_disappearing_link (link_addr);
+	GC_unregister_disappearing_link (link_addr);
 	*link_addr = NULL;
 }
 
@@ -533,6 +587,112 @@ gboolean
 mono_gc_pending_finalizers (void)
 {
 	return GC_should_invoke_finalizers ();
+}
+
+/*
+ * LOCKING: Assumes the domain_finalizers lock is held.
+ */
+static void
+add_weak_track_handle_internal (MonoDomain *domain, MonoObject *obj, guint32 gchandle)
+{
+	GSList *refs;
+
+	if (!domain->track_resurrection_objects_hash)
+		domain->track_resurrection_objects_hash = g_hash_table_new (mono_aligned_addr_hash, NULL);
+
+	refs = g_hash_table_lookup (domain->track_resurrection_objects_hash, obj);
+	refs = g_slist_prepend (refs, GUINT_TO_POINTER (gchandle));
+	g_hash_table_insert (domain->track_resurrection_objects_hash, obj, refs);
+}
+
+void
+mono_gc_add_weak_track_handle (MonoObject *obj, guint32 handle)
+{
+	MonoDomain *domain;
+
+	if (!obj)
+		return;
+
+	domain = mono_object_get_domain (obj);
+
+	mono_domain_finalizers_lock (domain);
+
+	add_weak_track_handle_internal (domain, obj, handle);
+
+	g_hash_table_insert (domain->track_resurrection_handles_hash, GUINT_TO_POINTER (handle), obj);
+
+	mono_domain_finalizers_unlock (domain);
+}
+
+/*
+ * LOCKING: Assumes the domain_finalizers lock is held.
+ */
+static void
+remove_weak_track_handle_internal (MonoDomain *domain, MonoObject *obj, guint32 gchandle)
+{
+	GSList *refs;
+
+	if (!domain->track_resurrection_objects_hash)
+		return;
+
+	refs = g_hash_table_lookup (domain->track_resurrection_objects_hash, obj);
+	refs = g_slist_remove (refs, GUINT_TO_POINTER (gchandle));
+	g_hash_table_insert (domain->track_resurrection_objects_hash, obj, refs);
+}
+
+void
+mono_gc_change_weak_track_handle (MonoObject *old_obj, MonoObject *obj, guint32 gchandle)
+{
+	MonoDomain *domain = mono_domain_get ();
+
+	mono_domain_finalizers_lock (domain);
+
+	if (old_obj)
+		remove_weak_track_handle_internal (domain, old_obj, gchandle);
+	if (obj)
+		add_weak_track_handle_internal (domain, obj, gchandle);
+
+	mono_domain_finalizers_unlock (domain);
+}
+
+void
+mono_gc_remove_weak_track_handle (guint32 gchandle)
+{
+	MonoDomain *domain = mono_domain_get ();
+	MonoObject *obj;
+
+	/* Clean our entries in the two hashes in MonoDomain */
+
+	mono_domain_finalizers_lock (domain);
+
+	/* Get the original object this handle pointed to */
+	obj = g_hash_table_lookup (domain->track_resurrection_handles_hash, GUINT_TO_POINTER (gchandle));
+	if (obj) {
+		g_hash_table_remove (domain->track_resurrection_handles_hash, GUINT_TO_POINTER (gchandle));
+
+		remove_weak_track_handle_internal (domain, obj, gchandle);
+	}
+
+	mono_domain_finalizers_unlock (domain);
+}
+
+GSList*
+mono_gc_remove_weak_track_object (MonoDomain *domain, MonoObject *obj)
+{
+	GSList *refs = NULL;
+
+	if (domain->track_resurrection_objects_hash) {
+		refs = g_hash_table_lookup (domain->track_resurrection_objects_hash, obj);
+
+		if (refs)
+			/*
+			 * Since we don't run finalizers again for resurrected objects,
+			 * no need to keep these around.
+			 */
+			g_hash_table_remove (domain->track_resurrection_objects_hash, obj);
+	}
+
+	return refs;
 }
 
 void
@@ -823,6 +983,18 @@ create_allocator (int atype, int offset)
 
 static MonoMethod* alloc_method_cache [ATYPE_NUM];
 
+static G_GNUC_UNUSED gboolean
+mono_gc_is_critical_method (MonoMethod *method)
+{
+	int i;
+
+	for (i = 0; i < ATYPE_NUM; ++i)
+		if (method == alloc_method_cache [i])
+			return TRUE;
+
+	return FALSE;
+}
+
 /*
  * If possible, generate a managed method that can quickly allocate objects in class
  * @klass. The method will typically have an thread-local inline allocation sequence.
@@ -911,6 +1083,12 @@ mono_gc_get_write_barrier (void)
 }
 
 #else
+
+static G_GNUC_UNUSED gboolean
+mono_gc_is_critical_method (MonoMethod *method)
+{
+	return FALSE;
+}
 
 MonoMethod*
 mono_gc_get_managed_allocator (MonoVTable *vtable, gboolean for_box)
@@ -1005,11 +1183,44 @@ mono_gc_get_nursery (int *shift_bits, size_t *size)
 }
 
 void
-mono_gc_set_stack_end (void *stack_end)
+mono_gc_set_current_thread_appdomain (MonoDomain *domain)
 {
 }
 
-void mono_gc_set_skip_thread (gboolean value)
+gboolean
+mono_gc_precise_stack_mark_enabled (void)
+{
+	return FALSE;
+}
+
+FILE *
+mono_gc_get_logfile (void)
+{
+	return NULL;
+}
+
+void
+mono_gc_conservatively_scan_area (void *start, void *end)
+{
+	g_assert_not_reached ();
+}
+
+void *
+mono_gc_scan_object (void *obj)
+{
+	g_assert_not_reached ();
+	return NULL;
+}
+
+gsize*
+mono_gc_get_bitmap_for_descr (void *descr, int *numbits)
+{
+	g_assert_not_reached ();
+	return NULL;
+}
+
+void
+mono_gc_set_gc_callbacks (MonoGCCallbacks *callbacks)
 {
 }
 
@@ -1037,12 +1248,27 @@ mono_gc_pthread_detach (pthread_t thread)
 	return pthread_detach (thread);
 }
 
+void
+mono_gc_pthread_exit (void *retval)
+{
+	pthread_exit (retval);
+}
+
 #endif
 
-guint
-mono_gc_get_vtable_bits (MonoClass *class)
+#ifdef HOST_WIN32
+BOOL APIENTRY mono_gc_dllmain (HMODULE module_handle, DWORD reason, LPVOID reserved)
 {
-	return 0;
+#ifdef USE_INCLUDED_LIBGC
+	return GC_DllMain (module_handle, reason, reserved);
+#else
+	return TRUE;
+#endif
+}
+#endif
+
+void mono_gc_set_skip_thread (gboolean skip)
+{
 }
 
 #endif /* no Boehm GC */

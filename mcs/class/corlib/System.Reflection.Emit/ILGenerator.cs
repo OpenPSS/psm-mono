@@ -838,9 +838,7 @@ namespace System.Reflection.Emit {
 
 		public virtual void EmitCalli (OpCode opcode, CallingConvention unmanagedCallConv, Type returnType, Type[] parameterTypes)
 		{
-			// GetMethodSigHelper expects a ModuleBuilder or null, and module might be
-			// a normal module when using dynamic methods.
-			SignatureHelper helper = SignatureHelper.GetMethodSigHelper (module as ModuleBuilder, 0, unmanagedCallConv, returnType, parameterTypes);
+			SignatureHelper helper = SignatureHelper.GetMethodSigHelper (module, 0, unmanagedCallConv, returnType, parameterTypes);
 			Emit (opcode, helper);
 		}
 
@@ -849,7 +847,7 @@ namespace System.Reflection.Emit {
 			if (optionalParameterTypes != null)
 				throw new NotImplementedException ();
 
-			SignatureHelper helper = SignatureHelper.GetMethodSigHelper (module as ModuleBuilder, callingConvention, 0, returnType, parameterTypes);
+			SignatureHelper helper = SignatureHelper.GetMethodSigHelper (module, callingConvention, 0, returnType, parameterTypes);
 			Emit (opcode, helper);
 		}
 		
@@ -951,7 +949,7 @@ namespace System.Reflection.Emit {
 				if (locals != null) {
 					foreach (LocalBuilder local in locals) {
 						if (local.Name != null && local.Name.Length > 0) {
-							SignatureHelper sighelper = SignatureHelper.GetLocalVarSigHelper (module as ModuleBuilder);
+							SignatureHelper sighelper = SignatureHelper.GetLocalVarSigHelper (module);
 							sighelper.AddArgument (local.LocalType);
 							byte[] signature = sighelper.GetSignature ();
 							symbolWriter.DefineLocalVariable (local.Name, FieldAttributes.Public, signature, SymAddressKind.ILOffset, local.position, 0, 0, local.StartOffset, local.EndOffset);
@@ -1002,6 +1000,31 @@ namespace System.Reflection.Emit {
 					emit_int (diff);
 					code_len = old_cl;
 				}
+			}
+		}
+
+		// Used by DynamicILGenerator
+		internal void SetCode (byte[] code, int max_stack) {
+			// Make a copy to avoid possible security problems
+			this.code = (byte[])code.Clone ();
+			this.code_len = code.Length;
+			this.max_stack = max_stack;
+			this.cur_stack = 0;
+		}
+
+		internal unsafe void SetCode (byte *code, int code_size, int max_stack) {
+			// Make a copy to avoid possible security problems
+			this.code = new byte [code_size];
+			for (int i = 0; i < code_size; ++i)
+				this.code [i] = code [i];
+			this.code_len = code_size;
+			this.max_stack = max_stack;
+			this.cur_stack = 0;
+		}
+
+		internal TokenGenerator TokenGenerator {
+			get {
+				return token_gen;
 			}
 		}
 

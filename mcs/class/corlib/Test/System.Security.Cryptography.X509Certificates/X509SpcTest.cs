@@ -1001,6 +1001,7 @@ namespace MonoTests.System.Security.Cryptography.X509Certificates {
 			}
 		}
 
+#if !MOBILE
 		[Test]
 		[Category ("NotWorking")] // we're missing the root certificate
 		public void ValidSignature () 
@@ -1051,5 +1052,6 @@ namespace MonoTests.System.Security.Cryptography.X509Certificates {
 			Assert.AreEqual (0, spc.GetHashCode (), "NonSignedAssembly");
 #endif
 		}
+#endif // !MOBILE
 	}
 }

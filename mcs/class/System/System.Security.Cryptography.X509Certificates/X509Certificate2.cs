@@ -39,9 +39,6 @@ using MX = Mono.Security.X509;
 
 namespace System.Security.Cryptography.X509Certificates {
 
-#if NET_4_0
-	[Serializable]
-#endif
 	public class X509Certificate2 : X509Certificate {
 #if !SECURITY_DEP && !MOONLIGHT
 		// Used in Mono.Security HttpsClientStream

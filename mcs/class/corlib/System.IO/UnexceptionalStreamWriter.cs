@@ -97,7 +97,7 @@ namespace System.IO {
 		{
 			try {
 				base.Write (buffer, index, count);
-			} catch (Exception) {
+			} catch (IOException) {
 			}
 		}
 
@@ -105,7 +105,7 @@ namespace System.IO {
 		{
 			try {
 				base.Write (value);
-			} catch (Exception) {
+			} catch (IOException) {
 			}
 		}
 
@@ -113,7 +113,7 @@ namespace System.IO {
 		{
 			try {
 				base.Write (value);
-			} catch (Exception) {
+			} catch (IOException) {
 			}
 		}
 
@@ -121,7 +121,7 @@ namespace System.IO {
 		{
 			try {
 				base.Write (value);
-			} catch (Exception) {
+			} catch (IOException) {
 			}
 		}
 	}

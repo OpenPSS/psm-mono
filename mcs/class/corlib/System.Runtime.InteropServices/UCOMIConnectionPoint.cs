@@ -26,6 +26,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 namespace System.Runtime.InteropServices
 {
 	[Obsolete]
@@ -41,3 +42,4 @@ namespace System.Runtime.InteropServices
 		void EnumConnections (out UCOMIEnumConnections ppEnum);
 	}
 }
+#endif

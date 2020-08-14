@@ -11,6 +11,7 @@
 //
 // (C) 2001, 2002 Ximian, Inc.  http://www.ximian.com
 // Copyright (C) 2004-2005 Novell, Inc (http://www.novell.com)
+// Copyright 2011 Xamarin Inc (http://www.xamarin.com).
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the
@@ -57,12 +58,14 @@ using System.Text;
 namespace System {
 
 	[ComVisible (true)]
-#if !NET_2_1
+#if !NET_2_1 || MOONLIGHT
 	[ComDefaultInterface (typeof (_AppDomain))]
 #endif
 	[ClassInterface(ClassInterfaceType.None)]
-#if NET_2_1
-	public sealed class AppDomain : MarshalByRefObject {
+#if MOONLIGHT
+	public sealed class AppDomain : _AppDomain {
+#elif NET_2_1
+	public sealed class AppDomain : MarshalByRefObject, _AppDomain {
 #else
 	public sealed class AppDomain : MarshalByRefObject, _AppDomain, IEvidenceFactory {
 #endif
@@ -125,10 +128,12 @@ namespace System {
 		public string BaseDirectory {
 			get {
 				string path = SetupInformationNoCopy.ApplicationBase;
+#if !NET_2_1
 				if (SecurityManager.SecurityEnabled && (path != null) && (path.Length > 0)) {
 					// we cannot divulge local file informations
 					new FileIOPermission (FileIOPermissionAccess.PathDiscovery, path).Demand ();
 				}
+#endif
 				return path;
 			}
 		}
@@ -136,10 +141,12 @@ namespace System {
 		public string RelativeSearchPath {
 			get {
 				string path = SetupInformationNoCopy.PrivateBinPath;
+#if !NET_2_1
 				if (SecurityManager.SecurityEnabled && (path != null) && (path.Length > 0)) {
 					// we cannot divulge local file informations
 					new FileIOPermission (FileIOPermissionAccess.PathDiscovery, path).Demand ();
 				}
+#endif
 				return path;
 			}
 		}
@@ -151,10 +158,12 @@ namespace System {
 					return null;
 
 				string path = Path.Combine (setup.DynamicBase, setup.ApplicationName);
+#if !NET_2_1
 				if (SecurityManager.SecurityEnabled && (path != null) && (path.Length > 0)) {
 					// we cannot divulge local file informations
 					new FileIOPermission (FileIOPermissionAccess.PathDiscovery, path).Demand ();
 				}
+#endif
 				return path;
 			}
 		}
@@ -679,10 +688,12 @@ namespace System {
 			return base.GetType ();
 		}
 
+#if !MOONLIGHT
 		public override object InitializeLifetimeService ()
 		{
 			return null;
 		}
+#endif
 
 		[MethodImplAttribute (MethodImplOptions.InternalCall)]
 		internal extern Assembly LoadAssembly (string assemblyRef, Evidence securityEvidence, bool refOnly);
@@ -1341,13 +1352,12 @@ namespace System {
 				DomainUnload(this, null);
 		}
 
-#if !NET_2_1
 		internal byte[] GetMarshalledDomainObjRef ()
 		{
 			ObjRef oref = RemotingServices.Marshal (AppDomain.CurrentDomain, null, typeof (AppDomain));
 			return CADSerializer.SerializeObject (oref).GetBuffer();
 		}
-#endif
+
 		internal void ProcessMessageInDomain (byte[] arrRequest, CADMethodCallMessage cadMsg,
 		                                      out byte[] arrResponse, out CADMethodReturnMessage cadMrm)
 		{

@@ -27,15 +27,14 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
+using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace System.Globalization
 {
 	[System.Runtime.InteropServices.ComVisible(true)]
 	[Serializable]
-	[StructLayout (LayoutKind.Sequential)]
-	public partial class RegionInfo
+	public class RegionInfo
 	{
 		static RegionInfo currentRegion;
 
@@ -47,21 +46,16 @@ namespace System.Globalization
 					// make sure to fill BootstrapCultureID.
 					CultureInfo ci = CultureInfo.CurrentCulture;
 					// If current culture is invariant then region is not available.
-					if (ci != null && CultureInfo.BootstrapCultureID != 0x7F)
-						currentRegion = new RegionInfo (CultureInfo.BootstrapCultureID);
-					else
-#if MONOTOUCH
-						currentRegion = CreateFromNSLocale ();
-#else
-						currentRegion = null;
-#endif
+					if (ci == null || CultureInfo.BootstrapCultureID == 0x7F)
+						return null;
+					currentRegion = new RegionInfo (CultureInfo.BootstrapCultureID);
 				}
 				return currentRegion;
 			}
 		}
-		
-		// the following (instance) fields must be _first_ and stay synchronized
-		// with the mono's MonoRegionInfo defined in mono/metadata/object-internals.h
+
+		int lcid; // it is used only for Equals() (not even used in GetHashCode()).
+
 #pragma warning disable 649
 		int regionId;
 		string iso2Name;
@@ -72,11 +66,7 @@ namespace System.Globalization
 		string isoCurrencySymbol;
 		string currencyEnglishName;
 #pragma warning restore 649
-		
-		// new (instance) fields should be added here (and do not have to be duplicated in the runtime)
-		
-		int lcid; // it is used only for Equals() (not even used in GetHashCode()).
-		
+
 		public RegionInfo (int culture)
 		{
 			if (!GetByTerritory (CultureInfo.GetCultureInfo (culture)))

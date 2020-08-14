@@ -188,6 +188,9 @@ struct _MethodDesc {
 	uint64_t callee_time;
 	uint64_t self_time;
 	TraceDesc traces;
+        uint64_t jit_start;
+	uint64_t jit_time;
+	intptr_t jit_thread;
 };
 
 static MethodDesc* method_hash [HASH_SIZE] = {0};
@@ -1047,6 +1050,12 @@ struct _ThreadContext {
 	uintptr_t *roots_extra;
 	int *roots_types;
 	uint64_t gc_start_times [3];
+
+	/* stack for jitting */
+	MethodDesc **jit_stack;
+	uint64_t *jit_time_stack;
+	int jit_stack_size;
+	int jit_stack_id;
 };
 
 static void
@@ -1101,6 +1110,10 @@ get_thread (ProfContext *ctx, intptr_t thread_id)
 	thread->stack = malloc (thread->stack_size * sizeof (void*));
 	thread->time_stack = malloc (thread->stack_size * sizeof (uint64_t));
 	thread->callee_time_stack = malloc (thread->stack_size * sizeof (uint64_t));
+	thread->jit_stack_id = 0;
+	thread->jit_stack_size = 32;
+	thread->jit_stack = malloc (thread->jit_stack_size * sizeof (void*));
+	thread->jit_time_stack = malloc (thread->jit_stack_size * sizeof (uint64_t));
 	return thread;
 }
 
@@ -1120,6 +1133,16 @@ ensure_thread_stack (ThreadContext *thread)
 		thread->stack = realloc (thread->stack, thread->stack_size * sizeof (void*));
 		thread->time_stack = realloc (thread->time_stack, thread->stack_size * sizeof (uint64_t));
 		thread->callee_time_stack = realloc (thread->callee_time_stack, thread->stack_size * sizeof (uint64_t));
+	}
+}
+
+static void
+ensure_thread_jit_stack (ThreadContext *thread)
+{
+	if (thread->jit_stack_id == thread->jit_stack_size) {
+		thread->jit_stack_size *= 2;
+		thread->jit_stack = realloc (thread->jit_stack, thread->jit_stack_size * sizeof (void*));
+		thread->jit_time_stack = realloc (thread->jit_time_stack, thread->jit_stack_size * sizeof (uint64_t));
 	}
 }
 
@@ -1272,6 +1295,33 @@ pop_method (ThreadContext *thread, MethodDesc *method, uint64_t timestamp)
 		//fprintf (outfile, "method %s took %d\n", method->name, (int)(tdiff/1000));
 	} else {
 		fprintf (outfile, "unmatched leave at stack pos: %d for method %s\n", thread->stack_id, method->name);
+	}
+}
+
+
+static void
+push_jit (ThreadContext *thread, MethodDesc *method, uint64_t timestamp)
+{
+	ensure_thread_jit_stack (thread);
+	thread->jit_time_stack [thread->jit_stack_id] = timestamp;
+	thread->jit_stack [thread->jit_stack_id++] = method;
+	method->jit_thread = thread->thread_id;
+	method->jit_start = timestamp;
+}
+
+static void
+pop_jit (ThreadContext *thread, MethodDesc *method, uint64_t timestamp)
+{
+	if (thread->jit_stack_id > 0 && thread->jit_stack [thread->jit_stack_id - 1] == method) {
+		uint64_t tdiff;
+		thread->jit_stack_id--;
+		if (timestamp < thread->jit_time_stack [thread->jit_stack_id])
+			fprintf (outfile, "time went backwards for jitting %s\n", method->name);
+		tdiff = timestamp - thread->jit_time_stack [thread->jit_stack_id];
+		method->jit_time = tdiff;
+		//fprintf (outfile, "method %s took %d to jit\n", method->name, (int)(tdiff/1000));
+	} else {
+		fprintf (outfile, "unmatched jit end at stack pos: %d for method %s\n", thread->jit_stack_id, method->name);
 	}
 }
 
@@ -1703,14 +1753,41 @@ decode_buffer (ProfContext *ctx)
 			LOG_TIME (time_base, tdiff);
 			time_base += tdiff;
 			method_base += ptrdiff;
-			if (subtype == TYPE_JIT) {
+			if (subtype == TYPE_JIT_START) {
+				MethodDesc *method;
+
+				if (ctx->data_version < 5) {
+					fprintf (stderr, "data versions < 5 can't have JIT_START subtypes.  erroneous file.\n");
+					return 0;
+				}
+
+				/* add the method here with 0 code start and len.  we'll fix it up in the TYPE_JIT code below */
+				method = add_method (method_base, (char*)p, 0, 0);
+				push_jit (thread, method, time_base);
+
+				if (debug)
+					fprintf (outfile, "%s jit started\n", method->name);
+
+				while (*p) p++;
+				p++;
+			}
+			else if (subtype == TYPE_JIT) {
+				MethodDesc *method;
 				intptr_t codediff = decode_sleb128 (p, &p);
 				int codelen = decode_uleb128 (p, &p);
 				if (debug)
 					fprintf (outfile, "jitted method %p (%s), size: %d, code: %p\n", (void*)(method_base), p, codelen, (void*)(ptr_base + codediff));
-				add_method (method_base, (char*)p, ptr_base + codediff, codelen);
-				while (*p) p++;
-				p++;
+				if (ctx->data_version < 5) {
+					method = add_method (method_base, (char*)p, ptr_base + codediff, codelen);
+					while (*p) p++;
+					p++;
+				}
+				else {
+					method = lookup_method (method_base);
+					method->code = ptr_base + codediff;
+					method->len = codelen;
+					pop_jit (thread, method, time_base);
+				}
 			} else {
 				MethodDesc *method;
 				if ((thread_filter && thread_filter != thread->thread_id))
@@ -2168,22 +2245,52 @@ dump_gcs (void)
 	}
 }
 
+static int
+compare_method_jit_times (const void *a, const void *b)
+{
+	MethodDesc *const*A = a;
+	MethodDesc *const*B = b;
+	uint64_t vala, valb;
+
+	vala = (*A)->jit_time;
+	valb = (*B)->jit_time;
+
+	if (vala == valb)
+		return 0;
+	if (valb < vala)
+		return -1;
+	return 1;
+}
+
 static void
 dump_jit (void)
 {
-	int i;
+	int i, c;
 	int code_size = 0;
 	int compiled_methods = 0;
-	MethodDesc* m;
-	fprintf (outfile, "\nJIT summary\n");
+	MethodDesc **methods = malloc (num_methods * sizeof (void*));
+	MethodDesc *cd;
+	c = 0;
 	for (i = 0; i < HASH_SIZE; ++i) {
-		m = method_hash [i];
-		for (m = method_hash [i]; m; m = m->next) {
-			if (!m->code)
-				continue;
-			compiled_methods++;
-			code_size += m->len;
+		cd = method_hash [i];
+		while (cd) {
+			methods [c++] = cd;
+			cd = cd->next;
 		}
+	}
+	qsort (methods, num_methods, sizeof (void*), compare_method_jit_times);
+
+	fprintf (outfile, "\nJIT summary\n");
+	fprintf (outfile, "%8s %10s Method name\n", "JIT(ms)", "Thread");
+	for (i = 0; i < num_methods; ++i) {
+		cd = methods[i];
+		if (!cd->code)
+			continue;
+		if (cd->jit_start < time_from || cd->jit_start >= time_to)
+			continue;
+		fprintf (outfile, "%8llu 0x%08x %s\n", cd->jit_time / 1000000, cd->jit_thread, cd->name);
+		compiled_methods++;
+		code_size += cd->len;
 	}
 	fprintf (outfile, "\tCompiled methods: %d\n", compiled_methods);
 	fprintf (outfile, "\tGenerated code size: %d\n", code_size);

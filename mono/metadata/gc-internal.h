@@ -93,6 +93,8 @@ MonoObject  *ves_icall_System_GC_get_ephemeron_tombstone (void) MONO_INTERNAL;
 extern void mono_gc_init (void) MONO_INTERNAL;
 extern void mono_gc_base_init (void) MONO_INTERNAL;
 extern void mono_gc_cleanup (void) MONO_INTERNAL;
+extern void mono_gc_enable (void) MONO_INTERNAL;
+extern void mono_gc_disable (void) MONO_INTERNAL;
 
 /*
  * Return whenever the current thread is registered with the GC (i.e. started
@@ -108,6 +110,8 @@ extern gboolean mono_gc_register_thread (void *baseptr) MONO_INTERNAL;
 
 extern gboolean mono_gc_is_finalizer_internal_thread (MonoInternalThread *thread) MONO_INTERNAL;
 
+extern gboolean mono_gc_is_finalizer_native_thread (void *thr) MONO_INTERNAL;
+
 extern void mono_gc_set_stack_end (void *stack_end) MONO_INTERNAL;
 
 /* only valid after the RECLAIM_START GC event and before RECLAIM_END
@@ -120,8 +124,15 @@ extern void     mono_gc_enable_events (void);
 
 /* disappearing link functionality */
 void        mono_gc_weak_link_add    (void **link_addr, MonoObject *obj, gboolean track) MONO_INTERNAL;
-void        mono_gc_weak_link_remove (void **link_addr, gboolean track) MONO_INTERNAL;
+void        mono_gc_weak_link_remove (void **link_addr) MONO_INTERNAL;
 MonoObject *mono_gc_weak_link_get    (void **link_addr) MONO_INTERNAL;
+
+#ifndef HAVE_SGEN_GC
+void    mono_gc_add_weak_track_handle    (MonoObject *obj, guint32 gchandle) MONO_INTERNAL;
+void    mono_gc_change_weak_track_handle (MonoObject *old_obj, MonoObject *obj, guint32 gchandle) MONO_INTERNAL;
+void    mono_gc_remove_weak_track_handle (guint32 gchandle) MONO_INTERNAL;
+GSList* mono_gc_remove_weak_track_object (MonoDomain *domain, MonoObject *obj) MONO_INTERNAL;
+#endif
 
 /*Ephemeron functionality. Sgen only*/
 gboolean    mono_gc_ephemeron_array_add (MonoObject *obj) MONO_INTERNAL;
@@ -310,6 +321,8 @@ guint8* mono_gc_get_card_table (int *shift_bits, gpointer *card_mask) MONO_INTER
 
 void* mono_gc_get_nursery (int *shift_bits, size_t *size) MONO_INTERNAL;
 
+void mono_gc_set_current_thread_appdomain (MonoDomain *domain) MONO_INTERNAL;
+
 void mono_gc_set_skip_thread (gboolean skip) MONO_INTERNAL;
 
 /*
@@ -339,7 +352,6 @@ struct _RefQueueEntry {
 #else
 	guint32 gchandle;
 #endif
-	MonoDomain *domain;
 	void *user_data;
 	RefQueueEntry *next;
 };
@@ -355,9 +367,13 @@ MonoReferenceQueue* mono_gc_reference_queue_new (mono_reference_queue_callback c
 void mono_gc_reference_queue_free (MonoReferenceQueue *queue) MONO_INTERNAL;
 gboolean mono_gc_reference_queue_add (MonoReferenceQueue *queue, MonoObject *obj, void *user_data) MONO_INTERNAL;
 
+#ifdef HOST_WIN32
+BOOL APIENTRY mono_gc_dllmain (HMODULE module_handle, DWORD reason, LPVOID reserved) MONO_INTERNAL;
+#endif
+
 void mono_gc_bzero (void *dest, size_t size) MONO_INTERNAL;
 void mono_gc_memmove (void *dest, const void *src, size_t size) MONO_INTERNAL;
 
-guint mono_gc_get_vtable_bits (MonoClass *class) MONO_INTERNAL;
+
 #endif /* __MONO_METADATA_GC_INTERNAL_H__ */
 

@@ -48,9 +48,9 @@ namespace System.Xml.Linq
 			Following
 		}
 
-		public int Compare (XNode x, XNode y)
+		public int Compare (XNode n1, XNode n2)
 		{
-			switch (CompareCore (x,y)) {
+			switch (CompareCore (n1, n2)) {
 			case CompareResult.Same:
 				return 0;
 			case CompareResult.Random:

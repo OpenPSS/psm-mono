@@ -854,9 +854,7 @@ namespace System.Runtime.Serialization
 
 		public override object DeserializeEmptyContent (XmlReader reader, XmlFormatterDeserializer deserializer, string id)
 		{
-			object instance = CreateInstance ();
-			HandleId (id, deserializer, instance);
-			return instance;
+			return DeserializeContent (reader, deserializer, id);
 		}
 
 		public override object DeserializeContent (XmlReader reader, XmlFormatterDeserializer deserializer, string id)

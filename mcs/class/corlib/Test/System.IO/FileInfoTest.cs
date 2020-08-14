@@ -15,6 +15,7 @@ using NUnit.Framework;
 namespace MonoTests.System.IO
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class FileInfoTest
 	{
 		string TempFolder = Path.Combine (Path.GetTempPath (), "MonoTests.System.IO.Tests");
@@ -139,7 +140,7 @@ namespace MonoTests.System.IO
 			}
 		}
 
-#if NET_2_0
+#if !NET_2_1
 		[Test]
 		[Category ("NotWorking")]
 		public void IsReadOnly ()
@@ -853,7 +854,7 @@ namespace MonoTests.System.IO
 			}
 		}
 
-#if NET_2_0
+#if !NET_2_1
 		[Test]
 		public void Replace1 ()
 		{
@@ -1271,6 +1272,7 @@ namespace MonoTests.System.IO
 			}
 		}
 			
+#if !NET_2_1
 		[Test]
 		public void Serialization ()
 		{
@@ -1308,6 +1310,7 @@ namespace MonoTests.System.IO
 			Assert.AreEqual (info.Name, clone.Name, "#1");
 			Assert.AreEqual (info.FullName, clone.FullName, "#2");
 		}
+#endif
 
 		[Test]
 		public void ToStringVariety ()

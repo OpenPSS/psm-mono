@@ -17,6 +17,7 @@ using NUnit.Framework;
 namespace MonoTests.System.IO
 {
 	[TestFixture]
+	[Category("PssFileIO")]
 	public class FileSystemInfoTest
 	{
 		CultureInfo old_culture;
@@ -345,6 +346,7 @@ namespace MonoTests.System.IO
 			}
 		}
 
+#if !NET_2_1
 		[Test]
 		public void Serialization ()
 		{
@@ -386,5 +388,6 @@ namespace MonoTests.System.IO
 				DeleteDir (path);
 			}
 		}
+#endif
 	}
 }

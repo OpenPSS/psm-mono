@@ -29,6 +29,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#if !MOBILE
 using System.Runtime.InteropServices;
 using System.Collections.Specialized;
 
@@ -79,8 +80,6 @@ namespace System.CodeDom
 			}
 		}
 
-#if NET_2_0
-
 		CodeDirectiveCollection startDirectives;
 		CodeDirectiveCollection endDirectives;
 
@@ -99,8 +98,6 @@ namespace System.CodeDom
 				return endDirectives;
 			}
 		}
-
-#endif
-
 	}
 }
+#endif

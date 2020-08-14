@@ -53,25 +53,25 @@ namespace System.Linq.Parallel
 		}
 
 		#region INodeVisitor implementation
-		public void Visit (QueryBaseNode node)
+		public void Visit<T> (QueryBaseNode<T> node)
 		{
 			// Nothing to do atm. Later we can check if the node is a
 			// Take or a Skip and set accordingly UseStrip
 		}
 
-		public void Visit (QueryChildNode node)
+		public void Visit<U, V> (QueryChildNode<U, V> node)
 		{
 			node.Parent.Visit (this);
 		}
 
-		public void Visit (QueryOptionNode node)
+		public void Visit<T> (QueryOptionNode<T> node)
 		{
 			MergeOptions (node.GetOptions ());
 
-			Visit ((QueryChildNode)node);
+			Visit<T, T> ((QueryChildNode<T, T>)node);
 		}
 
-		public void Visit (QueryStartNode node)
+		public void Visit<T> (QueryStartNode<T> node)
 		{
 			if (behindOrderGuard == null)
 				behindOrderGuard = false;
@@ -83,15 +83,15 @@ namespace System.Linq.Parallel
 				ShouldBeSequential = true;
 		}
 
-		public void Visit (QueryStreamNode node)
+		public void Visit<T, TParent> (QueryStreamNode<T, TParent> node)
 		{
 			if (node.IsIndexed)
 				UseStrip = true;
 
-			Visit ((QueryChildNode)node);
+			Visit<T, TParent> ((QueryChildNode<T, TParent>)node);
 		}
 
-		public void Visit (QueryOrderGuardNode node)
+		public void Visit<T> (QueryOrderGuardNode<T> node)
 		{
 			if (behindOrderGuard == null) {
 				if (node.EnsureOrder) {
@@ -102,21 +102,21 @@ namespace System.Linq.Parallel
 				}
 			}
 
-			Visit ((QueryStreamNode)node);
+			Visit<T, T> ((QueryStreamNode<T, T>)node);
 		}
 
-		public void Visit (QueryMuxNode node)
+		public void Visit<TFirst, TSecond, TResult> (QueryMuxNode<TFirst, TSecond, TResult> node)
 		{
-			Visit ((QueryChildNode)node);
+			Visit<TResult, TFirst> ((QueryChildNode<TResult, TFirst>)node);
 		}
 
-		public void Visit (QueryHeadWorkerNode node)
+		public void Visit<T> (QueryHeadWorkerNode<T> node)
 		{
 			// Wouldn't it be better with standard Linq?
 			if (node.Count.HasValue && node.Count < partitionCount)
 				ShouldBeSequential = true;
 
-			Visit ((QueryStreamNode)node);
+			Visit<T, T> ((QueryStreamNode<T, T>)node);
 		}
 		#endregion
 

@@ -99,8 +99,11 @@ get_pw_data (void)
 		user_name = g_strdup (pw.pw_name);
 	}
 #endif
-	if (home_dir == NULL)
+	if (home_dir == NULL) {
 		home_dir = g_getenv ("HOME");
+		if (home_dir == NULL)
+			home_dir = "";
+	}
 
 	if (user_name == NULL) {
 		user_name = g_getenv ("USER");
