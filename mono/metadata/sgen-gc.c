@@ -679,6 +679,12 @@ static MonoNativeTlsKey thread_info_key;
 
 #endif
 
+#ifdef __GNUC__
+#define MONO_ATTR_USED __attribute__ ((used))
+#else
+#define MONO_ATTR_USED
+#endif
+
 /*
  * FIXME: What is faster, a TLS variable pointing to a structure, or separate TLS 
  * variables for next+temp_end ?
@@ -692,9 +698,9 @@ static __thread char *tlab_real_end;
 static __thread gpointer *store_remset_buffer;
 static __thread long store_remset_buffer_index;
 /* Used by the managed allocator/wbarrier */
-static __thread char **tlab_next_addr;
-static __thread char *stack_end;
-static __thread long *store_remset_buffer_index_addr;
+static __thread char **tlab_next_addr MONO_ATTR_USED;
+static __thread char *stack_end MONO_ATTR_USED;
+static __thread long *store_remset_buffer_index_addr MONO_ATTR_USED;
 #endif
 
 /* The size of a TLAB */
