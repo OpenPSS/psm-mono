@@ -146,20 +146,21 @@ fast_current_time (void)
 	__asm__ __volatile__("rdtsc" : "=a" (low), "=d" (high))
 #endif
 
-static int
-getcpu ()
-{
 #if defined(_MSC_VER)
+static int getcpu ()
+{
 	__asm {
 		mov eax, 1
 		cpuid
 		shr ebx, 24
 		mov eax, ebx
 	}
-#else
-	return sched_getcpu ();
-#endif
 }
+#else
+#define getcpu sched_getcpu
+#endif
+
+
 static uint64_t
 safe_rdtsc (int *cpu)
 {
