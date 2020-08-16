@@ -7,13 +7,19 @@
  */
 #include <config.h>
 
+#ifdef __GNUC__
+#define MONO_ATTR_USED __attribute__ ((used))
+#else
+#define MONO_ATTR_USED
+#endif
+
 #ifdef HAVE_KW_THREAD
 
 #define MONO_HAVE_FAST_TLS
 #define MONO_FAST_TLS_SET(x,y) x = y
 #define MONO_FAST_TLS_GET(x) x
 #define MONO_FAST_TLS_INIT(x)
-#define MONO_FAST_TLS_DECLARE(x) static __thread gpointer x MONO_TLS_FAST;
+#define MONO_FAST_TLS_DECLARE(x) static __thread gpointer x MONO_TLS_FAST MONO_ATTR_USED;
 
 #if HAVE_TLS_MODEL_ATTR
 
@@ -159,7 +165,7 @@
 
 #elif defined(TARGET_VITA)
 
-#define MONO_HAVE_FAST_TLS
+#define MONO_HAVE_FAST_TLS 
 #define MONO_FAST_TLS_SET(x,y) pthread_vita_tls_set_np(x, y)
 #define MONO_FAST_TLS_GET(x) pthread_vita_tls_get_np(x)
 #define MONO_FAST_TLS_INIT(x)  x = pthread_vita_tls_create_np(NULL)
